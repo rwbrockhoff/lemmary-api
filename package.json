@@ -1,0 +1,40 @@
+{
+	"name": "assemblr-api",
+	"version": "0.1.0",
+	"description": "Assemblr — Production management API for makers",
+	"author": "Ryan Brockhoff",
+	"private": true,
+	"type": "module",
+	"license": "UNLICENSED",
+	"config": {
+		"commitizen": {
+			"path": "./node_modules/cz-conventional-changelog"
+		}
+	},
+	"scripts": {
+		"commit": "cz",
+		"dev": "tsx watch server/index.ts",
+		"build": "tsc",
+		"start": "node dist/server/index.js",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"format:changed": "git diff --name-only --relative | xargs prettier --write"
+	},
+	"dependencies": {
+		"dotenv": "^17.3.1",
+		"fastify": "^5.7.4",
+		"kysely": "^0.28.11",
+		"pg": "^8.18.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/node": "^25.3.0",
+		"@types/pg": "^8.16.0",
+		"commitizen": "^4.3.1",
+		"cz-conventional-changelog": "^3.3.0",
+		"eslint": "^10.0.1",
+		"prettier": "^3.8.1",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
+	}
+}
