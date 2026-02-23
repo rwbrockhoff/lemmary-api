@@ -84,7 +84,7 @@ async function seed() {
 		.execute();
 
 	const materialTypes = [
-		{ name: 'X50 Fabric', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: true, tracks_dimensions: false, position: 0 },
+		{ name: 'X50 Fabric', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_dimensions: false, position: 0 },
 		{ name: 'Zipper Tape', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 1 },
 		{ name: 'Webbing', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 2 },
 		{ name: 'Elastic', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 3 },
