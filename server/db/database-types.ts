@@ -9,6 +9,7 @@ export interface Database {
 	bom_items: BomItemTable;
 	production_batches: ProductionBatchTable;
 	production_batch_orders: ProductionBatchOrderTable;
+	production_batch_order_items: ProductionBatchOrderItemTable;
 	production_batch_items: ProductionBatchItemTable;
 	production_batch_materials: ProductionBatchMaterialTable;
 }
@@ -140,6 +141,22 @@ export interface ProductionBatchOrderTable {
 export type ProductionBatchOrder = Selectable<ProductionBatchOrderTable>;
 export type NewProductionBatchOrder = Insertable<ProductionBatchOrderTable>;
 
+export interface ProductionBatchOrderItemTable {
+	id: Generated<string>;
+	batch_id: string;
+	batch_order_id: string;
+	platform_sku: string | null;
+	product_name: string;
+	variant_label: string | null;
+	quantity: number;
+	completed: Generated<boolean>;
+	completed_qty: Generated<number>;
+	created_at: Generated<Date>;
+}
+
+export type ProductionBatchOrderItem = Selectable<ProductionBatchOrderItemTable>;
+export type NewProductionBatchOrderItem = Insertable<ProductionBatchOrderItemTable>;
+
 export interface ProductionBatchItemTable {
 	id: Generated<string>;
 	batch_id: string;
@@ -164,6 +181,7 @@ export interface ProductionBatchMaterialTable {
 	width: string | null;
 	quantity: string;
 	completed: Generated<boolean>;
+	completed_qty: Generated<number>;
 	created_at: Generated<Date>;
 }
 
