@@ -11,6 +11,9 @@ import {
 	getBatch,
 	createBatch,
 	updateBatchStatus,
+	toggleOrderComplete,
+	toggleItemComplete,
+	toggleMaterialComplete,
 } from './batches-service.js';
 
 export async function handleGetBatches(
@@ -103,6 +106,75 @@ export async function handleUpdateBatch(
 		return successResponse(reply, batch);
 	} catch (error) {
 		request.log.error(error, 'Failed to update batch');
+		return internalError(reply);
+	}
+}
+
+export async function handleToggleOrderComplete(
+	request: FastifyRequest<{
+		Params: { batchId: string; id: string };
+		Body: { completed: boolean };
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const result = await toggleOrderComplete(
+			request.userId,
+			request.params.batchId,
+			request.params.id,
+			request.body.completed,
+		);
+
+		if (!result) return notFound(reply);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to update batch order');
+		return internalError(reply);
+	}
+}
+
+export async function handleToggleItemComplete(
+	request: FastifyRequest<{
+		Params: { batchId: string; id: string };
+		Body: { completed: boolean };
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const result = await toggleItemComplete(
+			request.userId,
+			request.params.batchId,
+			request.params.id,
+			request.body.completed,
+		);
+
+		if (!result) return notFound(reply);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to update batch item');
+		return internalError(reply);
+	}
+}
+
+export async function handleToggleMaterialComplete(
+	request: FastifyRequest<{
+		Params: { batchId: string; id: string };
+		Body: { completed: boolean };
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const result = await toggleMaterialComplete(
+			request.userId,
+			request.params.batchId,
+			request.params.id,
+			request.body.completed,
+		);
+
+		if (!result) return notFound(reply);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to update batch material');
 		return internalError(reply);
 	}
 }
