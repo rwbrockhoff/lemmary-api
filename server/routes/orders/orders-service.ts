@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import type { Store } from '../../db/database-types.js';
 import {
@@ -83,12 +84,18 @@ export async function getOrders(userId: string) {
 
 	const orders = await db
 		.selectFrom('orders')
-		.selectAll()
+		.selectAll('orders')
+		.select(
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+		)
 		.where('store_id', '=', store.id)
 		.orderBy('order_date', 'desc')
 		.execute();
 
-	return orders;
+	return orders.map((row) => ({
+		...row,
+		item_count: Number(row.item_count),
+	}));
 }
 
 export async function getOrderWithItems(userId: string, orderId: string) {
