@@ -14,6 +14,8 @@ import {
 	toggleOrderComplete,
 	toggleItemComplete,
 	toggleMaterialComplete,
+	updateOrderItemCompletedQty,
+	updateMaterialCompletedQty,
 } from './batches-service.js';
 
 export async function handleGetBatches(
@@ -175,6 +177,64 @@ export async function handleToggleMaterialComplete(
 		return successResponse(reply, result);
 	} catch (error) {
 		request.log.error(error, 'Failed to update batch material');
+		return internalError(reply);
+	}
+}
+
+export async function handleUpdateOrderItemCompletedQty(
+	request: FastifyRequest<{
+		Params: { batchId: string; id: string };
+		Body: { completedQty: number };
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const { completedQty } = request.body;
+
+		if (completedQty < 0) {
+			return badRequest(reply, 'Completed quantity cannot be negative');
+		}
+
+		const result = await updateOrderItemCompletedQty(
+			request.userId,
+			request.params.batchId,
+			request.params.id,
+			completedQty,
+		);
+
+		if (!result) return notFound(reply);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to update order item quantity');
+		return internalError(reply);
+	}
+}
+
+export async function handleUpdateMaterialCompletedQty(
+	request: FastifyRequest<{
+		Params: { batchId: string; id: string };
+		Body: { completedQty: number };
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const { completedQty } = request.body;
+
+		if (completedQty < 0) {
+			return badRequest(reply, 'Completed quantity cannot be negative');
+		}
+
+		const result = await updateMaterialCompletedQty(
+			request.userId,
+			request.params.batchId,
+			request.params.id,
+			completedQty,
+		);
+
+		if (!result) return notFound(reply);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to update material quantity');
 		return internalError(reply);
 	}
 }

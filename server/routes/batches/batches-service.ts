@@ -27,10 +27,10 @@ export async function getBatches(userId: string) {
 			sql<string>`(select count(*) from production_batch_orders where batch_id = production_batches.id)`.as(
 				'order_count',
 			),
-			sql<string>`(select count(*) from production_batch_items where batch_id = production_batches.id)`.as(
+			sql<string>`(select coalesce(sum(quantity), 0) from production_batch_order_items where batch_id = production_batches.id)`.as(
 				'item_count',
 			),
-			sql<string>`(select count(*) from production_batch_items where batch_id = production_batches.id and completed = true)`.as(
+			sql<string>`(select coalesce(sum(completed_qty), 0) from production_batch_order_items where batch_id = production_batches.id)`.as(
 				'items_completed',
 			),
 		])
@@ -82,6 +82,14 @@ export async function getBatch(userId: string, batchId: string) {
 		.orderBy('variant_label', 'asc')
 		.execute();
 
+	const orderItems = await db
+		.selectFrom('production_batch_order_items')
+		.selectAll()
+		.where('batch_id', '=', batchId)
+		.orderBy('product_name', 'asc')
+		.orderBy('variant_label', 'asc')
+		.execute();
+
 	const materials = await db
 		.selectFrom('production_batch_materials')
 		.selectAll()
@@ -90,7 +98,7 @@ export async function getBatch(userId: string, batchId: string) {
 		.orderBy('piece', 'asc')
 		.execute();
 
-	return { ...batch, orders, items, materials };
+	return { ...batch, orders, items, orderItems, materials };
 }
 
 export async function createBatch(
@@ -118,7 +126,7 @@ export async function createBatch(
 			.returningAll()
 			.executeTakeFirstOrThrow();
 
-		await trx
+		const batchOrders = await trx
 			.insertInto('production_batch_orders')
 			.values(
 				orderIds.map((orderId) => ({
@@ -126,7 +134,38 @@ export async function createBatch(
 					order_id: orderId,
 				})),
 			)
+			.returning(['id', 'order_id'])
 			.execute();
+
+		const orderItems = await trx
+			.selectFrom('order_items')
+			.selectAll()
+			.where(
+				'order_id',
+				'in',
+				batchOrders.map((bo) => bo.order_id),
+			)
+			.execute();
+
+		if (orderItems.length > 0) {
+			const batchOrderMap = new Map(
+				batchOrders.map((bo) => [bo.order_id, bo.id]),
+			);
+
+			await trx
+				.insertInto('production_batch_order_items')
+				.values(
+					orderItems.map((item) => ({
+						batch_id: batch.id,
+						batch_order_id: batchOrderMap.get(item.order_id)!,
+						platform_sku: item.platform_sku,
+						product_name: item.product_name,
+						variant_label: item.variant_label,
+						quantity: item.quantity,
+					})),
+				)
+				.execute();
+		}
 
 		const summary = await trx
 			.selectFrom('order_items')
@@ -357,6 +396,48 @@ export async function toggleMaterialComplete(
 		.updateTable('production_batch_materials')
 		.set({ completed })
 		.where('id', '=', batchMaterialId)
+		.where('batch_id', '=', batchId)
+		.returningAll()
+		.executeTakeFirst();
+}
+
+export async function updateOrderItemCompletedQty(
+	userId: string,
+	batchId: string,
+	orderItemId: string,
+	completedQty: number,
+) {
+	const batch = await verifyBatchOwnership(userId, batchId);
+	if (!batch) return null;
+
+	return db
+		.updateTable('production_batch_order_items')
+		.set({
+			completed_qty: completedQty,
+			completed: sql<boolean>`${completedQty} >= quantity`,
+		})
+		.where('id', '=', orderItemId)
+		.where('batch_id', '=', batchId)
+		.returningAll()
+		.executeTakeFirst();
+}
+
+export async function updateMaterialCompletedQty(
+	userId: string,
+	batchId: string,
+	materialId: string,
+	completedQty: number,
+) {
+	const batch = await verifyBatchOwnership(userId, batchId);
+	if (!batch) return null;
+
+	return db
+		.updateTable('production_batch_materials')
+		.set({
+			completed_qty: completedQty,
+			completed: sql<boolean>`${completedQty} >= quantity`,
+		})
+		.where('id', '=', materialId)
 		.where('batch_id', '=', batchId)
 		.returningAll()
 		.executeTakeFirst();
