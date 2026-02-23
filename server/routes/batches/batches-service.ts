@@ -71,7 +71,7 @@ export async function getBatch(userId: string, batchId: string) {
 			'orders.grand_total',
 		])
 		.where('production_batch_orders.batch_id', '=', batchId)
-		.orderBy('orders.order_date', 'desc')
+		.orderBy('orders.order_date', 'asc')
 		.execute();
 
 	const items = await db

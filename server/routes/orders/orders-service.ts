@@ -76,6 +76,12 @@ export async function syncOrders(userId: string) {
 	const orders = await fetchOrdersFromPlatform(store);
 	const synced = await upsertOrders(store.id, orders);
 
+	await db
+		.updateTable('stores')
+		.set({ last_synced_at: new Date() })
+		.where('id', '=', store.id)
+		.execute();
+
 	return { synced, storeId: store.id };
 }
 
@@ -92,10 +98,13 @@ export async function getOrders(userId: string) {
 		.orderBy('order_date', 'desc')
 		.execute();
 
-	return orders.map((row) => ({
-		...row,
-		item_count: Number(row.item_count),
-	}));
+	return {
+		orders: orders.map((row) => ({
+			...row,
+			item_count: Number(row.item_count),
+		})),
+		lastSyncedAt: store.last_synced_at,
+	};
 }
 
 export async function getOrderWithItems(userId: string, orderId: string) {

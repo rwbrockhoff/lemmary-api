@@ -33,6 +33,7 @@ export interface StoreTable {
 	store_name: string;
 	api_key: string;
 	platform_config: Record<string, unknown> | null;
+	last_synced_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
