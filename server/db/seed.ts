@@ -54,7 +54,12 @@ async function seed() {
 			email: 'jaclyn@salkadesigns.com',
 			full_name: 'Jaclyn Cage',
 		})
-		.onConflict((oc) => oc.column('id').doNothing())
+		.onConflict((oc) =>
+			oc.column('id').doUpdateSet({
+				email: 'jaclyn@salkadesigns.com',
+				full_name: 'Jaclyn Cage',
+			}),
+		)
 		.execute();
 
 	await db
@@ -70,7 +75,12 @@ async function seed() {
 				api_version: '1.0',
 			},
 		})
-		.onConflict((oc) => oc.column('id').doNothing())
+		.onConflict((oc) =>
+			oc.column('id').doUpdateSet({
+				api_key: process.env.SQUARESPACE_API_KEY ?? '',
+				store_name: 'Salka Designs',
+			}),
+		)
 		.execute();
 
 	const materialTypes = [
