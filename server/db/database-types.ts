@@ -7,6 +7,10 @@ export interface Database {
 	order_items: OrderItemTable;
 	bom_material_types: BomMaterialTypeTable;
 	bom_items: BomItemTable;
+	production_batches: ProductionBatchTable;
+	production_batch_orders: ProductionBatchOrderTable;
+	production_batch_items: ProductionBatchItemTable;
+	production_batch_materials: ProductionBatchMaterialTable;
 }
 
 export interface UserTable {
@@ -110,3 +114,58 @@ export interface BomItemTable {
 export type BomItem = Selectable<BomItemTable>;
 export type NewBomItem = Insertable<BomItemTable>;
 export type BomItemUpdate = Updateable<BomItemTable>;
+
+export interface ProductionBatchTable {
+	id: Generated<string>;
+	store_id: string;
+	name: string;
+	status: Generated<string>;
+	completed_at: Date | null;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type ProductionBatch = Selectable<ProductionBatchTable>;
+export type NewProductionBatch = Insertable<ProductionBatchTable>;
+export type ProductionBatchUpdate = Updateable<ProductionBatchTable>;
+
+export interface ProductionBatchOrderTable {
+	id: Generated<string>;
+	batch_id: string;
+	order_id: string;
+	completed: Generated<boolean>;
+	created_at: Generated<Date>;
+}
+
+export type ProductionBatchOrder = Selectable<ProductionBatchOrderTable>;
+export type NewProductionBatchOrder = Insertable<ProductionBatchOrderTable>;
+
+export interface ProductionBatchItemTable {
+	id: Generated<string>;
+	batch_id: string;
+	platform_sku: string | null;
+	product_name: string;
+	variant_label: string | null;
+	quantity: number;
+	completed: Generated<boolean>;
+	created_at: Generated<Date>;
+}
+
+export type ProductionBatchItem = Selectable<ProductionBatchItemTable>;
+export type NewProductionBatchItem = Insertable<ProductionBatchItemTable>;
+
+export interface ProductionBatchMaterialTable {
+	id: Generated<string>;
+	batch_id: string;
+	category: string;
+	material_type: string | null;
+	piece: string;
+	color: string | null;
+	width: string | null;
+	quantity: string;
+	completed: Generated<boolean>;
+	created_at: Generated<Date>;
+}
+
+export type ProductionBatchMaterial = Selectable<ProductionBatchMaterialTable>;
+export type NewProductionBatchMaterial = Insertable<ProductionBatchMaterialTable>;

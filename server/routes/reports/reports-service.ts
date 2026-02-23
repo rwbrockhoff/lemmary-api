@@ -30,7 +30,6 @@ export async function getProductionSummary(userId: string) {
 			'order_items.platform_sku',
 			'order_items.product_name',
 			'order_items.variant_label',
-			'order_items.unit_price',
 		])
 		.select(sql<string>`sum(order_items.quantity)`.as('total_quantity'))
 		.where('orders.store_id', '=', store.id)
@@ -39,9 +38,8 @@ export async function getProductionSummary(userId: string) {
 			'order_items.platform_sku',
 			'order_items.product_name',
 			'order_items.variant_label',
-			'order_items.unit_price',
 		])
-		.orderBy('order_items.unit_price', 'desc')
+		.orderBy('order_items.product_name', 'asc')
 		.orderBy('order_items.variant_label', 'asc')
 		.execute();
 

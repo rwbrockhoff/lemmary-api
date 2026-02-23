@@ -4,6 +4,7 @@ import { env } from './config/environment.js';
 import { authMiddleware } from './middleware/auth-middleware.js';
 import { ordersRoutes } from './routes/orders/orders-routes.js';
 import { reportsRoutes } from './routes/reports/reports-routes.js';
+import { batchesRoutes } from './routes/batches/batches-routes.js';
 
 export const buildApp = () => {
 	const app = Fastify({ logger: true });
@@ -21,6 +22,7 @@ export const buildApp = () => {
 
 	app.register(ordersRoutes);
 	app.register(reportsRoutes);
+	app.register(batchesRoutes);
 
 	return app;
 };
