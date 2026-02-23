@@ -356,13 +356,34 @@ export async function toggleOrderComplete(
 	const batch = await verifyBatchOwnership(userId, batchId);
 	if (!batch) return null;
 
-	return db
+	const order = await db
 		.updateTable('production_batch_orders')
 		.set({ completed })
 		.where('id', '=', batchOrderId)
 		.where('batch_id', '=', batchId)
 		.returningAll()
 		.executeTakeFirst();
+
+	if (!order) return null;
+
+	if (completed) {
+		await db
+			.updateTable('production_batch_order_items')
+			.set({
+				completed: true,
+				completed_qty: sql`quantity`,
+			})
+			.where('batch_order_id', '=', batchOrderId)
+			.execute();
+	} else {
+		await db
+			.updateTable('production_batch_order_items')
+			.set({ completed: false, completed_qty: 0 })
+			.where('batch_order_id', '=', batchOrderId)
+			.execute();
+	}
+
+	return order;
 }
 
 export async function toggleItemComplete(
@@ -410,7 +431,7 @@ export async function updateOrderItemCompletedQty(
 	const batch = await verifyBatchOwnership(userId, batchId);
 	if (!batch) return null;
 
-	return db
+	const updated = await db
 		.updateTable('production_batch_order_items')
 		.set({
 			completed_qty: completedQty,
@@ -419,7 +440,23 @@ export async function updateOrderItemCompletedQty(
 		.where('id', '=', orderItemId)
 		.where('batch_id', '=', batchId)
 		.returningAll()
-		.executeTakeFirst();
+		.executeTakeFirstOrThrow();
+
+	const siblings = await db
+		.selectFrom('production_batch_order_items')
+		.select(['completed'])
+		.where('batch_order_id', '=', updated.batch_order_id)
+		.execute();
+
+	const allComplete = siblings.every((s) => s.completed);
+
+	await db
+		.updateTable('production_batch_orders')
+		.set({ completed: allComplete })
+		.where('id', '=', updated.batch_order_id)
+		.execute();
+
+	return updated;
 }
 
 export async function updateMaterialCompletedQty(
