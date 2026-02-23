@@ -30,42 +30,44 @@ async function fetchOrdersFromPlatform(
 }
 
 async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
-	let synced = 0;
+	return db.transaction().execute(async (trx) => {
+		let synced = 0;
 
-	for (const { order, items } of orders) {
-		const result = await db
-			.insertInto('orders')
-			.values({ ...order, store_id: storeId })
-			.onConflict((oc) =>
-				oc.columns(['store_id', 'platform_order_id']).doUpdateSet({
-					customer_name: order.customer_name,
-					customer_email: order.customer_email,
-					fulfillment_status: order.fulfillment_status,
-					subtotal: order.subtotal,
-					shipping_total: order.shipping_total,
-					grand_total: order.grand_total,
-					updated_at: new Date(),
-				}),
-			)
-			.returning('id')
-			.executeTakeFirstOrThrow();
+		for (const { order, items } of orders) {
+			const result = await trx
+				.insertInto('orders')
+				.values({ ...order, store_id: storeId })
+				.onConflict((oc) =>
+					oc.columns(['store_id', 'platform_order_id']).doUpdateSet({
+						customer_name: order.customer_name,
+						customer_email: order.customer_email,
+						fulfillment_status: order.fulfillment_status,
+						subtotal: order.subtotal,
+						shipping_total: order.shipping_total,
+						grand_total: order.grand_total,
+						updated_at: new Date(),
+					}),
+				)
+				.returning('id')
+				.executeTakeFirstOrThrow();
 
-		await db
-			.deleteFrom('order_items')
-			.where('order_id', '=', result.id)
-			.execute();
-
-		if (items.length > 0) {
-			await db
-				.insertInto('order_items')
-				.values(items.map((item) => ({ ...item, order_id: result.id })))
+			await trx
+				.deleteFrom('order_items')
+				.where('order_id', '=', result.id)
 				.execute();
+
+			if (items.length > 0) {
+				await trx
+					.insertInto('order_items')
+					.values(items.map((item) => ({ ...item, order_id: result.id })))
+					.execute();
+			}
+
+			synced++;
 		}
 
-		synced++;
-	}
-
-	return synced;
+		return synced;
+	});
 }
 
 export async function syncOrders(userId: string) {
