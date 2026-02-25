@@ -20,6 +20,9 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('subtotal', 'numeric')
 		.addColumn('shipping_total', 'numeric')
 		.addColumn('grand_total', 'numeric')
+		.addColumn('workflow_stage_id', 'uuid', (col) =>
+			col.references('order_workflow_stages.id').onDelete('set null'),
+		)
 		.addColumn('currency', 'text', (col) => col.defaultTo('USD').notNull())
 		.addColumn('created_at', 'timestamptz', (col) =>
 			col.defaultTo(sql`now()`).notNull(),

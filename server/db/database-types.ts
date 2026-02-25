@@ -3,6 +3,8 @@ import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 export interface Database {
 	users: UserTable;
 	stores: StoreTable;
+	order_workflow_stages: OrderWorkflowStageTable;
+	order_item_workflow_stages: OrderItemWorkflowStageTable;
 	orders: OrderTable;
 	order_items: OrderItemTable;
 	bom_material_types: BomMaterialTypeTable;
@@ -42,6 +44,36 @@ export type Store = Selectable<StoreTable>;
 export type NewStore = Insertable<StoreTable>;
 export type StoreUpdate = Updateable<StoreTable>;
 
+export interface OrderWorkflowStageTable {
+	id: Generated<string>;
+	store_id: string;
+	name: string;
+	position: number;
+	color: string | null;
+	is_default: Generated<boolean>;
+	is_complete: Generated<boolean>;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type OrderWorkflowStage = Selectable<OrderWorkflowStageTable>;
+export type NewOrderWorkflowStage = Insertable<OrderWorkflowStageTable>;
+
+export interface OrderItemWorkflowStageTable {
+	id: Generated<string>;
+	store_id: string;
+	name: string;
+	position: number;
+	color: string | null;
+	is_default: Generated<boolean>;
+	is_complete: Generated<boolean>;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type OrderItemWorkflowStage = Selectable<OrderItemWorkflowStageTable>;
+export type NewOrderItemWorkflowStage = Insertable<OrderItemWorkflowStageTable>;
+
 export interface OrderTable {
 	id: Generated<string>;
 	store_id: string;
@@ -51,6 +83,7 @@ export interface OrderTable {
 	customer_email: string | null;
 	order_date: Date;
 	fulfillment_status: Generated<string>;
+	workflow_stage_id: string | null;
 	subtotal: string | null;
 	shipping_total: string | null;
 	grand_total: string | null;
@@ -66,12 +99,14 @@ export type OrderUpdate = Updateable<OrderTable>;
 export interface OrderItemTable {
 	id: Generated<string>;
 	order_id: string;
+	platform_line_item_id: string | null;
 	platform_sku: string | null;
 	product_name: string;
 	variant_label: string | null;
 	quantity: number;
 	unit_price: string | null;
 	image_url: string | null;
+	workflow_stage_id: string | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }

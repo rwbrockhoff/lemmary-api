@@ -30,14 +30,41 @@ async function fetchOrdersFromPlatform(
 	throw new Error(`Unsupported platform: ${store.platform}`);
 }
 
+async function getDefaultStageIds(storeId: string) {
+	const orderStage = await db
+		.selectFrom('order_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('is_default', '=', true)
+		.executeTakeFirst();
+
+	const itemStage = await db
+		.selectFrom('order_item_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('is_default', '=', true)
+		.executeTakeFirst();
+
+	return {
+		orderStageId: orderStage?.id ?? null,
+		itemStageId: itemStage?.id ?? null,
+	};
+}
+
 async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
+	const { orderStageId, itemStageId } = await getDefaultStageIds(storeId);
+
 	return db.transaction().execute(async (trx) => {
 		let synced = 0;
 
 		for (const { order, items } of orders) {
 			const result = await trx
 				.insertInto('orders')
-				.values({ ...order, store_id: storeId })
+				.values({
+					...order,
+					store_id: storeId,
+					workflow_stage_id: orderStageId,
+				})
 				.onConflict((oc) =>
 					oc.columns(['store_id', 'platform_order_id']).doUpdateSet({
 						customer_name: order.customer_name,
@@ -52,16 +79,29 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
 				.returning('id')
 				.executeTakeFirstOrThrow();
 
-			await trx
-				.deleteFrom('order_items')
-				.where('order_id', '=', result.id)
-				.execute();
-
 			if (items.length > 0) {
-				await trx
-					.insertInto('order_items')
-					.values(items.map((item) => ({ ...item, order_id: result.id })))
-					.execute();
+				for (const item of items) {
+					await trx
+						.insertInto('order_items')
+						.values({
+							...item,
+							order_id: result.id,
+							workflow_stage_id: itemStageId,
+						})
+						.onConflict((oc) =>
+							oc
+								.columns(['order_id', 'platform_line_item_id'])
+								.doUpdateSet({
+									product_name: item.product_name,
+									variant_label: item.variant_label,
+									quantity: item.quantity,
+									unit_price: item.unit_price,
+									image_url: item.image_url,
+									updated_at: new Date(),
+								}),
+						)
+						.execute();
+				}
 			}
 
 			synced++;
@@ -91,10 +131,17 @@ export async function getOrders(userId: string) {
 	const orders = await db
 		.selectFrom('orders')
 		.selectAll('orders')
-		.select(
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
 		)
-		.where('store_id', '=', store.id)
+		.select([
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
+		])
+		.where('orders.store_id', '=', store.id)
 		.orderBy('order_date', 'desc')
 		.execute();
 
@@ -112,18 +159,92 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 
 	const order = await db
 		.selectFrom('orders')
-		.selectAll()
-		.where('id', '=', orderId)
-		.where('store_id', '=', store.id)
+		.selectAll('orders')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
+		.select('order_workflow_stages.name as workflow_stage_name')
+		.where('orders.id', '=', orderId)
+		.where('orders.store_id', '=', store.id)
 		.executeTakeFirst();
 
 	if (!order) return null;
 
 	const items = await db
 		.selectFrom('order_items')
-		.selectAll()
+		.selectAll('order_items')
+		.leftJoin(
+			'order_item_workflow_stages',
+			'order_item_workflow_stages.id',
+			'order_items.workflow_stage_id',
+		)
+		.select('order_item_workflow_stages.name as workflow_stage_name')
 		.where('order_id', '=', order.id)
 		.execute();
 
 	return { ...order, items };
+}
+
+export async function getWorkflowStages(userId: string) {
+	const store = await getStoreForUser(userId);
+
+	const orderStages = await db
+		.selectFrom('order_workflow_stages')
+		.selectAll()
+		.where('store_id', '=', store.id)
+		.orderBy('position', 'asc')
+		.execute();
+
+	const itemStages = await db
+		.selectFrom('order_item_workflow_stages')
+		.selectAll()
+		.where('store_id', '=', store.id)
+		.orderBy('position', 'asc')
+		.execute();
+
+	return { orderStages, itemStages };
+}
+
+export async function updateOrderStage(
+	userId: string,
+	orderId: string,
+	stageId: string,
+) {
+	const store = await getStoreForUser(userId);
+
+	return db
+		.updateTable('orders')
+		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.returningAll()
+		.executeTakeFirst();
+}
+
+export async function updateOrderItemStage(
+	userId: string,
+	orderId: string,
+	itemId: string,
+	stageId: string,
+) {
+	const store = await getStoreForUser(userId);
+
+	const order = await db
+		.selectFrom('orders')
+		.select('id')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!order) return null;
+
+	return db
+		.updateTable('order_items')
+		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.where('id', '=', itemId)
+		.where('order_id', '=', orderId)
+		.returningAll()
+		.executeTakeFirst();
 }

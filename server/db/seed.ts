@@ -83,6 +83,37 @@ async function seed() {
 		)
 		.execute();
 
+	await db.deleteFrom('order_workflow_stages').where('store_id', '=', DEV_STORE_ID).execute();
+	await db.deleteFrom('order_item_workflow_stages').where('store_id', '=', DEV_STORE_ID).execute();
+
+	const orderStages = await db
+		.insertInto('order_workflow_stages')
+		.values([
+			{ store_id: DEV_STORE_ID, name: 'New', position: 0, color: 'gray', is_default: true, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'In Production', position: 1, color: 'blue', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Ready to Ship', position: 2, color: 'orange', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Shipped', position: 3, color: 'green', is_default: false, is_complete: true },
+		])
+		.returning(['id', 'is_default'])
+		.execute();
+
+	const defaultOrderStageId = orderStages.find((s) => s.is_default)!.id;
+
+	const itemStages = await db
+		.insertInto('order_item_workflow_stages')
+		.values([
+			{ store_id: DEV_STORE_ID, name: 'To Cut', position: 0, color: 'gray', is_default: true, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Components Ready', position: 1, color: 'blue', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'In Progress', position: 2, color: 'orange', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Complete', position: 3, color: 'green', is_default: false, is_complete: true },
+		])
+		.returning(['id', 'is_default'])
+		.execute();
+
+	const defaultItemStageId = itemStages.find((s) => s.is_default)!.id;
+
+	console.log('  Workflow stages seeded');
+
 	const materialTypes = [
 		{ name: 'X50 Fabric', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_dimensions: false, position: 0 },
 		{ name: 'Zipper Tape', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 1 },
