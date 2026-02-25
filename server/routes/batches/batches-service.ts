@@ -12,9 +12,13 @@ async function getStoreForUser(userId: string) {
 	return store;
 }
 
-function extractBaseColor(variantLabel: string | null): string {
-	if (!variantLabel) return '';
-	return variantLabel.split('(')[0].trim();
+function extractBaseColor(variantLabel: { name: string; value: string }[] | null): string {
+	if (!variantLabel || variantLabel.length === 0) return '';
+	const colorVariant = variantLabel.find(
+		(v) => v.name.toLowerCase() === 'color',
+	);
+	if (colorVariant) return colorVariant.value.split('(')[0].trim();
+	return variantLabel[0].value.split('(')[0].trim();
 }
 
 export async function getBatches(userId: string) {
@@ -194,7 +198,7 @@ export async function createBatch(
 						batch_order_id: batchOrderMap.get(item.order_id)!,
 						platform_sku: item.platform_sku,
 						product_name: item.product_name,
-						variant_label: item.variant_label,
+						variant_label: item.variant_label ? JSON.stringify(item.variant_label) as any : null,
 						quantity: item.quantity,
 					})),
 				)
@@ -228,7 +232,7 @@ export async function createBatch(
 						batch_id: batch.id,
 						platform_sku: item.platform_sku,
 						product_name: item.product_name,
-						variant_label: item.variant_label,
+						variant_label: item.variant_label ? JSON.stringify(item.variant_label) as any : null,
 						quantity: Number(item.total_quantity),
 					})),
 				)

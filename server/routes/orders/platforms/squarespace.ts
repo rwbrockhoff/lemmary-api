@@ -104,7 +104,10 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 			platform_line_item_id: item.id,
 			platform_sku: item.sku || null,
 			product_name: item.productName,
-			variant_label: item.variantOptions?.[0]?.value || null,
+			variant_label:
+			item.variantOptions?.length > 0
+				? item.variantOptions.map((v) => ({ name: v.optionName, value: v.value }))
+				: null,
 			quantity: item.quantity,
 			unit_price: item.unitPricePaid?.value ?? null,
 			image_url: item.imageUrl || null,

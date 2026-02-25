@@ -96,13 +96,15 @@ export type Order = Selectable<OrderTable>;
 export type NewOrder = Insertable<OrderTable>;
 export type OrderUpdate = Updateable<OrderTable>;
 
+export type VariantOption = { name: string; value: string };
+
 export interface OrderItemTable {
 	id: Generated<string>;
 	order_id: string;
 	platform_line_item_id: string | null;
 	platform_sku: string | null;
 	product_name: string;
-	variant_label: string | null;
+	variant_label: VariantOption[] | null;
 	quantity: number;
 	unit_price: string | null;
 	image_url: string | null;
@@ -183,7 +185,7 @@ export interface ProductionBatchOrderItemTable {
 	batch_order_id: string;
 	platform_sku: string | null;
 	product_name: string;
-	variant_label: string | null;
+	variant_label: VariantOption[] | null;
 	quantity: number;
 	completed: Generated<boolean>;
 	completed_qty: Generated<number>;
@@ -198,7 +200,7 @@ export interface ProductionBatchItemTable {
 	batch_id: string;
 	platform_sku: string | null;
 	product_name: string;
-	variant_label: string | null;
+	variant_label: VariantOption[] | null;
 	quantity: number;
 	completed: Generated<boolean>;
 	created_at: Generated<Date>;

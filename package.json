@@ -21,7 +21,8 @@
 		"format:changed": "git diff --name-only --relative | xargs prettier --write",
 		"migrate:latest": "tsx server/db/migrate.ts",
 		"migrate:down": "tsx server/db/migrate.ts down",
-		"seed": "tsx server/db/seed.ts"
+		"seed": "tsx server/db/seed.ts",
+		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed"
 	},
 	"dependencies": {
 		"@fastify/cors": "^11.2.0",

@@ -12,7 +12,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('platform_line_item_id', 'text')
 		.addColumn('platform_sku', 'text')
 		.addColumn('product_name', 'text', (col) => col.notNull())
-		.addColumn('variant_label', 'text')
+		.addColumn('variant_label', 'jsonb')
 		.addColumn('quantity', 'integer', (col) => col.notNull())
 		.addColumn('unit_price', 'numeric')
 		.addColumn('image_url', 'text')

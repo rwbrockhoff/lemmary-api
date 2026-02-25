@@ -15,9 +15,13 @@ async function getStoreForUser(userId: string) {
 	return store;
 }
 
-function extractBaseColor(variantLabel: string | null): string {
-	if (!variantLabel) return '';
-	return variantLabel.split('(')[0].trim();
+function extractBaseColor(variantLabel: { name: string; value: string }[] | null): string {
+	if (!variantLabel || variantLabel.length === 0) return '';
+	const colorVariant = variantLabel.find(
+		(v) => v.name.toLowerCase() === 'color',
+	);
+	if (colorVariant) return colorVariant.value.split('(')[0].trim();
+	return variantLabel[0].value.split('(')[0].trim();
 }
 
 export async function getProductionSummary(userId: string) {
@@ -90,7 +94,7 @@ export async function getMaterialsReport(userId: string) {
 	type Mismatch = {
 		platform_sku: string | null;
 		product_name: string;
-		variant_label: string | null;
+		variant_label: { name: string; value: string }[] | null;
 	};
 
 	const fabricRaw: FabricEntry[] = [];

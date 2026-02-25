@@ -81,10 +81,15 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
 
 			if (items.length > 0) {
 				for (const item of items) {
+					const variantJson = item.variant_label
+						? JSON.stringify(item.variant_label)
+						: null;
+
 					await trx
 						.insertInto('order_items')
 						.values({
 							...item,
+							variant_label: variantJson as any,
 							order_id: result.id,
 							workflow_stage_id: itemStageId,
 						})
@@ -93,7 +98,7 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
 								.columns(['order_id', 'platform_line_item_id'])
 								.doUpdateSet({
 									product_name: item.product_name,
-									variant_label: item.variant_label,
+									variant_label: variantJson as any,
 									quantity: item.quantity,
 									unit_price: item.unit_price,
 									image_url: item.image_url,
