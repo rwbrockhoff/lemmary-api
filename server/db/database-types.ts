@@ -35,6 +35,7 @@ export interface StoreTable {
 	store_name: string;
 	api_key: string;
 	platform_config: Record<string, unknown> | null;
+	lead_time_days: number | null;
 	last_synced_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
@@ -83,6 +84,7 @@ export interface OrderTable {
 	customer_email: string | null;
 	order_date: Date;
 	fulfillment_status: Generated<string>;
+	due_date: Date | null;
 	workflow_stage_id: string | null;
 	subtotal: string | null;
 	shipping_total: string | null;

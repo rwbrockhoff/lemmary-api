@@ -70,6 +70,7 @@ async function seed() {
 			platform: 'squarespace',
 			store_name: 'Salka Designs',
 			api_key: process.env.SQUARESPACE_API_KEY ?? '',
+			lead_time_days: 21,
 			platform_config: {
 				base_url: 'https://api.squarespace.com/1.0',
 				api_version: '1.0',

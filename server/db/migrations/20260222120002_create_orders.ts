@@ -23,6 +23,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('workflow_stage_id', 'uuid', (col) =>
 			col.references('order_workflow_stages.id').onDelete('set null'),
 		)
+		.addColumn('due_date', 'timestamptz')
 		.addColumn('shipping_method', 'text')
 		.addColumn('order_notes', 'text')
 		.addColumn('order_url', 'text')

@@ -51,19 +51,29 @@ async function getDefaultStageIds(storeId: string) {
 	};
 }
 
-async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
+function calculateDueDate(orderDate: Date, leadTimeDays: number | null): Date | null {
+	if (!leadTimeDays) return null;
+	const due = new Date(orderDate);
+	due.setDate(due.getDate() + leadTimeDays);
+	return due;
+}
+
+async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTimeDays: number | null) {
 	const { orderStageId, itemStageId } = await getDefaultStageIds(storeId);
 
 	return db.transaction().execute(async (trx) => {
 		let synced = 0;
 
 		for (const { order, items } of orders) {
+			const dueDate = calculateDueDate(order.order_date, leadTimeDays);
+
 			const result = await trx
 				.insertInto('orders')
 				.values({
 					...order,
 					store_id: storeId,
 					workflow_stage_id: orderStageId,
+					due_date: dueDate,
 				})
 				.onConflict((oc) =>
 					oc.columns(['store_id', 'platform_order_id']).doUpdateSet({
@@ -121,7 +131,7 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
 export async function syncOrders(userId: string) {
 	const store = await getStoreForUser(userId);
 	const orders = await fetchOrdersFromPlatform(store);
-	const synced = await upsertOrders(store.id, orders);
+	const synced = await upsertOrders(store.id, orders, store.lead_time_days);
 
 	await db
 		.updateTable('stores')

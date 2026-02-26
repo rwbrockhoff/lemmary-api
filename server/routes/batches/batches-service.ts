@@ -73,6 +73,11 @@ export async function getBatch(userId: string, batchId: string) {
 	const orders = await db
 		.selectFrom('production_batch_orders')
 		.innerJoin('orders', 'orders.id', 'production_batch_orders.order_id')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
 		.select([
 			'production_batch_orders.id',
 			'production_batch_orders.order_id',
@@ -80,7 +85,10 @@ export async function getBatch(userId: string, batchId: string) {
 			'orders.order_number',
 			'orders.customer_name',
 			'orders.order_date',
+			'orders.due_date',
 			'orders.grand_total',
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
 		])
 		.where('production_batch_orders.batch_id', '=', batchId)
 		.orderBy('orders.order_date', 'asc')
