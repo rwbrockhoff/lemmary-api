@@ -73,6 +73,8 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[]) {
 						subtotal: order.subtotal,
 						shipping_total: order.shipping_total,
 						grand_total: order.grand_total,
+						shipping_method: order.shipping_method,
+						order_url: order.order_url,
 						updated_at: new Date(),
 					}),
 				)
@@ -187,6 +189,7 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		)
 		.select('order_item_workflow_stages.name as workflow_stage_name')
 		.where('order_id', '=', order.id)
+		.orderBy('order_items.created_at', 'asc')
 		.execute();
 
 	return { ...order, items };
@@ -222,6 +225,22 @@ export async function updateOrderStage(
 	return db
 		.updateTable('orders')
 		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.returningAll()
+		.executeTakeFirst();
+}
+
+export async function updateOrderNotes(
+	userId: string,
+	orderId: string,
+	notes: string,
+) {
+	const store = await getStoreForUser(userId);
+
+	return db
+		.updateTable('orders')
+		.set({ order_notes: notes, updated_at: new Date() })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()

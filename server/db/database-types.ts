@@ -87,6 +87,9 @@ export interface OrderTable {
 	subtotal: string | null;
 	shipping_total: string | null;
 	grand_total: string | null;
+	shipping_method: string | null;
+	order_notes: string | null;
+	order_url: string | null;
 	currency: Generated<string>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

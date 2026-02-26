@@ -23,6 +23,9 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('workflow_stage_id', 'uuid', (col) =>
 			col.references('order_workflow_stages.id').onDelete('set null'),
 		)
+		.addColumn('shipping_method', 'text')
+		.addColumn('order_notes', 'text')
+		.addColumn('order_url', 'text')
 		.addColumn('currency', 'text', (col) => col.defaultTo('USD').notNull())
 		.addColumn('created_at', 'timestamptz', (col) =>
 			col.defaultTo(sql`now()`).notNull(),

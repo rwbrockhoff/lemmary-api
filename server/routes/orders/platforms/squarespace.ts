@@ -27,6 +27,14 @@ type SquarespaceLineItem = {
 	imageUrl: string;
 };
 
+type SquarespaceInternalNote = {
+	content: string;
+};
+
+type SquarespaceShippingLine = {
+	method: string;
+};
+
 type SquarespaceOrder = {
 	id: string;
 	orderNumber: string;
@@ -38,6 +46,8 @@ type SquarespaceOrder = {
 	shippingTotal: SquarespaceMoneyValue;
 	grandTotal: SquarespaceMoneyValue;
 	lineItems: SquarespaceLineItem[];
+	internalNotes: SquarespaceInternalNote[];
+	shippingLines: SquarespaceShippingLine[];
 };
 
 type SquarespaceResponse = {
@@ -97,6 +107,12 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 		shipping_total: raw.shippingTotal?.value ?? null,
 		grand_total: raw.grandTotal?.value ?? null,
 		currency: raw.grandTotal?.currency ?? 'USD',
+		shipping_method: raw.shippingLines?.[0]?.method ?? null,
+		order_notes:
+			raw.internalNotes?.length > 0
+				? raw.internalNotes.map((n) => n.content).join('\n')
+				: null,
+		order_url: `https://salka-designs.squarespace.com/commerce/orders/${raw.id}/authenticated`,
 	};
 
 	const items: Omit<NewOrderItem, 'order_id'>[] = raw.lineItems.map(

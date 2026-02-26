@@ -11,6 +11,7 @@ import {
 	getOrderWithItems,
 	getWorkflowStages,
 	updateOrderStage,
+	updateOrderNotes,
 	updateOrderItemStage,
 } from './orders-service.js';
 
@@ -95,6 +96,30 @@ export async function handleUpdateOrderStage(
 		return successResponse(reply, order);
 	} catch (error) {
 		request.log.error(error, 'Failed to update order stage');
+		return internalError(reply);
+	}
+}
+
+export async function handleUpdateOrderNotes(
+	request: FastifyRequest<{
+		Params: { orderId: string };
+		Body: { notes: string };
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const { notes } = request.body;
+
+		const order = await updateOrderNotes(
+			request.userId,
+			request.params.orderId,
+			notes,
+		);
+
+		if (!order) return notFound(reply, 'Order not found');
+		return successResponse(reply, order);
+	} catch (error) {
+		request.log.error(error, 'Failed to update order notes');
 		return internalError(reply);
 	}
 }
