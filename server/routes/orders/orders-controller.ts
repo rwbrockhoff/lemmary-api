@@ -13,6 +13,7 @@ import {
 	updateOrderStage,
 	updateOrderNotes,
 	updateOrderItemStage,
+	getWorkflowBoard,
 } from './orders-service.js';
 
 export async function handleSyncOrders(
@@ -120,6 +121,19 @@ export async function handleUpdateOrderNotes(
 		return successResponse(reply, order);
 	} catch (error) {
 		request.log.error(error, 'Failed to update order notes');
+		return internalError(reply);
+	}
+}
+
+export async function handleGetWorkflowBoard(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	try {
+		const board = await getWorkflowBoard(request.userId);
+		return successResponse(reply, board);
+	} catch (error) {
+		request.log.error(error, 'Failed to fetch workflow board');
 		return internalError(reply);
 	}
 }

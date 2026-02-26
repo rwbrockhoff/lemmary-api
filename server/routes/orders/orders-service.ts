@@ -243,6 +243,69 @@ export async function updateOrderNotes(
 		.executeTakeFirst();
 }
 
+export async function getWorkflowBoard(userId: string) {
+	const store = await getStoreForUser(userId);
+
+	const orders = await db
+		.selectFrom('orders')
+		.selectAll('orders')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
+		.select([
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
+			sql<string | null>`(
+				select pb.name
+				from production_batch_orders pbo
+				inner join production_batches pb on pb.id = pbo.batch_id
+				where pbo.order_id = orders.id
+				and pb.status = 'active'
+				order by pb.created_at desc
+				limit 1
+			)`.as('batch_name'),
+			sql<string | null>`(
+				select pb.id
+				from production_batch_orders pbo
+				inner join production_batches pb on pb.id = pbo.batch_id
+				where pbo.order_id = orders.id
+				and pb.status = 'active'
+				order by pb.created_at desc
+				limit 1
+			)`.as('batch_id'),
+		])
+		.where('orders.store_id', '=', store.id)
+		.orderBy('order_date', 'asc')
+		.execute();
+
+	const stages = await db
+		.selectFrom('order_workflow_stages')
+		.selectAll()
+		.where('store_id', '=', store.id)
+		.orderBy('position', 'asc')
+		.execute();
+
+	const activeBatches = await db
+		.selectFrom('production_batches')
+		.select(['id', 'name'])
+		.where('store_id', '=', store.id)
+		.where('status', '=', 'active')
+		.orderBy('created_at', 'desc')
+		.execute();
+
+	return {
+		orders: orders.map((row) => ({
+			...row,
+			item_count: Number(row.item_count),
+		})),
+		stages,
+		activeBatches,
+	};
+}
+
 export async function updateOrderItemStage(
 	userId: string,
 	orderId: string,
