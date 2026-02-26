@@ -1,28 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
-
-async function getStoreForUser(userId: string) {
-	const store = await db
-		.selectFrom('stores')
-		.selectAll()
-		.where('user_id', '=', userId)
-		.executeTakeFirst();
-
-	if (!store) {
-		throw new Error('No store found for user');
-	}
-
-	return store;
-}
-
-function extractBaseColor(variantLabel: { name: string; value: string }[] | null): string {
-	if (!variantLabel || variantLabel.length === 0) return '';
-	const colorVariant = variantLabel.find(
-		(v) => v.name.toLowerCase() === 'color',
-	);
-	if (colorVariant) return colorVariant.value.split('(')[0].trim();
-	return variantLabel[0].value.split('(')[0].trim();
-}
+import { getStoreForUser } from '../../utils/store.js';
+import { extractBaseColor } from '../../utils/variants.js';
 
 export async function getProductionSummary(userId: string) {
 	const store = await getStoreForUser(userId);

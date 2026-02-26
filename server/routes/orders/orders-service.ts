@@ -1,24 +1,12 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import type { Store } from '../../db/database-types.js';
+import { getStoreForUser } from '../../utils/store.js';
+import { toJsonb } from '../../utils/json.js';
 import {
 	fetchSquarespaceOrders,
 	type NormalizedOrder,
 } from './platforms/squarespace.js';
-
-async function getStoreForUser(userId: string): Promise<Store> {
-	const store = await db
-		.selectFrom('stores')
-		.selectAll()
-		.where('user_id', '=', userId)
-		.executeTakeFirst();
-
-	if (!store) {
-		throw new Error('No store found for user');
-	}
-
-	return store;
-}
 
 async function fetchOrdersFromPlatform(
 	store: Store,
@@ -93,15 +81,13 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTime
 
 			if (items.length > 0) {
 				for (const item of items) {
-					const variantJson = item.variant_label
-						? JSON.stringify(item.variant_label)
-						: null;
+					const variantJson = toJsonb(item.variant_label);
 
 					await trx
 						.insertInto('order_items')
 						.values({
 							...item,
-							variant_label: variantJson as any,
+							variant_label: variantJson,
 							order_id: result.id,
 							workflow_stage_id: itemStageId,
 						})
@@ -110,7 +96,7 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTime
 								.columns(['order_id', 'platform_line_item_id'])
 								.doUpdateSet({
 									product_name: item.product_name,
-									variant_label: variantJson as any,
+									variant_label: variantJson,
 									quantity: item.quantity,
 									unit_price: item.unit_price,
 									image_url: item.image_url,

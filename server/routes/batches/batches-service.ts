@@ -1,25 +1,8 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
-
-async function getStoreForUser(userId: string) {
-	const store = await db
-		.selectFrom('stores')
-		.selectAll()
-		.where('user_id', '=', userId)
-		.executeTakeFirst();
-
-	if (!store) throw new Error('No store found for user');
-	return store;
-}
-
-function extractBaseColor(variantLabel: { name: string; value: string }[] | null): string {
-	if (!variantLabel || variantLabel.length === 0) return '';
-	const colorVariant = variantLabel.find(
-		(v) => v.name.toLowerCase() === 'color',
-	);
-	if (colorVariant) return colorVariant.value.split('(')[0].trim();
-	return variantLabel[0].value.split('(')[0].trim();
-}
+import { getStoreForUser } from '../../utils/store.js';
+import { extractBaseColor } from '../../utils/variants.js';
+import { toJsonb } from '../../utils/json.js';
 
 export async function getBatches(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -206,7 +189,7 @@ export async function createBatch(
 						batch_order_id: batchOrderMap.get(item.order_id)!,
 						platform_sku: item.platform_sku,
 						product_name: item.product_name,
-						variant_label: item.variant_label ? JSON.stringify(item.variant_label) as any : null,
+						variant_label: toJsonb(item.variant_label),
 						quantity: item.quantity,
 					})),
 				)
@@ -240,7 +223,7 @@ export async function createBatch(
 						batch_id: batch.id,
 						platform_sku: item.platform_sku,
 						product_name: item.product_name,
-						variant_label: item.variant_label ? JSON.stringify(item.variant_label) as any : null,
+						variant_label: toJsonb(item.variant_label),
 						quantity: Number(item.total_quantity),
 					})),
 				)
