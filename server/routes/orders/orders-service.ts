@@ -243,10 +243,8 @@ export async function updateOrderNotes(
 		.executeTakeFirst();
 }
 
-export async function getWorkflowBoard(userId: string) {
-	const store = await getStoreForUser(userId);
-
-	const orders = await db
+function workflowOrdersBase(storeId: string) {
+	return db
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
@@ -277,9 +275,24 @@ export async function getWorkflowBoard(userId: string) {
 				limit 1
 			)`.as('batch_id'),
 		])
-		.where('orders.store_id', '=', store.id)
+		.where('orders.store_id', '=', storeId);
+}
+
+export async function getWorkflowBoard(userId: string) {
+	const store = await getStoreForUser(userId);
+
+	const openOrders = await workflowOrdersBase(store.id)
+		.where('order_workflow_stages.is_complete', '!=', true)
 		.orderBy('order_date', 'asc')
 		.execute();
+
+	const completedOrders = await workflowOrdersBase(store.id)
+		.where('order_workflow_stages.is_complete', '=', true)
+		.orderBy('orders.updated_at', 'desc')
+		.limit(10)
+		.execute();
+
+	const orders = [...openOrders, ...completedOrders];
 
 	const stages = await db
 		.selectFrom('order_workflow_stages')
