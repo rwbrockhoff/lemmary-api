@@ -95,8 +95,9 @@ export async function handleUpdateBatch(
 	try {
 		const { status, name } = request.body;
 
-		if (status && !['active', 'completed'].includes(status)) {
-			return badRequest(reply, 'Status must be active or completed');
+		const validStatuses = ['Active', 'Up Next', 'Paused', 'Completed'];
+		if (status && !validStatuses.includes(status)) {
+			return badRequest(reply, `Status must be one of: ${validStatuses.join(', ')}`);
 		}
 
 		if (name !== undefined && !name.trim()) {

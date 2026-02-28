@@ -357,7 +357,7 @@ export async function updateBatch(
 
 	if (updates.status) {
 		set.status = updates.status;
-		set.completed_at = updates.status === 'completed' ? new Date() : null;
+		set.completed_at = updates.status === 'Completed' ? new Date() : null;
 	}
 
 	if (updates.name) {
