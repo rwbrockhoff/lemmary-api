@@ -1,4 +1,6 @@
-export function toJsonb<T>(value: T | null): string | null {
+import { RawBuilder, sql } from 'kysely';
+
+export function toJsonb<T>(value: T | null): RawBuilder<T> | null {
 	if (value == null) return null;
-	return JSON.stringify(value) as any;
+	return sql`${JSON.stringify(value)}::jsonb`;
 }
