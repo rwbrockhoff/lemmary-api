@@ -5,6 +5,7 @@ import { authMiddleware } from './middleware/auth-middleware.js';
 import { ordersRoutes } from './routes/orders/orders-routes.js';
 import { reportsRoutes } from './routes/reports/reports-routes.js';
 import { batchesRoutes } from './routes/batches/batches-routes.js';
+import { authRoutes } from './routes/auth/auth-routes.js';
 
 export const buildApp = () => {
 	const app = Fastify({ logger: true });
@@ -21,6 +22,7 @@ export const buildApp = () => {
 		return { status: 'ok' };
 	});
 
+	app.register(authRoutes);
 	app.register(ordersRoutes);
 	app.register(reportsRoutes);
 	app.register(batchesRoutes);
