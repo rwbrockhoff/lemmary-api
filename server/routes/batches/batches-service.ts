@@ -142,6 +142,7 @@ export async function createBatch(
 		.select('id')
 		.where('id', 'in', orderIds)
 		.where('store_id', '=', store.id)
+		.where('fulfillment_status', '=', 'pending')
 		.execute();
 
 	if (orders.length !== orderIds.length) {

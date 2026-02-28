@@ -12,7 +12,7 @@ async function fetchOrdersFromPlatform(
 	store: Store,
 ): Promise<NormalizedOrder[]> {
 	if (store.platform === 'squarespace') {
-		return fetchSquarespaceOrders(store.api_key);
+		return fetchSquarespaceOrders(store.api_key, store.last_synced_at);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
@@ -145,6 +145,7 @@ export async function getOrders(userId: string) {
 			'order_workflow_stages.color as workflow_stage_color',
 		])
 		.where('orders.store_id', '=', store.id)
+		.where('orders.fulfillment_status', '=', 'pending')
 		.orderBy('order_date', 'desc')
 		.execute();
 
@@ -275,7 +276,8 @@ function workflowOrdersBase(storeId: string) {
 				limit 1
 			)`.as('batch_id'),
 		])
-		.where('orders.store_id', '=', storeId);
+		.where('orders.store_id', '=', storeId)
+		.where('orders.fulfillment_status', '=', 'pending');
 }
 
 export async function getWorkflowBoard(userId: string) {

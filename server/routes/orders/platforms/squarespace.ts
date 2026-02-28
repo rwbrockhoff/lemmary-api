@@ -66,15 +66,23 @@ export type NormalizedOrder = {
 
 async function fetchPage(
 	apiKey: string,
-	params?: { fulfillmentStatus?: string; cursor?: string },
+	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string },
 ): Promise<SquarespaceResponse> {
-	let url = BASE_URL;
+	const searchParams = new URLSearchParams();
 
 	if (params?.cursor) {
-		url += `?cursor=${params.cursor}`;
-	} else if (params?.fulfillmentStatus) {
-		url += `?fulfillmentStatus=${params.fulfillmentStatus}`;
+		searchParams.set('cursor', params.cursor);
+	} else {
+		if (params?.fulfillmentStatus) {
+			searchParams.set('fulfillmentStatus', params.fulfillmentStatus);
+		}
+		if (params?.modifiedAfter) {
+			searchParams.set('modifiedAfter', params.modifiedAfter);
+		}
 	}
+
+	const query = searchParams.toString();
+	const url = query ? `${BASE_URL}?${query}` : BASE_URL;
 
 	const response = await fetch(url, {
 		headers: {
@@ -133,16 +141,17 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 	return { order, items };
 }
 
-export async function fetchSquarespaceOrders(
+async function fetchAllPages(
 	apiKey: string,
-	fulfillmentStatus = 'PENDING',
+	options: { fulfillmentStatus?: string; modifiedAfter?: string },
 ): Promise<NormalizedOrder[]> {
 	const allOrders: NormalizedOrder[] = [];
 	let cursor: string | null = null;
 
 	do {
 		const page = await fetchPage(apiKey, {
-			fulfillmentStatus: cursor ? undefined : fulfillmentStatus,
+			fulfillmentStatus: cursor ? undefined : options.fulfillmentStatus,
+			modifiedAfter: cursor ? undefined : options.modifiedAfter,
 			cursor: cursor ?? undefined,
 		});
 
@@ -154,4 +163,22 @@ export async function fetchSquarespaceOrders(
 	} while (cursor);
 
 	return allOrders;
+}
+
+export async function fetchSquarespaceOrders(
+	apiKey: string,
+	lastSyncedAt: Date | null,
+): Promise<NormalizedOrder[]> {
+	if (!lastSyncedAt) {
+		return fetchAllPages(apiKey, {});
+	}
+
+	const modifiedAfter = lastSyncedAt.toISOString();
+
+	const [pending, fulfilled] = await Promise.all([
+		fetchAllPages(apiKey, { fulfillmentStatus: 'PENDING' }),
+		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter }),
+	]);
+
+	return [...pending, ...fulfilled];
 }
