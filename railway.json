@@ -1,6 +1,6 @@
 {
 	"$schema": "https://railway.com/railway.schema.json",
 	"deploy": {
-		"startCommand": "npm run build && npm run start"
+		"startCommand": "ls -la && ls -la dist 2>/dev/null || echo 'NO DIST FOLDER' && npm run build && ls -la dist && npm run start"
 	}
 }
