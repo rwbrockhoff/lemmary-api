@@ -164,6 +164,7 @@ export interface ProductionBatchTable {
 	store_id: string;
 	name: string;
 	status: Generated<string>;
+	due_date: Date | null;
 	completed_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
@@ -218,6 +219,7 @@ export interface ProductionBatchMaterialTable {
 	id: Generated<string>;
 	batch_id: string;
 	category: string;
+	product_name: string | null;
 	material_type: string | null;
 	piece: string;
 	color: string | null;

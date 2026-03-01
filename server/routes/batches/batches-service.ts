@@ -249,6 +249,7 @@ export async function createBatch(
 		type MaterialSnapshot = {
 			batch_id: string;
 			category: string;
+			product_name: string | null;
 			material_type: string | null;
 			piece: string;
 			color: string | null;
@@ -279,6 +280,7 @@ export async function createBatch(
 					materialsRaw.push({
 						batch_id: batch.id,
 						category: 'fabric',
+						product_name: item.product_name,
 						material_type: null,
 						piece: bom.piece,
 						color: bom.color,
@@ -290,6 +292,7 @@ export async function createBatch(
 					materialsRaw.push({
 						batch_id: batch.id,
 						category: 'linear',
+						product_name: item.product_name,
 						material_type: bom.material_type,
 						piece: bom.piece,
 						color: null,
@@ -300,6 +303,7 @@ export async function createBatch(
 					materialsRaw.push({
 						batch_id: batch.id,
 						category: 'hardware',
+						product_name: item.product_name,
 						material_type: null,
 						piece: bom.piece,
 						color: null,
