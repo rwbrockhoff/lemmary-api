@@ -66,7 +66,7 @@ export type NormalizedOrder = {
 
 async function fetchPage(
 	apiKey: string,
-	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string },
+	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string; modifiedBefore?: string },
 ): Promise<SquarespaceResponse> {
 	const searchParams = new URLSearchParams();
 
@@ -78,6 +78,7 @@ async function fetchPage(
 		}
 		if (params?.modifiedAfter) {
 			searchParams.set('modifiedAfter', params.modifiedAfter);
+			searchParams.set('modifiedBefore', params.modifiedBefore ?? new Date().toISOString());
 		}
 	}
 
@@ -143,7 +144,7 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 
 async function fetchAllPages(
 	apiKey: string,
-	options: { fulfillmentStatus?: string; modifiedAfter?: string },
+	options: { fulfillmentStatus?: string; modifiedAfter?: string; modifiedBefore?: string },
 ): Promise<NormalizedOrder[]> {
 	const allOrders: NormalizedOrder[] = [];
 	let cursor: string | null = null;
@@ -152,6 +153,7 @@ async function fetchAllPages(
 		const page = await fetchPage(apiKey, {
 			fulfillmentStatus: cursor ? undefined : options.fulfillmentStatus,
 			modifiedAfter: cursor ? undefined : options.modifiedAfter,
+			modifiedBefore: cursor ? undefined : options.modifiedBefore,
 			cursor: cursor ?? undefined,
 		});
 
@@ -174,10 +176,11 @@ export async function fetchSquarespaceOrders(
 	}
 
 	const modifiedAfter = lastSyncedAt.toISOString();
+	const modifiedBefore = new Date().toISOString();
 
 	const [pending, fulfilled] = await Promise.all([
 		fetchAllPages(apiKey, { fulfillmentStatus: 'PENDING' }),
-		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter }),
+		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter, modifiedBefore }),
 	]);
 
 	return [...pending, ...fulfilled];
