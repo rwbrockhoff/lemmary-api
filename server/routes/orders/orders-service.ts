@@ -182,6 +182,11 @@ export async function getOrdersWithItems(userId: string) {
 		)
 		.select([
 			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			sql<string>`(
+				select count(*) from order_items oi
+				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
+				where oi.order_id = orders.id and s.is_complete = true
+			)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 			sql<string | null>`(
@@ -217,11 +222,15 @@ export async function getOrdersWithItems(userId: string) {
 		itemsByOrder.set(item.order_id, group);
 	}
 
-	return orders.map((row) => ({
-		...row,
-		item_count: Number(row.item_count),
-		items: itemsByOrder.get(row.id) ?? [],
-	}));
+	return {
+		orders: orders.map((row) => ({
+			...row,
+			item_count: Number(row.item_count),
+			items_completed: Number(row.items_completed),
+			items: itemsByOrder.get(row.id) ?? [],
+		})),
+		lastSyncedAt: store.last_synced_at,
+	};
 }
 
 export async function getOrderWithItems(userId: string, orderId: string) {
