@@ -10,7 +10,8 @@ import {
 	getBatches,
 	getBatch,
 	createBatch,
-	updateBatchStatus,
+	updateBatch,
+	deleteBatch,
 	toggleOrderComplete,
 	toggleItemComplete,
 	toggleMaterialComplete,
@@ -87,27 +88,54 @@ export async function handleCreateBatch(
 export async function handleUpdateBatch(
 	request: FastifyRequest<{
 		Params: { batchId: string };
-		Body: { status: string };
+		Body: { status?: string; name?: string };
 	}>,
 	reply: FastifyReply,
 ) {
 	try {
-		const { status } = request.body;
+		const { status, name } = request.body;
 
-		if (!['active', 'completed'].includes(status)) {
-			return badRequest(reply, 'Status must be active or completed');
+		const validStatuses = ['Active', 'Up Next', 'Paused', 'Completed'];
+		if (status && !validStatuses.includes(status)) {
+			return badRequest(reply, `Status must be one of: ${validStatuses.join(', ')}`);
 		}
 
-		const batch = await updateBatchStatus(
+		if (name !== undefined && !name.trim()) {
+			return badRequest(reply, 'Batch name cannot be empty');
+		}
+
+		if (!status && !name) {
+			return badRequest(reply, 'No updates provided');
+		}
+
+		const batch = await updateBatch(
 			request.userId,
 			request.params.batchId,
-			status,
+			{ status, name },
 		);
 
 		if (!batch) return notFound(reply, 'Batch not found');
 		return successResponse(reply, batch);
 	} catch (error) {
 		request.log.error(error, 'Failed to update batch');
+		return internalError(reply);
+	}
+}
+
+export async function handleDeleteBatch(
+	request: FastifyRequest<{ Params: { batchId: string } }>,
+	reply: FastifyReply,
+) {
+	try {
+		const deleted = await deleteBatch(
+			request.userId,
+			request.params.batchId,
+		);
+
+		if (!deleted) return notFound(reply, 'Batch not found');
+		return successResponse(reply, deleted);
+	} catch (error) {
+		request.log.error(error, 'Failed to delete batch');
 		return internalError(reply);
 	}
 }

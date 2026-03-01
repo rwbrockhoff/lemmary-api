@@ -3,6 +3,8 @@ import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 export interface Database {
 	users: UserTable;
 	stores: StoreTable;
+	order_workflow_stages: OrderWorkflowStageTable;
+	order_item_workflow_stages: OrderItemWorkflowStageTable;
 	orders: OrderTable;
 	order_items: OrderItemTable;
 	bom_material_types: BomMaterialTypeTable;
@@ -33,6 +35,8 @@ export interface StoreTable {
 	store_name: string;
 	api_key: string;
 	platform_config: Record<string, unknown> | null;
+	lead_time_days: number | null;
+	last_synced_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
@@ -40,6 +44,36 @@ export interface StoreTable {
 export type Store = Selectable<StoreTable>;
 export type NewStore = Insertable<StoreTable>;
 export type StoreUpdate = Updateable<StoreTable>;
+
+export interface OrderWorkflowStageTable {
+	id: Generated<string>;
+	store_id: string;
+	name: string;
+	position: number;
+	color: string | null;
+	is_default: Generated<boolean>;
+	is_complete: Generated<boolean>;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type OrderWorkflowStage = Selectable<OrderWorkflowStageTable>;
+export type NewOrderWorkflowStage = Insertable<OrderWorkflowStageTable>;
+
+export interface OrderItemWorkflowStageTable {
+	id: Generated<string>;
+	store_id: string;
+	name: string;
+	position: number;
+	color: string | null;
+	is_default: Generated<boolean>;
+	is_complete: Generated<boolean>;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type OrderItemWorkflowStage = Selectable<OrderItemWorkflowStageTable>;
+export type NewOrderItemWorkflowStage = Insertable<OrderItemWorkflowStageTable>;
 
 export interface OrderTable {
 	id: Generated<string>;
@@ -50,9 +84,14 @@ export interface OrderTable {
 	customer_email: string | null;
 	order_date: Date;
 	fulfillment_status: Generated<string>;
+	due_date: Date | null;
+	workflow_stage_id: string | null;
 	subtotal: string | null;
 	shipping_total: string | null;
 	grand_total: string | null;
+	shipping_method: string | null;
+	order_notes: string | null;
+	order_url: string | null;
 	currency: Generated<string>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
@@ -62,15 +101,19 @@ export type Order = Selectable<OrderTable>;
 export type NewOrder = Insertable<OrderTable>;
 export type OrderUpdate = Updateable<OrderTable>;
 
+export type VariantOption = { name: string; value: string };
+
 export interface OrderItemTable {
 	id: Generated<string>;
 	order_id: string;
+	platform_line_item_id: string | null;
 	platform_sku: string | null;
 	product_name: string;
-	variant_label: string | null;
+	variant_label: VariantOption[] | null;
 	quantity: number;
 	unit_price: string | null;
 	image_url: string | null;
+	workflow_stage_id: string | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
@@ -147,7 +190,7 @@ export interface ProductionBatchOrderItemTable {
 	batch_order_id: string;
 	platform_sku: string | null;
 	product_name: string;
-	variant_label: string | null;
+	variant_label: VariantOption[] | null;
 	quantity: number;
 	completed: Generated<boolean>;
 	completed_qty: Generated<number>;
@@ -162,7 +205,7 @@ export interface ProductionBatchItemTable {
 	batch_id: string;
 	platform_sku: string | null;
 	product_name: string;
-	variant_label: string | null;
+	variant_label: VariantOption[] | null;
 	quantity: number;
 	completed: Generated<boolean>;
 	created_at: Generated<Date>;

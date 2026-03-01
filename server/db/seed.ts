@@ -70,6 +70,7 @@ async function seed() {
 			platform: 'squarespace',
 			store_name: 'Salka Designs',
 			api_key: process.env.SQUARESPACE_API_KEY ?? '',
+			lead_time_days: 21,
 			platform_config: {
 				base_url: 'https://api.squarespace.com/1.0',
 				api_version: '1.0',
@@ -82,6 +83,33 @@ async function seed() {
 			}),
 		)
 		.execute();
+
+	await db.deleteFrom('order_workflow_stages').where('store_id', '=', DEV_STORE_ID).execute();
+	await db.deleteFrom('order_item_workflow_stages').where('store_id', '=', DEV_STORE_ID).execute();
+
+	await db
+		.insertInto('order_workflow_stages')
+		.values([
+			{ store_id: DEV_STORE_ID, name: 'Order Placed', position: 0, color: 'gray', is_default: true, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'In Progress 🔄', position: 1, color: 'blue', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Order Finished 🙌🏻', position: 2, color: 'purple', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Ready to Ship 📦', position: 3, color: 'purple', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Fulfilled 👏🏻', position: 4, color: 'green', is_default: false, is_complete: true },
+		])
+		.execute();
+
+	await db
+		.insertInto('order_item_workflow_stages')
+		.values([
+			{ store_id: DEV_STORE_ID, name: 'Not Started', position: 0, color: 'gray', is_default: true, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Fabric Cut ✂️', position: 1, color: 'blue', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Components Ready 📎', position: 2, color: 'blue', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'In Progress 🔄', position: 3, color: 'purple', is_default: false, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'Done 👏🏻', position: 4, color: 'green', is_default: false, is_complete: true },
+		])
+		.execute();
+
+	console.log('  Workflow stages seeded');
 
 	const materialTypes = [
 		{ name: 'X50 Fabric', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_dimensions: false, position: 0 },

@@ -1,24 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
-
-async function getStoreForUser(userId: string) {
-	const store = await db
-		.selectFrom('stores')
-		.selectAll()
-		.where('user_id', '=', userId)
-		.executeTakeFirst();
-
-	if (!store) {
-		throw new Error('No store found for user');
-	}
-
-	return store;
-}
-
-function extractBaseColor(variantLabel: string | null): string {
-	if (!variantLabel) return '';
-	return variantLabel.split('(')[0].trim();
-}
+import { getStoreForUser } from '../../utils/store.js';
+import { extractBaseColor } from '../../utils/variants.js';
 
 export async function getProductionSummary(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -90,7 +73,7 @@ export async function getMaterialsReport(userId: string) {
 	type Mismatch = {
 		platform_sku: string | null;
 		product_name: string;
-		variant_label: string | null;
+		variant_label: { name: string; value: string }[] | null;
 	};
 
 	const fabricRaw: FabricEntry[] = [];

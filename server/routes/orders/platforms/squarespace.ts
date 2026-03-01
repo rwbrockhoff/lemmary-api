@@ -27,6 +27,14 @@ type SquarespaceLineItem = {
 	imageUrl: string;
 };
 
+type SquarespaceInternalNote = {
+	content: string;
+};
+
+type SquarespaceShippingLine = {
+	method: string;
+};
+
 type SquarespaceOrder = {
 	id: string;
 	orderNumber: string;
@@ -38,6 +46,8 @@ type SquarespaceOrder = {
 	shippingTotal: SquarespaceMoneyValue;
 	grandTotal: SquarespaceMoneyValue;
 	lineItems: SquarespaceLineItem[];
+	internalNotes: SquarespaceInternalNote[];
+	shippingLines: SquarespaceShippingLine[];
 };
 
 type SquarespaceResponse = {
@@ -56,15 +66,23 @@ export type NormalizedOrder = {
 
 async function fetchPage(
 	apiKey: string,
-	params?: { fulfillmentStatus?: string; cursor?: string },
+	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string },
 ): Promise<SquarespaceResponse> {
-	let url = BASE_URL;
+	const searchParams = new URLSearchParams();
 
 	if (params?.cursor) {
-		url += `?cursor=${params.cursor}`;
-	} else if (params?.fulfillmentStatus) {
-		url += `?fulfillmentStatus=${params.fulfillmentStatus}`;
+		searchParams.set('cursor', params.cursor);
+	} else {
+		if (params?.fulfillmentStatus) {
+			searchParams.set('fulfillmentStatus', params.fulfillmentStatus);
+		}
+		if (params?.modifiedAfter) {
+			searchParams.set('modifiedAfter', params.modifiedAfter);
+		}
 	}
+
+	const query = searchParams.toString();
+	const url = query ? `${BASE_URL}?${query}` : BASE_URL;
 
 	const response = await fetch(url, {
 		headers: {
@@ -97,13 +115,23 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 		shipping_total: raw.shippingTotal?.value ?? null,
 		grand_total: raw.grandTotal?.value ?? null,
 		currency: raw.grandTotal?.currency ?? 'USD',
+		shipping_method: raw.shippingLines?.[0]?.method ?? null,
+		order_notes:
+			raw.internalNotes?.length > 0
+				? raw.internalNotes.map((n) => n.content).join('\n')
+				: null,
+		order_url: `https://salka-designs.squarespace.com/commerce/orders/${raw.id}/authenticated`,
 	};
 
 	const items: Omit<NewOrderItem, 'order_id'>[] = raw.lineItems.map(
 		(item) => ({
+			platform_line_item_id: item.id,
 			platform_sku: item.sku || null,
 			product_name: item.productName,
-			variant_label: item.variantOptions?.[0]?.value || null,
+			variant_label:
+			item.variantOptions?.length > 0
+				? item.variantOptions.map((v) => ({ name: v.optionName, value: v.value }))
+				: null,
 			quantity: item.quantity,
 			unit_price: item.unitPricePaid?.value ?? null,
 			image_url: item.imageUrl || null,
@@ -113,16 +141,17 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 	return { order, items };
 }
 
-export async function fetchSquarespaceOrders(
+async function fetchAllPages(
 	apiKey: string,
-	fulfillmentStatus = 'PENDING',
+	options: { fulfillmentStatus?: string; modifiedAfter?: string },
 ): Promise<NormalizedOrder[]> {
 	const allOrders: NormalizedOrder[] = [];
 	let cursor: string | null = null;
 
 	do {
 		const page = await fetchPage(apiKey, {
-			fulfillmentStatus: cursor ? undefined : fulfillmentStatus,
+			fulfillmentStatus: cursor ? undefined : options.fulfillmentStatus,
+			modifiedAfter: cursor ? undefined : options.modifiedAfter,
 			cursor: cursor ?? undefined,
 		});
 
@@ -134,4 +163,22 @@ export async function fetchSquarespaceOrders(
 	} while (cursor);
 
 	return allOrders;
+}
+
+export async function fetchSquarespaceOrders(
+	apiKey: string,
+	lastSyncedAt: Date | null,
+): Promise<NormalizedOrder[]> {
+	if (!lastSyncedAt) {
+		return fetchAllPages(apiKey, {});
+	}
+
+	const modifiedAfter = lastSyncedAt.toISOString();
+
+	const [pending, fulfilled] = await Promise.all([
+		fetchAllPages(apiKey, { fulfillmentStatus: 'PENDING' }),
+		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter }),
+	]);
+
+	return [...pending, ...fulfilled];
 }

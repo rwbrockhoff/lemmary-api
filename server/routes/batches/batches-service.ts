@@ -1,21 +1,8 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
-
-async function getStoreForUser(userId: string) {
-	const store = await db
-		.selectFrom('stores')
-		.selectAll()
-		.where('user_id', '=', userId)
-		.executeTakeFirst();
-
-	if (!store) throw new Error('No store found for user');
-	return store;
-}
-
-function extractBaseColor(variantLabel: string | null): string {
-	if (!variantLabel) return '';
-	return variantLabel.split('(')[0].trim();
-}
+import { getStoreForUser } from '../../utils/store.js';
+import { extractBaseColor } from '../../utils/variants.js';
+import { toJsonb } from '../../utils/json.js';
 
 export async function getBatches(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -27,12 +14,20 @@ export async function getBatches(userId: string) {
 			sql<string>`(select count(*) from production_batch_orders where batch_id = production_batches.id)`.as(
 				'order_count',
 			),
-			sql<string>`(select coalesce(sum(quantity), 0) from production_batch_order_items where batch_id = production_batches.id)`.as(
-				'item_count',
-			),
-			sql<string>`(select coalesce(sum(completed_qty), 0) from production_batch_order_items where batch_id = production_batches.id)`.as(
-				'items_completed',
-			),
+			sql<string>`(
+				select count(*)
+				from production_batch_orders pbo
+				inner join order_items oi on oi.order_id = pbo.order_id
+				where pbo.batch_id = production_batches.id
+			)`.as('item_count'),
+			sql<string>`(
+				select count(*)
+				from production_batch_orders pbo
+				inner join order_items oi on oi.order_id = pbo.order_id
+				inner join order_item_workflow_stages oiws on oiws.id = oi.workflow_stage_id
+				where pbo.batch_id = production_batches.id
+				and oiws.is_complete = true
+			)`.as('items_completed'),
 		])
 		.where('store_id', '=', store.id)
 		.orderBy('created_at', 'desc')
@@ -61,6 +56,11 @@ export async function getBatch(userId: string, batchId: string) {
 	const orders = await db
 		.selectFrom('production_batch_orders')
 		.innerJoin('orders', 'orders.id', 'production_batch_orders.order_id')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
 		.select([
 			'production_batch_orders.id',
 			'production_batch_orders.order_id',
@@ -68,10 +68,13 @@ export async function getBatch(userId: string, batchId: string) {
 			'orders.order_number',
 			'orders.customer_name',
 			'orders.order_date',
+			'orders.due_date',
 			'orders.grand_total',
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
 		])
 		.where('production_batch_orders.batch_id', '=', batchId)
-		.orderBy('orders.order_date', 'desc')
+		.orderBy('orders.order_date', 'asc')
 		.execute();
 
 	const items = await db
@@ -82,13 +85,39 @@ export async function getBatch(userId: string, batchId: string) {
 		.orderBy('variant_label', 'asc')
 		.execute();
 
-	const orderItems = await db
-		.selectFrom('production_batch_order_items')
-		.selectAll()
-		.where('batch_id', '=', batchId)
-		.orderBy('product_name', 'asc')
-		.orderBy('variant_label', 'asc')
-		.execute();
+	const orderIds = orders.map((o) => o.order_id);
+
+	const orderItems = orderIds.length > 0
+		? await db
+				.selectFrom('order_items')
+				.innerJoin(
+					'production_batch_orders',
+					'production_batch_orders.order_id',
+					'order_items.order_id',
+				)
+				.leftJoin(
+					'order_item_workflow_stages',
+					'order_item_workflow_stages.id',
+					'order_items.workflow_stage_id',
+				)
+				.select([
+					'order_items.id',
+					'order_items.order_id',
+					'production_batch_orders.id as batch_order_id',
+					'order_items.platform_sku',
+					'order_items.product_name',
+					'order_items.variant_label',
+					'order_items.quantity',
+					'order_items.workflow_stage_id',
+					'order_item_workflow_stages.name as workflow_stage_name',
+					'order_item_workflow_stages.is_complete',
+				])
+				.where('production_batch_orders.batch_id', '=', batchId)
+				.where('order_items.order_id', 'in', orderIds)
+				.orderBy('order_items.product_name', 'asc')
+				.orderBy('order_items.variant_label', 'asc')
+				.execute()
+		: [];
 
 	const materials = await db
 		.selectFrom('production_batch_materials')
@@ -113,6 +142,7 @@ export async function createBatch(
 		.select('id')
 		.where('id', 'in', orderIds)
 		.where('store_id', '=', store.id)
+		.where('fulfillment_status', '=', 'pending')
 		.execute();
 
 	if (orders.length !== orderIds.length) {
@@ -160,7 +190,7 @@ export async function createBatch(
 						batch_order_id: batchOrderMap.get(item.order_id)!,
 						platform_sku: item.platform_sku,
 						product_name: item.product_name,
-						variant_label: item.variant_label,
+						variant_label: toJsonb(item.variant_label),
 						quantity: item.quantity,
 					})),
 				)
@@ -194,7 +224,7 @@ export async function createBatch(
 						batch_id: batch.id,
 						platform_sku: item.platform_sku,
 						product_name: item.product_name,
-						variant_label: item.variant_label,
+						variant_label: toJsonb(item.variant_label),
 						quantity: Number(item.total_quantity),
 					})),
 				)
@@ -316,24 +346,66 @@ export async function createBatch(
 	});
 }
 
-export async function updateBatchStatus(
+export async function updateBatch(
 	userId: string,
 	batchId: string,
-	status: string,
+	updates: { status?: string; name?: string },
 ) {
 	const store = await getStoreForUser(userId);
 
+	const set: Record<string, unknown> = { updated_at: new Date() };
+
+	if (updates.status) {
+		set.status = updates.status;
+		set.completed_at = updates.status === 'Completed' ? new Date() : null;
+	}
+
+	if (updates.name) {
+		set.name = updates.name.trim();
+	}
+
 	return db
 		.updateTable('production_batches')
-		.set({
-			status,
-			completed_at: status === 'completed' ? new Date() : null,
-			updated_at: new Date(),
-		})
+		.set(set)
 		.where('id', '=', batchId)
 		.where('store_id', '=', store.id)
 		.returningAll()
 		.executeTakeFirst();
+}
+
+export async function deleteBatch(userId: string, batchId: string) {
+	const store = await getStoreForUser(userId);
+
+	return db.transaction().execute(async (trx) => {
+		await trx
+			.deleteFrom('production_batch_materials')
+			.where('batch_id', '=', batchId)
+			.execute();
+
+		await trx
+			.deleteFrom('production_batch_order_items')
+			.where('batch_id', '=', batchId)
+			.execute();
+
+		await trx
+			.deleteFrom('production_batch_items')
+			.where('batch_id', '=', batchId)
+			.execute();
+
+		await trx
+			.deleteFrom('production_batch_orders')
+			.where('batch_id', '=', batchId)
+			.execute();
+
+		const deleted = await trx
+			.deleteFrom('production_batches')
+			.where('id', '=', batchId)
+			.where('store_id', '=', store.id)
+			.returningAll()
+			.executeTakeFirst();
+
+		return deleted;
+	});
 }
 
 async function verifyBatchOwnership(userId: string, batchId: string) {

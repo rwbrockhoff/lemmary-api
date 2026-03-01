@@ -9,12 +9,16 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('order_id', 'uuid', (col) =>
 			col.references('orders.id').onDelete('cascade').notNull(),
 		)
+		.addColumn('platform_line_item_id', 'text')
 		.addColumn('platform_sku', 'text')
 		.addColumn('product_name', 'text', (col) => col.notNull())
-		.addColumn('variant_label', 'text')
+		.addColumn('variant_label', 'jsonb')
 		.addColumn('quantity', 'integer', (col) => col.notNull())
 		.addColumn('unit_price', 'numeric')
 		.addColumn('image_url', 'text')
+		.addColumn('workflow_stage_id', 'uuid', (col) =>
+			col.references('order_item_workflow_stages.id').onDelete('set null'),
+		)
 		.addColumn('created_at', 'timestamptz', (col) =>
 			col.defaultTo(sql`now()`).notNull(),
 		)
@@ -33,6 +37,13 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.createIndex('idx_order_items_platform_sku')
 		.on('order_items')
 		.column('platform_sku')
+		.execute();
+
+	await db.schema
+		.createIndex('idx_order_items_order_platform_line')
+		.on('order_items')
+		.columns(['order_id', 'platform_line_item_id'])
+		.unique()
 		.execute();
 }
 

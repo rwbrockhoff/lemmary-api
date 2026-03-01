@@ -14,7 +14,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 		)
 		.addColumn('platform_sku', 'text')
 		.addColumn('product_name', 'text', (col) => col.notNull())
-		.addColumn('variant_label', 'text')
+		.addColumn('variant_label', 'jsonb')
 		.addColumn('quantity', 'integer', (col) => col.notNull())
 		.addColumn('completed', 'boolean', (col) =>
 			col.defaultTo(false).notNull(),

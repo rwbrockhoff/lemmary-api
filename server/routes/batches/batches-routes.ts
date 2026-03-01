@@ -4,6 +4,7 @@ import {
 	handleGetBatch,
 	handleCreateBatch,
 	handleUpdateBatch,
+	handleDeleteBatch,
 	handleToggleOrderComplete,
 	handleToggleItemComplete,
 	handleToggleMaterialComplete,
@@ -16,6 +17,7 @@ export async function batchesRoutes(app: FastifyInstance) {
 	app.get('/batches/:batchId', handleGetBatch);
 	app.post('/batches', handleCreateBatch);
 	app.put('/batches/:batchId', handleUpdateBatch);
+	app.delete('/batches/:batchId', handleDeleteBatch);
 	app.put('/batches/:batchId/orders/:id', handleToggleOrderComplete);
 	app.put('/batches/:batchId/items/:id', handleToggleItemComplete);
 	app.put('/batches/:batchId/materials/:id', handleToggleMaterialComplete);
