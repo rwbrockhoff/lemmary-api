@@ -1,8 +1,9 @@
-import { sql } from 'kysely';
+import { sql, type Transaction } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { extractBaseColor } from '../../utils/variants.js';
 import { toJsonb } from '../../utils/json.js';
+import type { Database } from '../../db/database-types.js';
 
 export async function getBatches(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -156,195 +157,7 @@ export async function createBatch(
 			.returningAll()
 			.executeTakeFirstOrThrow();
 
-		const batchOrders = await trx
-			.insertInto('production_batch_orders')
-			.values(
-				orderIds.map((orderId) => ({
-					batch_id: batch.id,
-					order_id: orderId,
-				})),
-			)
-			.returning(['id', 'order_id'])
-			.execute();
-
-		const orderItems = await trx
-			.selectFrom('order_items')
-			.selectAll()
-			.where(
-				'order_id',
-				'in',
-				batchOrders.map((bo) => bo.order_id),
-			)
-			.execute();
-
-		if (orderItems.length > 0) {
-			const batchOrderMap = new Map(
-				batchOrders.map((bo) => [bo.order_id, bo.id]),
-			);
-
-			await trx
-				.insertInto('production_batch_order_items')
-				.values(
-					orderItems.map((item) => ({
-						batch_id: batch.id,
-						batch_order_id: batchOrderMap.get(item.order_id)!,
-						platform_sku: item.platform_sku,
-						product_name: item.product_name,
-						variant_label: toJsonb(item.variant_label),
-						quantity: item.quantity,
-					})),
-				)
-				.execute();
-		}
-
-		const summary = await trx
-			.selectFrom('order_items')
-			.innerJoin('orders', 'orders.id', 'order_items.order_id')
-			.select([
-				'order_items.platform_sku',
-				'order_items.product_name',
-				'order_items.variant_label',
-			])
-			.select(
-				sql<string>`sum(order_items.quantity)`.as('total_quantity'),
-			)
-			.where('orders.id', 'in', orderIds)
-			.groupBy([
-				'order_items.platform_sku',
-				'order_items.product_name',
-				'order_items.variant_label',
-			])
-			.execute();
-
-		if (summary.length > 0) {
-			await trx
-				.insertInto('production_batch_items')
-				.values(
-					summary.map((item) => ({
-						batch_id: batch.id,
-						platform_sku: item.platform_sku,
-						product_name: item.product_name,
-						variant_label: toJsonb(item.variant_label),
-						quantity: Number(item.total_quantity),
-					})),
-				)
-				.execute();
-		}
-
-		const bomItems = await trx
-			.selectFrom('bom_items')
-			.innerJoin(
-				'bom_material_types',
-				'bom_material_types.id',
-				'bom_items.material_type_id',
-			)
-			.selectAll('bom_items')
-			.select([
-				'bom_material_types.name as material_type',
-				'bom_material_types.measurement',
-			])
-			.where('bom_items.store_id', '=', store.id)
-			.execute();
-
-		type MaterialSnapshot = {
-			batch_id: string;
-			category: string;
-			product_name: string | null;
-			material_type: string | null;
-			piece: string;
-			color: string | null;
-			width: string | null;
-			quantity: number;
-		};
-
-		const materialsRaw: MaterialSnapshot[] = [];
-
-		for (const item of summary) {
-			const baseColor = extractBaseColor(item.variant_label);
-			const totalQty = Number(item.total_quantity);
-
-			const matches = bomItems.filter(
-				(bom) =>
-					bom.platform_sku === item.platform_sku &&
-					(baseColor === ''
-						? true
-						: bom.variant
-								?.toLowerCase()
-								.includes(baseColor.toLowerCase())),
-			);
-
-			for (const bom of matches) {
-				const qty = bom.quantity * totalQty;
-
-				if (bom.measurement === 'area') {
-					materialsRaw.push({
-						batch_id: batch.id,
-						category: 'fabric',
-						product_name: item.product_name,
-						material_type: null,
-						piece: bom.piece,
-						color: bom.color,
-						width: null,
-						quantity: qty,
-					});
-				} else if (bom.measurement === 'linear') {
-					const length = bom.length ? Number(bom.length) : 0;
-					materialsRaw.push({
-						batch_id: batch.id,
-						category: 'linear',
-						product_name: item.product_name,
-						material_type: bom.material_type,
-						piece: bom.piece,
-						color: null,
-						width: bom.width,
-						quantity: length * qty,
-					});
-				} else {
-					materialsRaw.push({
-						batch_id: batch.id,
-						category: 'hardware',
-						product_name: item.product_name,
-						material_type: null,
-						piece: bom.piece,
-						color: null,
-						width: null,
-						quantity: qty,
-					});
-				}
-			}
-		}
-
-		const materialMap = new Map<string, MaterialSnapshot>();
-		for (const entry of materialsRaw) {
-			let key: string;
-			if (entry.category === 'fabric') {
-				key = `fabric|${entry.piece}|${entry.color}`;
-			} else if (entry.category === 'linear') {
-				key = `linear|${entry.material_type}|${entry.width}`;
-			} else {
-				key = `hardware|${entry.piece}`;
-			}
-
-			const existing = materialMap.get(key);
-			if (existing) {
-				existing.quantity += entry.quantity;
-			} else {
-				materialMap.set(key, { ...entry });
-			}
-		}
-
-		const materials = [...materialMap.values()];
-		if (materials.length > 0) {
-			await trx
-				.insertInto('production_batch_materials')
-				.values(
-					materials.map((m) => ({
-						...m,
-						quantity: String(m.quantity),
-					})),
-				)
-				.execute();
-		}
+		await populateBatchData(trx, batch.id, orderIds, store.id);
 
 		return batch;
 	});
@@ -353,53 +166,58 @@ export async function createBatch(
 export async function updateBatch(
 	userId: string,
 	batchId: string,
-	updates: { status?: string; name?: string },
+	updates: { status?: string; name?: string; orderIds?: string[] },
 ) {
 	const store = await getStoreForUser(userId);
 
-	const set: Record<string, unknown> = { updated_at: new Date() };
+	return db.transaction().execute(async (trx) => {
+		const set: Record<string, unknown> = { updated_at: new Date() };
 
-	if (updates.status) {
-		set.status = updates.status;
-		set.completed_at = updates.status === 'Completed' ? new Date() : null;
-	}
+		if (updates.status) {
+			set.status = updates.status;
+			set.completed_at = updates.status === 'Completed' ? new Date() : null;
+		}
 
-	if (updates.name) {
-		set.name = updates.name.trim();
-	}
+		if (updates.name) {
+			set.name = updates.name.trim();
+		}
 
-	return db
-		.updateTable('production_batches')
-		.set(set)
-		.where('id', '=', batchId)
-		.where('store_id', '=', store.id)
-		.returningAll()
-		.executeTakeFirst();
+		const batch = await trx
+			.updateTable('production_batches')
+			.set(set)
+			.where('id', '=', batchId)
+			.where('store_id', '=', store.id)
+			.returningAll()
+			.executeTakeFirst();
+
+		if (!batch) return null;
+
+		if (updates.orderIds) {
+			const orders = await trx
+				.selectFrom('orders')
+				.select('id')
+				.where('id', 'in', updates.orderIds)
+				.where('store_id', '=', store.id)
+				.where('fulfillment_status', '=', 'pending')
+				.execute();
+
+			if (orders.length !== updates.orderIds.length) {
+				throw new Error('One or more orders not found');
+			}
+
+			await clearBatchData(trx, batchId);
+			await populateBatchData(trx, batchId, updates.orderIds, store.id);
+		}
+
+		return batch;
+	});
 }
 
 export async function deleteBatch(userId: string, batchId: string) {
 	const store = await getStoreForUser(userId);
 
 	return db.transaction().execute(async (trx) => {
-		await trx
-			.deleteFrom('production_batch_materials')
-			.where('batch_id', '=', batchId)
-			.execute();
-
-		await trx
-			.deleteFrom('production_batch_order_items')
-			.where('batch_id', '=', batchId)
-			.execute();
-
-		await trx
-			.deleteFrom('production_batch_items')
-			.where('batch_id', '=', batchId)
-			.execute();
-
-		await trx
-			.deleteFrom('production_batch_orders')
-			.where('batch_id', '=', batchId)
-			.execute();
+		await clearBatchData(trx, batchId);
 
 		const deleted = await trx
 			.deleteFrom('production_batches')
@@ -410,6 +228,225 @@ export async function deleteBatch(userId: string, batchId: string) {
 
 		return deleted;
 	});
+}
+
+async function clearBatchData(trx: Transaction<Database>, batchId: string) {
+	await trx
+		.deleteFrom('production_batch_materials')
+		.where('batch_id', '=', batchId)
+		.execute();
+
+	await trx
+		.deleteFrom('production_batch_order_items')
+		.where('batch_id', '=', batchId)
+		.execute();
+
+	await trx
+		.deleteFrom('production_batch_items')
+		.where('batch_id', '=', batchId)
+		.execute();
+
+	await trx
+		.deleteFrom('production_batch_orders')
+		.where('batch_id', '=', batchId)
+		.execute();
+}
+
+async function populateBatchData(
+	trx: Transaction<Database>,
+	batchId: string,
+	orderIds: string[],
+	storeId: string,
+) {
+	const batchOrders = await trx
+		.insertInto('production_batch_orders')
+		.values(
+			orderIds.map((orderId) => ({
+				batch_id: batchId,
+				order_id: orderId,
+			})),
+		)
+		.returning(['id', 'order_id'])
+		.execute();
+
+	const orderItems = await trx
+		.selectFrom('order_items')
+		.selectAll()
+		.where(
+			'order_id',
+			'in',
+			batchOrders.map((bo) => bo.order_id),
+		)
+		.execute();
+
+	if (orderItems.length > 0) {
+		const batchOrderMap = new Map(
+			batchOrders.map((bo) => [bo.order_id, bo.id]),
+		);
+
+		await trx
+			.insertInto('production_batch_order_items')
+			.values(
+				orderItems.map((item) => ({
+					batch_id: batchId,
+					batch_order_id: batchOrderMap.get(item.order_id)!,
+					platform_sku: item.platform_sku,
+					product_name: item.product_name,
+					variant_label: toJsonb(item.variant_label),
+					quantity: item.quantity,
+				})),
+			)
+			.execute();
+	}
+
+	const summary = await trx
+		.selectFrom('order_items')
+		.innerJoin('orders', 'orders.id', 'order_items.order_id')
+		.select([
+			'order_items.platform_sku',
+			'order_items.product_name',
+			'order_items.variant_label',
+		])
+		.select(
+			sql<string>`sum(order_items.quantity)`.as('total_quantity'),
+		)
+		.where('orders.id', 'in', orderIds)
+		.groupBy([
+			'order_items.platform_sku',
+			'order_items.product_name',
+			'order_items.variant_label',
+		])
+		.execute();
+
+	if (summary.length > 0) {
+		await trx
+			.insertInto('production_batch_items')
+			.values(
+				summary.map((item) => ({
+					batch_id: batchId,
+					platform_sku: item.platform_sku,
+					product_name: item.product_name,
+					variant_label: toJsonb(item.variant_label),
+					quantity: Number(item.total_quantity),
+				})),
+			)
+			.execute();
+	}
+
+	const bomItems = await trx
+		.selectFrom('bom_items')
+		.innerJoin(
+			'bom_material_types',
+			'bom_material_types.id',
+			'bom_items.material_type_id',
+		)
+		.selectAll('bom_items')
+		.select([
+			'bom_material_types.name as material_type',
+			'bom_material_types.measurement',
+		])
+		.where('bom_items.store_id', '=', storeId)
+		.execute();
+
+	type MaterialSnapshot = {
+		batch_id: string;
+		category: string;
+		product_name: string | null;
+		material_type: string | null;
+		piece: string;
+		color: string | null;
+		width: string | null;
+		quantity: number;
+	};
+
+	const materialsRaw: MaterialSnapshot[] = [];
+
+	for (const item of summary) {
+		const baseColor = extractBaseColor(item.variant_label);
+		const totalQty = Number(item.total_quantity);
+
+		const matches = bomItems.filter(
+			(bom) =>
+				bom.platform_sku === item.platform_sku &&
+				(baseColor === ''
+					? true
+					: bom.variant
+							?.toLowerCase()
+							.includes(baseColor.toLowerCase())),
+		);
+
+		for (const bom of matches) {
+			const qty = bom.quantity * totalQty;
+
+			if (bom.measurement === 'area') {
+				materialsRaw.push({
+					batch_id: batchId,
+					category: 'fabric',
+					product_name: item.product_name,
+					material_type: null,
+					piece: bom.piece,
+					color: bom.color,
+					width: null,
+					quantity: qty,
+				});
+			} else if (bom.measurement === 'linear') {
+				const length = bom.length ? Number(bom.length) : 0;
+				materialsRaw.push({
+					batch_id: batchId,
+					category: 'linear',
+					product_name: item.product_name,
+					material_type: bom.material_type,
+					piece: bom.piece,
+					color: null,
+					width: bom.width,
+					quantity: length * qty,
+				});
+			} else {
+				materialsRaw.push({
+					batch_id: batchId,
+					category: 'hardware',
+					product_name: item.product_name,
+					material_type: null,
+					piece: bom.piece,
+					color: null,
+					width: null,
+					quantity: qty,
+				});
+			}
+		}
+	}
+
+	const materialMap = new Map<string, MaterialSnapshot>();
+	for (const entry of materialsRaw) {
+		let key: string;
+		if (entry.category === 'fabric') {
+			key = `fabric|${entry.piece}|${entry.color}`;
+		} else if (entry.category === 'linear') {
+			key = `linear|${entry.material_type}|${entry.width}`;
+		} else {
+			key = `hardware|${entry.piece}`;
+		}
+
+		const existing = materialMap.get(key);
+		if (existing) {
+			existing.quantity += entry.quantity;
+		} else {
+			materialMap.set(key, { ...entry });
+		}
+	}
+
+	const materials = [...materialMap.values()];
+	if (materials.length > 0) {
+		await trx
+			.insertInto('production_batch_materials')
+			.values(
+				materials.map((m) => ({
+					...m,
+					quantity: String(m.quantity),
+				})),
+			)
+			.execute();
+	}
 }
 
 async function verifyBatchOwnership(userId: string, batchId: string) {
