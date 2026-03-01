@@ -265,7 +265,7 @@ function workflowOrdersBase(storeId: string) {
 				from production_batch_orders pbo
 				inner join production_batches pb on pb.id = pbo.batch_id
 				where pbo.order_id = orders.id
-				and pb.status = 'active'
+				and pb.status = 'Active'
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_name'),
@@ -274,7 +274,7 @@ function workflowOrdersBase(storeId: string) {
 				from production_batch_orders pbo
 				inner join production_batches pb on pb.id = pbo.batch_id
 				where pbo.order_id = orders.id
-				and pb.status = 'active'
+				and pb.status = 'Active'
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_id'),
@@ -310,7 +310,7 @@ export async function getWorkflowBoard(userId: string) {
 		.selectFrom('production_batches')
 		.select(['id', 'name'])
 		.where('store_id', '=', store.id)
-		.where('status', '=', 'active')
+		.where('status', '=', 'Active')
 		.orderBy('created_at', 'desc')
 		.execute();
 
