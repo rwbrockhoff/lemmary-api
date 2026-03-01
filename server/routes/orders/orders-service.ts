@@ -153,6 +153,15 @@ export async function getOrders(userId: string) {
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_name'),
+			sql<string | null>`(
+				select pb.id
+				from production_batch_orders pbo
+				inner join production_batches pb on pb.id = pbo.batch_id
+				where pbo.order_id = orders.id
+				and pb.status != 'Completed'
+				order by pb.created_at desc
+				limit 1
+			)`.as('batch_id'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
@@ -198,6 +207,15 @@ export async function getOrdersWithItems(userId: string) {
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_name'),
+			sql<string | null>`(
+				select pb.id
+				from production_batch_orders pbo
+				inner join production_batches pb on pb.id = pbo.batch_id
+				where pbo.order_id = orders.id
+				and pb.status != 'Completed'
+				order by pb.created_at desc
+				limit 1
+			)`.as('batch_id'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
