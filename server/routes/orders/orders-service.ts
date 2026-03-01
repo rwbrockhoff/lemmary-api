@@ -144,6 +144,15 @@ export async function getOrders(userId: string) {
 			sql<string>`(select count(*) from order_items join order_item_workflow_stages on order_item_workflow_stages.id = order_items.workflow_stage_id where order_items.order_id = orders.id and order_item_workflow_stages.is_complete = true)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
+			sql<string | null>`(
+				select pb.name
+				from production_batch_orders pbo
+				inner join production_batches pb on pb.id = pbo.batch_id
+				where pbo.order_id = orders.id
+				and pb.status != 'Completed'
+				order by pb.created_at desc
+				limit 1
+			)`.as('batch_name'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
@@ -158,6 +167,61 @@ export async function getOrders(userId: string) {
 		})),
 		lastSyncedAt: store.last_synced_at,
 	};
+}
+
+export async function getOrdersWithItems(userId: string) {
+	const store = await getStoreForUser(userId);
+
+	const orders = await db
+		.selectFrom('orders')
+		.selectAll('orders')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
+		.select([
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
+			sql<string | null>`(
+				select pb.name
+				from production_batch_orders pbo
+				inner join production_batches pb on pb.id = pbo.batch_id
+				where pbo.order_id = orders.id
+				and pb.status != 'Completed'
+				order by pb.created_at desc
+				limit 1
+			)`.as('batch_name'),
+		])
+		.where('orders.store_id', '=', store.id)
+		.where('orders.fulfillment_status', '=', 'pending')
+		.orderBy('order_date', 'asc')
+		.execute();
+
+	const orderIds = orders.map((o) => o.id);
+
+	const items = orderIds.length > 0
+		? await db
+				.selectFrom('order_items')
+				.selectAll('order_items')
+				.where('order_id', 'in', orderIds)
+				.orderBy('created_at', 'asc')
+				.execute()
+		: [];
+
+	const itemsByOrder = new Map<string, typeof items>();
+	for (const item of items) {
+		const group = itemsByOrder.get(item.order_id) ?? [];
+		group.push(item);
+		itemsByOrder.set(item.order_id, group);
+	}
+
+	return orders.map((row) => ({
+		...row,
+		item_count: Number(row.item_count),
+		items: itemsByOrder.get(row.id) ?? [],
+	}));
 }
 
 export async function getOrderWithItems(userId: string, orderId: string) {
@@ -265,7 +329,7 @@ function workflowOrdersBase(storeId: string) {
 				from production_batch_orders pbo
 				inner join production_batches pb on pb.id = pbo.batch_id
 				where pbo.order_id = orders.id
-				and pb.status = 'Active'
+				and pb.status != 'Completed'
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_name'),
@@ -274,7 +338,7 @@ function workflowOrdersBase(storeId: string) {
 				from production_batch_orders pbo
 				inner join production_batches pb on pb.id = pbo.batch_id
 				where pbo.order_id = orders.id
-				and pb.status = 'Active'
+				and pb.status != 'Completed'
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_id'),

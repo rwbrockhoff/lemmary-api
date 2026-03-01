@@ -8,6 +8,7 @@ import {
 import {
 	syncOrders,
 	getOrders,
+	getOrdersWithItems,
 	getOrderWithItems,
 	getWorkflowStages,
 	updateOrderStage,
@@ -38,6 +39,19 @@ export async function handleGetOrders(
 		return successResponse(reply, orders);
 	} catch (error) {
 		request.log.error(error, 'Failed to fetch orders');
+		return internalError(reply);
+	}
+}
+
+export async function handleGetOrdersWithItems(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	try {
+		const orders = await getOrdersWithItems(request.userId);
+		return successResponse(reply, orders);
+	} catch (error) {
+		request.log.error(error, 'Failed to fetch orders with items');
 		return internalError(reply);
 	}
 }

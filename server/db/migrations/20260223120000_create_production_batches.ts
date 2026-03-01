@@ -13,6 +13,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('status', 'text', (col) =>
 			col.defaultTo('Active').notNull(),
 		)
+		.addColumn('due_date', 'timestamptz')
 		.addColumn('completed_at', 'timestamptz')
 		.addColumn('created_at', 'timestamptz', (col) =>
 			col.defaultTo(sql`now()`).notNull(),

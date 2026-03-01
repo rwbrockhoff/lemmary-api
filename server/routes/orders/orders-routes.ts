@@ -7,12 +7,14 @@ import {
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
 	handleUpdateOrderItemStage,
+	handleGetOrdersWithItems,
 	handleGetWorkflowBoard,
 } from './orders-controller.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
 	app.post('/orders/sync', handleSyncOrders);
 	app.get('/orders', handleGetOrders);
+	app.get('/orders/with-items', handleGetOrdersWithItems);
 	app.get('/orders/workflow-stages', handleGetWorkflowStages);
 	app.get('/orders/workflow-board', handleGetWorkflowBoard);
 	app.get('/orders/:orderId', handleGetOrder);

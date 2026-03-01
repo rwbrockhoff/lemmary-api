@@ -10,6 +10,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 			col.references('production_batches.id').onDelete('cascade').notNull(),
 		)
 		.addColumn('category', 'text', (col) => col.notNull())
+		.addColumn('product_name', 'text')
 		.addColumn('material_type', 'text')
 		.addColumn('piece', 'text', (col) => col.notNull())
 		.addColumn('color', 'text')

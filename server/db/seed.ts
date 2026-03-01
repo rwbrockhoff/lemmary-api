@@ -90,7 +90,7 @@ async function seed() {
 	await db
 		.insertInto('order_workflow_stages')
 		.values([
-			{ store_id: DEV_STORE_ID, name: 'Order Placed', position: 0, color: 'gray', is_default: true, is_complete: false },
+			{ store_id: DEV_STORE_ID, name: 'New', position: 0, color: 'gray', is_default: true, is_complete: false },
 			{ store_id: DEV_STORE_ID, name: 'In Progress 🔄', position: 1, color: 'blue', is_default: false, is_complete: false },
 			{ store_id: DEV_STORE_ID, name: 'Order Finished 🙌🏻', position: 2, color: 'purple', is_default: false, is_complete: false },
 			{ store_id: DEV_STORE_ID, name: 'Ready to Ship 📦', position: 3, color: 'purple', is_default: false, is_complete: false },
