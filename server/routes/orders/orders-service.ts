@@ -73,6 +73,10 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTime
 						grand_total: order.grand_total,
 						shipping_method: order.shipping_method,
 						order_url: order.order_url,
+						fulfilled_on: order.fulfilled_on,
+						tracking_number: order.tracking_number,
+						tracking_url: order.tracking_url,
+						carrier_name: order.carrier_name,
 						updated_at: new Date(),
 					}),
 				)
@@ -251,6 +255,44 @@ export async function getOrdersWithItems(userId: string) {
 	};
 }
 
+export async function getCompletedOrders(userId: string, limit: number, offset: number) {
+	const store = await getStoreForUser(userId);
+
+	const orders = await db
+		.selectFrom('orders')
+		.selectAll('orders')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
+		.select([
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
+		])
+		.where('orders.store_id', '=', store.id)
+		.where('orders.fulfillment_status', '!=', 'pending')
+		.orderBy('order_date', 'desc')
+		.limit(limit + 1)
+		.offset(offset)
+		.execute();
+
+	const hasMore = orders.length > limit;
+	const trimmed = hasMore ? orders.slice(0, limit) : orders;
+
+	return {
+		orders: trimmed.map((row) => ({
+			...row,
+			item_count: Number(row.item_count),
+			items_completed: 0,
+			batch_name: null,
+			batch_id: null,
+		})),
+		hasMore,
+	};
+}
+
 export async function getOrderWithItems(userId: string, orderId: string) {
 	const store = await getStoreForUser(userId);
 
@@ -349,6 +391,11 @@ function workflowOrdersBase(storeId: string) {
 		)
 		.select([
 			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			sql<string>`(
+				select count(*) from order_items oi
+				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
+				where oi.order_id = orders.id and s.is_complete = true
+			)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 			sql<string | null>`(
@@ -409,6 +456,7 @@ export async function getWorkflowBoard(userId: string) {
 		orders: orders.map((row) => ({
 			...row,
 			item_count: Number(row.item_count),
+			items_completed: Number(row.items_completed),
 		})),
 		stages,
 		activeBatches,

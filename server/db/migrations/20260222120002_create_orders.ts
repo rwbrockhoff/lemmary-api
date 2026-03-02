@@ -27,6 +27,10 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('shipping_method', 'text')
 		.addColumn('order_notes', 'text')
 		.addColumn('order_url', 'text')
+		.addColumn('fulfilled_on', 'timestamptz')
+		.addColumn('tracking_number', 'text')
+		.addColumn('tracking_url', 'text')
+		.addColumn('carrier_name', 'text')
 		.addColumn('currency', 'text', (col) => col.defaultTo('USD').notNull())
 		.addColumn('created_at', 'timestamptz', (col) =>
 			col.defaultTo(sql`now()`).notNull(),

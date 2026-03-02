@@ -35,6 +35,12 @@ type SquarespaceShippingLine = {
 	method: string;
 };
 
+type SquarespaceFulfillment = {
+	trackingNumber: string | null;
+	trackingUrl: string | null;
+	carrierName: string | null;
+};
+
 type SquarespaceOrder = {
 	id: string;
 	orderNumber: string;
@@ -45,9 +51,11 @@ type SquarespaceOrder = {
 	subtotal: SquarespaceMoneyValue;
 	shippingTotal: SquarespaceMoneyValue;
 	grandTotal: SquarespaceMoneyValue;
+	fulfilledOn: string | null;
 	lineItems: SquarespaceLineItem[];
 	internalNotes: SquarespaceInternalNote[];
 	shippingLines: SquarespaceShippingLine[];
+	fulfillments: SquarespaceFulfillment[];
 };
 
 type SquarespaceResponse = {
@@ -116,6 +124,10 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 		shipping_total: raw.shippingTotal?.value ?? null,
 		grand_total: raw.grandTotal?.value ?? null,
 		currency: raw.grandTotal?.currency ?? 'USD',
+		fulfilled_on: raw.fulfilledOn ? new Date(raw.fulfilledOn) : null,
+		tracking_number: raw.fulfillments?.[0]?.trackingNumber ?? null,
+		tracking_url: raw.fulfillments?.[0]?.trackingUrl ?? null,
+		carrier_name: raw.fulfillments?.[0]?.carrierName ?? null,
 		shipping_method: raw.shippingLines?.[0]?.method ?? null,
 		order_notes:
 			raw.internalNotes?.length > 0

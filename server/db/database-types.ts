@@ -92,6 +92,10 @@ export interface OrderTable {
 	shipping_method: string | null;
 	order_notes: string | null;
 	order_url: string | null;
+	fulfilled_on: Date | null;
+	tracking_number: string | null;
+	tracking_url: string | null;
+	carrier_name: string | null;
 	currency: Generated<string>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

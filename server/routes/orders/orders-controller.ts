@@ -15,6 +15,7 @@ import {
 	updateOrderNotes,
 	updateOrderItemStage,
 	getWorkflowBoard,
+	getCompletedOrders,
 } from './orders-service.js';
 
 export async function handleSyncOrders(
@@ -52,6 +53,21 @@ export async function handleGetOrdersWithItems(
 		return successResponse(reply, orders);
 	} catch (error) {
 		request.log.error(error, 'Failed to fetch orders with items');
+		return internalError(reply);
+	}
+}
+
+export async function handleGetCompletedOrders(
+	request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>,
+	reply: FastifyReply,
+) {
+	try {
+		const limit = Math.min(Number(request.query.limit) || 15, 50);
+		const offset = Number(request.query.offset) || 0;
+		const result = await getCompletedOrders(request.userId, limit, offset);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to fetch completed orders');
 		return internalError(reply);
 	}
 }
