@@ -88,12 +88,12 @@ export async function handleCreateBatch(
 export async function handleUpdateBatch(
 	request: FastifyRequest<{
 		Params: { batchId: string };
-		Body: { status?: string; name?: string };
+		Body: { status?: string; name?: string; orderIds?: string[] };
 	}>,
 	reply: FastifyReply,
 ) {
 	try {
-		const { status, name } = request.body;
+		const { status, name, orderIds } = request.body;
 
 		const validStatuses = ['Active', 'Up Next', 'Paused', 'Completed'];
 		if (status && !validStatuses.includes(status)) {
@@ -104,19 +104,29 @@ export async function handleUpdateBatch(
 			return badRequest(reply, 'Batch name cannot be empty');
 		}
 
-		if (!status && !name) {
+		if (orderIds !== undefined && orderIds.length === 0) {
+			return badRequest(reply, 'Batch must have at least one order');
+		}
+
+		if (!status && !name && !orderIds) {
 			return badRequest(reply, 'No updates provided');
 		}
 
 		const batch = await updateBatch(
 			request.userId,
 			request.params.batchId,
-			{ status, name },
+			{ status, name, orderIds },
 		);
 
 		if (!batch) return notFound(reply, 'Batch not found');
 		return successResponse(reply, batch);
 	} catch (error) {
+		if (
+			error instanceof Error &&
+			error.message === 'One or more orders not found'
+		) {
+			return badRequest(reply, error.message);
+		}
 		request.log.error(error, 'Failed to update batch');
 		return internalError(reply);
 	}

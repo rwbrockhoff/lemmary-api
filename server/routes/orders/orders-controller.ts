@@ -8,12 +8,15 @@ import {
 import {
 	syncOrders,
 	getOrders,
+	getOrdersWithItems,
 	getOrderWithItems,
 	getWorkflowStages,
 	updateOrderStage,
 	updateOrderNotes,
 	updateOrderItemStage,
+	completeAllOrderItems,
 	getWorkflowBoard,
+	getCompletedOrders,
 } from './orders-service.js';
 
 export async function handleSyncOrders(
@@ -38,6 +41,34 @@ export async function handleGetOrders(
 		return successResponse(reply, orders);
 	} catch (error) {
 		request.log.error(error, 'Failed to fetch orders');
+		return internalError(reply);
+	}
+}
+
+export async function handleGetOrdersWithItems(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	try {
+		const orders = await getOrdersWithItems(request.userId);
+		return successResponse(reply, orders);
+	} catch (error) {
+		request.log.error(error, 'Failed to fetch orders with items');
+		return internalError(reply);
+	}
+}
+
+export async function handleGetCompletedOrders(
+	request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>,
+	reply: FastifyReply,
+) {
+	try {
+		const limit = Math.min(Number(request.query.limit) || 15, 50);
+		const offset = Number(request.query.offset) || 0;
+		const result = await getCompletedOrders(request.userId, limit, offset);
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to fetch completed orders');
 		return internalError(reply);
 	}
 }
@@ -160,6 +191,24 @@ export async function handleUpdateOrderItemStage(
 		return successResponse(reply, item);
 	} catch (error) {
 		request.log.error(error, 'Failed to update order item stage');
+		return internalError(reply);
+	}
+}
+
+export async function handleCompleteAllOrderItems(
+	request: FastifyRequest<{ Params: { orderId: string } }>,
+	reply: FastifyReply,
+) {
+	try {
+		const result = await completeAllOrderItems(
+			request.userId,
+			request.params.orderId,
+		);
+
+		if (!result) return notFound(reply, 'Order not found');
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to complete all order items');
 		return internalError(reply);
 	}
 }

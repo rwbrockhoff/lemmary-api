@@ -92,6 +92,10 @@ export interface OrderTable {
 	shipping_method: string | null;
 	order_notes: string | null;
 	order_url: string | null;
+	fulfilled_on: Date | null;
+	tracking_number: string | null;
+	tracking_url: string | null;
+	carrier_name: string | null;
 	currency: Generated<string>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
@@ -164,6 +168,7 @@ export interface ProductionBatchTable {
 	store_id: string;
 	name: string;
 	status: Generated<string>;
+	due_date: Date | null;
 	completed_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
@@ -218,6 +223,7 @@ export interface ProductionBatchMaterialTable {
 	id: Generated<string>;
 	batch_id: string;
 	category: string;
+	product_name: string | null;
 	material_type: string | null;
 	piece: string;
 	color: string | null;

@@ -35,6 +35,12 @@ type SquarespaceShippingLine = {
 	method: string;
 };
 
+type SquarespaceFulfillment = {
+	trackingNumber: string | null;
+	trackingUrl: string | null;
+	carrierName: string | null;
+};
+
 type SquarespaceOrder = {
 	id: string;
 	orderNumber: string;
@@ -45,9 +51,11 @@ type SquarespaceOrder = {
 	subtotal: SquarespaceMoneyValue;
 	shippingTotal: SquarespaceMoneyValue;
 	grandTotal: SquarespaceMoneyValue;
+	fulfilledOn: string | null;
 	lineItems: SquarespaceLineItem[];
 	internalNotes: SquarespaceInternalNote[];
 	shippingLines: SquarespaceShippingLine[];
+	fulfillments: SquarespaceFulfillment[];
 };
 
 type SquarespaceResponse = {
@@ -66,7 +74,7 @@ export type NormalizedOrder = {
 
 async function fetchPage(
 	apiKey: string,
-	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string },
+	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string; modifiedBefore?: string },
 ): Promise<SquarespaceResponse> {
 	const searchParams = new URLSearchParams();
 
@@ -78,6 +86,7 @@ async function fetchPage(
 		}
 		if (params?.modifiedAfter) {
 			searchParams.set('modifiedAfter', params.modifiedAfter);
+			searchParams.set('modifiedBefore', params.modifiedBefore ?? new Date().toISOString());
 		}
 	}
 
@@ -115,6 +124,10 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 		shipping_total: raw.shippingTotal?.value ?? null,
 		grand_total: raw.grandTotal?.value ?? null,
 		currency: raw.grandTotal?.currency ?? 'USD',
+		fulfilled_on: raw.fulfilledOn ? new Date(raw.fulfilledOn) : null,
+		tracking_number: raw.fulfillments?.[0]?.trackingNumber ?? null,
+		tracking_url: raw.fulfillments?.[0]?.trackingUrl ?? null,
+		carrier_name: raw.fulfillments?.[0]?.carrierName ?? null,
 		shipping_method: raw.shippingLines?.[0]?.method ?? null,
 		order_notes:
 			raw.internalNotes?.length > 0
@@ -143,7 +156,7 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 
 async function fetchAllPages(
 	apiKey: string,
-	options: { fulfillmentStatus?: string; modifiedAfter?: string },
+	options: { fulfillmentStatus?: string; modifiedAfter?: string; modifiedBefore?: string },
 ): Promise<NormalizedOrder[]> {
 	const allOrders: NormalizedOrder[] = [];
 	let cursor: string | null = null;
@@ -152,6 +165,7 @@ async function fetchAllPages(
 		const page = await fetchPage(apiKey, {
 			fulfillmentStatus: cursor ? undefined : options.fulfillmentStatus,
 			modifiedAfter: cursor ? undefined : options.modifiedAfter,
+			modifiedBefore: cursor ? undefined : options.modifiedBefore,
 			cursor: cursor ?? undefined,
 		});
 
@@ -174,10 +188,11 @@ export async function fetchSquarespaceOrders(
 	}
 
 	const modifiedAfter = lastSyncedAt.toISOString();
+	const modifiedBefore = new Date().toISOString();
 
 	const [pending, fulfilled] = await Promise.all([
 		fetchAllPages(apiKey, { fulfillmentStatus: 'PENDING' }),
-		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter }),
+		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter, modifiedBefore }),
 	]);
 
 	return [...pending, ...fulfilled];
