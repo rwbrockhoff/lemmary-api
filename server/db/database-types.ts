@@ -14,6 +14,8 @@ export interface Database {
 	production_batch_order_items: ProductionBatchOrderItemTable;
 	production_batch_items: ProductionBatchItemTable;
 	production_batch_materials: ProductionBatchMaterialTable;
+	products: ProductTable;
+	product_variants: ProductVariantTable;
 }
 
 export interface UserTable {
@@ -236,3 +238,41 @@ export interface ProductionBatchMaterialTable {
 
 export type ProductionBatchMaterial = Selectable<ProductionBatchMaterialTable>;
 export type NewProductionBatchMaterial = Insertable<ProductionBatchMaterialTable>;
+
+export interface ProductTable {
+	id: Generated<string>;
+	store_id: string;
+	platform_product_id: string;
+	name: string;
+	description: string | null;
+	slug: string | null;
+	is_visible: Generated<boolean>;
+	image_url: string | null;
+	product_url: string | null;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type Product = Selectable<ProductTable>;
+export type NewProduct = Insertable<ProductTable>;
+export type ProductUpdate = Updateable<ProductTable>;
+
+export interface ProductVariantTable {
+	id: Generated<string>;
+	product_id: string;
+	platform_variant_id: string;
+	platform_sku: string | null;
+	name: string;
+	price: string | null;
+	sale_price: string | null;
+	on_sale: Generated<boolean>;
+	stock_quantity: number | null;
+	stock_unlimited: Generated<boolean>;
+	image_url: string | null;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type ProductVariant = Selectable<ProductVariantTable>;
+export type NewProductVariant = Insertable<ProductVariantTable>;
+export type ProductVariantUpdate = Updateable<ProductVariantTable>;
