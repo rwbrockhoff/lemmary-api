@@ -128,3 +128,25 @@ export async function getProducts(userId: string) {
 		lastSyncedAt: store.last_synced_at,
 	};
 }
+
+export async function getProduct(userId: string, productId: string) {
+	const store = await getStoreForUser(userId);
+
+	const product = await db
+		.selectFrom('products')
+		.selectAll()
+		.where('id', '=', productId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!product) return null;
+
+	const variants = await db
+		.selectFrom('product_variants')
+		.selectAll()
+		.where('product_id', '=', product.id)
+		.orderBy('name', 'asc')
+		.execute();
+
+	return { ...product, variants };
+}
