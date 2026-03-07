@@ -21,6 +21,7 @@
 		"format:changed": "git diff --name-only --relative | xargs prettier --write",
 		"migrate:latest": "tsx server/db/migrate.ts",
 		"migrate:down": "tsx server/db/migrate.ts down",
+		"migrate:prod": "DOTENV_CONFIG_PATH=.env.production tsx server/db/migrate.ts",
 		"seed": "tsx server/db/seed.ts",
 		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed"
 	},
