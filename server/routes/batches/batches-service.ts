@@ -71,6 +71,7 @@ export async function getBatch(userId: string, batchId: string) {
 			'orders.order_date',
 			'orders.due_date',
 			'orders.grand_total',
+			'orders.workflow_stage_id',
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 		])

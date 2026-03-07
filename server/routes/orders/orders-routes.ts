@@ -10,6 +10,7 @@ import {
 	handleGetOrdersWithItems,
 	handleGetCompletedOrders,
 	handleGetWorkflowBoard,
+	handleCompleteAllOrderItems,
 } from './orders-controller.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
@@ -22,5 +23,6 @@ export async function ordersRoutes(app: FastifyInstance) {
 	app.get('/orders/:orderId', handleGetOrder);
 	app.put('/orders/:orderId/stage', handleUpdateOrderStage);
 	app.put('/orders/:orderId/notes', handleUpdateOrderNotes);
+	app.put('/orders/:orderId/items/complete-all', handleCompleteAllOrderItems);
 	app.put('/orders/:orderId/items/:itemId/stage', handleUpdateOrderItemStage);
 }

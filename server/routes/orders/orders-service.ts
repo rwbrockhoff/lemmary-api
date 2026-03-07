@@ -488,3 +488,36 @@ export async function updateOrderItemStage(
 		.returningAll()
 		.executeTakeFirst();
 }
+
+export async function completeAllOrderItems(
+	userId: string,
+	orderId: string,
+) {
+	const store = await getStoreForUser(userId);
+
+	const order = await db
+		.selectFrom('orders')
+		.select('id')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!order) return null;
+
+	const completeStage = await db
+		.selectFrom('order_item_workflow_stages')
+		.select('id')
+		.where('store_id', '=', store.id)
+		.where('is_complete', '=', true)
+		.executeTakeFirst();
+
+	if (!completeStage) return null;
+
+	await db
+		.updateTable('order_items')
+		.set({ workflow_stage_id: completeStage.id, updated_at: new Date() })
+		.where('order_id', '=', orderId)
+		.execute();
+
+	return { orderId, stageId: completeStage.id };
+}

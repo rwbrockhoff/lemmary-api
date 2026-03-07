@@ -14,6 +14,7 @@ import {
 	updateOrderStage,
 	updateOrderNotes,
 	updateOrderItemStage,
+	completeAllOrderItems,
 	getWorkflowBoard,
 	getCompletedOrders,
 } from './orders-service.js';
@@ -190,6 +191,24 @@ export async function handleUpdateOrderItemStage(
 		return successResponse(reply, item);
 	} catch (error) {
 		request.log.error(error, 'Failed to update order item stage');
+		return internalError(reply);
+	}
+}
+
+export async function handleCompleteAllOrderItems(
+	request: FastifyRequest<{ Params: { orderId: string } }>,
+	reply: FastifyReply,
+) {
+	try {
+		const result = await completeAllOrderItems(
+			request.userId,
+			request.params.orderId,
+		);
+
+		if (!result) return notFound(reply, 'Order not found');
+		return successResponse(reply, result);
+	} catch (error) {
+		request.log.error(error, 'Failed to complete all order items');
 		return internalError(reply);
 	}
 }
