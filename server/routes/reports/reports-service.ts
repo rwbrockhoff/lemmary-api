@@ -39,15 +39,17 @@ export async function getMaterialsReport(userId: string) {
 
 	const bomItems = await db
 		.selectFrom('bom_items')
-		.innerJoin(
+		.leftJoin('materials', 'materials.id', 'bom_items.material_id')
+		.leftJoin(
 			'bom_material_types',
 			'bom_material_types.id',
-			'bom_items.material_type_id',
+			'materials.material_type_id',
 		)
 		.selectAll('bom_items')
 		.select([
 			'bom_material_types.name as material_type',
-			'bom_material_types.measurement',
+			'materials.color',
+			'materials.size',
 		])
 		.where('bom_items.store_id', '=', store.id)
 		.execute();
@@ -60,7 +62,7 @@ export async function getMaterialsReport(userId: string) {
 	};
 
 	type LinearEntry = {
-		material_type: string;
+		material_type: string | null;
 		width: number | null;
 		total_inches: number;
 	};
@@ -115,7 +117,7 @@ export async function getMaterialsReport(userId: string) {
 				const length = bom.length ? Number(bom.length) : 0;
 				linearRaw.push({
 					material_type: bom.material_type,
-					width: bom.width ? Number(bom.width) : null,
+					width: bom.size ? Number(bom.size) : null,
 					total_inches: length * totalQty,
 				});
 			} else {
@@ -171,7 +173,7 @@ export async function getMaterialsReport(userId: string) {
 			feet_to_order: Math.ceil(entry.total_inches / 12),
 		}))
 		.sort((a, b) =>
-			a.material_type.localeCompare(b.material_type) ||
+			(a.material_type ?? '').localeCompare(b.material_type ?? '') ||
 			(a.width ?? 0) - (b.width ?? 0),
 		);
 

@@ -336,15 +336,17 @@ async function populateBatchData(
 
 	const bomItems = await trx
 		.selectFrom('bom_items')
-		.innerJoin(
+		.leftJoin('materials', 'materials.id', 'bom_items.material_id')
+		.leftJoin(
 			'bom_material_types',
 			'bom_material_types.id',
-			'bom_items.material_type_id',
+			'materials.material_type_id',
 		)
 		.selectAll('bom_items')
 		.select([
 			'bom_material_types.name as material_type',
-			'bom_material_types.measurement',
+			'materials.color',
+			'materials.size',
 		])
 		.where('bom_items.store_id', '=', storeId)
 		.execute();
@@ -386,7 +388,7 @@ async function populateBatchData(
 					product_name: item.product_name,
 					material_type: null,
 					piece: bom.piece,
-					color: bom.color,
+					color: bom.color ?? null,
 					width: null,
 					quantity: qty,
 				});
@@ -399,7 +401,7 @@ async function populateBatchData(
 					material_type: bom.material_type,
 					piece: bom.piece,
 					color: null,
-					width: bom.width,
+					width: bom.size ?? null,
 					quantity: length * qty,
 				});
 			} else {
