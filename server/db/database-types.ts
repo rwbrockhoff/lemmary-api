@@ -8,6 +8,7 @@ export interface Database {
 	orders: OrderTable;
 	order_items: OrderItemTable;
 	bom_material_types: BomMaterialTypeTable;
+	materials: MaterialTable;
 	bom_items: BomItemTable;
 	production_batches: ProductionBatchTable;
 	production_batch_orders: ProductionBatchOrderTable;
@@ -135,7 +136,7 @@ export interface BomMaterialTypeTable {
 	measurement: 'count' | 'linear' | 'area';
 	unit: 'pieces' | 'inches' | 'sq_ft' | 'yards';
 	tracks_color: Generated<boolean>;
-	tracks_dimensions: Generated<boolean>;
+	tracks_size: Generated<boolean>;
 	position: number;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
@@ -145,18 +146,33 @@ export type BomMaterialType = Selectable<BomMaterialTypeTable>;
 export type NewBomMaterialType = Insertable<BomMaterialTypeTable>;
 export type BomMaterialTypeUpdate = Updateable<BomMaterialTypeTable>;
 
-export interface BomItemTable {
+export interface MaterialTable {
 	id: Generated<string>;
 	store_id: string;
 	material_type_id: string;
+	color: string | null;
+	size: string | null;
+	purchase_url: string | null;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type Material = Selectable<MaterialTable>;
+export type NewMaterial = Insertable<MaterialTable>;
+export type MaterialUpdate = Updateable<MaterialTable>;
+
+export interface BomItemTable {
+	id: Generated<string>;
+	store_id: string;
+	material_id: string | null;
+	measurement: 'count' | 'linear' | 'area';
 	platform_sku: string;
 	product_name: string;
 	variant: string | null;
 	piece: string;
-	color: string | null;
 	length: string | null;
-	width: string | null;
 	quantity: number;
+	position: Generated<number>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
