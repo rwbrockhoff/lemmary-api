@@ -69,6 +69,7 @@ export async function getMaterialsReport(userId: string) {
 	};
 
 	type HardwareEntry = {
+		material_type: string;
 		piece: string;
 		total_count: number;
 	};
@@ -124,6 +125,7 @@ export async function getMaterialsReport(userId: string) {
 				});
 			} else {
 				hardwareRaw.push({
+					material_type: bom.material_type ?? 'Unknown',
 					piece: bom.piece,
 					total_count: totalQty,
 				});
@@ -155,11 +157,12 @@ export async function getMaterialsReport(userId: string) {
 
 	const hardwareMap = new Map<string, HardwareEntry>();
 	for (const entry of hardwareRaw) {
-		const existing = hardwareMap.get(entry.piece);
+		const key = `${entry.material_type}|${entry.piece}`;
+		const existing = hardwareMap.get(key);
 		if (existing) {
 			existing.total_count += entry.total_count;
 		} else {
-			hardwareMap.set(entry.piece, { ...entry });
+			hardwareMap.set(key, { ...entry });
 		}
 	}
 
@@ -180,6 +183,7 @@ export async function getMaterialsReport(userId: string) {
 		);
 
 	const hardware = [...hardwareMap.values()].sort((a, b) =>
+		a.material_type.localeCompare(b.material_type) ||
 		a.piece.localeCompare(b.piece),
 	);
 
