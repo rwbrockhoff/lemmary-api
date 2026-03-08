@@ -120,7 +120,11 @@ async function seed() {
 		{ name: 'Webbing', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 5 },
 		{ name: 'Elastic', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 6 },
 		{ name: 'Grosgrain', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 7 },
-		{ name: 'Hardware', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: true, position: 8 },
+		{ name: 'Zipper Slider', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 8 },
+		{ name: 'Zipper Pull', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 9 },
+		{ name: 'Label', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 10 },
+		{ name: 'Belt Buckle', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 11 },
+		{ name: 'Slik Clips', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 12 },
 	];
 
 	await db.deleteFrom('bom_items').where('store_id', '=', DEV_STORE_ID).execute();
