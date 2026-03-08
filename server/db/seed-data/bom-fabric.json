@@ -5,7 +5,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Custom Pattern",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0474541",
@@ -13,31 +14,35 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0474541",
     "product_name": "Art Sling - Zipper Pocket",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Inside/Outside Pocket",
-    "color": "Dark Blue",
-    "quantity": 2
+    "color": "Navy",
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0474541",
     "product_name": "Art Sling - Zipper Pocket",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Wings",
-    "color": "Dark Blue",
-    "quantity": 2
+    "color": "Navy",
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0474541",
     "product_name": "Art Sling - Zipper Pocket",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Front Pocket - Top",
-    "color": "Dark Blue",
-    "quantity": 1
+    "color": "Navy",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0474541",
@@ -45,7 +50,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Front Pocket - Bottom",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ8081348",
@@ -53,7 +59,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Custom Pattern",
     "color": "Pink",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8081348",
@@ -61,7 +68,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8081348",
@@ -69,7 +77,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Inside/Outside Pocket",
     "color": "Purple",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8081348",
@@ -77,7 +86,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Wings",
     "color": "Purple",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8081348",
@@ -85,7 +95,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Front Pocket - Top",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8081348",
@@ -93,7 +104,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Front Pocket - Bottom",
     "color": "Pink",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7852287",
@@ -101,7 +113,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Custom Pattern",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7852287",
@@ -109,7 +122,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7852287",
@@ -117,7 +131,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Inside/Outside Pocket",
     "color": "Red",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7852287",
@@ -125,7 +140,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Wings",
     "color": "Red",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7852287",
@@ -133,7 +149,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Front Pocket - Top",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7852287",
@@ -141,7 +158,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Front Pocket - Bottom",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ2989688",
@@ -149,7 +167,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Custom Pattern",
     "color": "Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ2989688",
@@ -157,7 +176,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ2989688",
@@ -165,7 +185,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ2989688",
@@ -173,7 +194,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ2989688",
@@ -181,7 +203,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Front Pocket - Top",
     "color": "Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ2989688",
@@ -189,7 +212,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Front Pocket - Bottom",
     "color": "Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6917779",
@@ -197,7 +221,8 @@
     "variant": "Winter White",
     "piece": "Custom Pattern",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6917779",
@@ -205,7 +230,8 @@
     "variant": "Winter White",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6917779",
@@ -213,7 +239,8 @@
     "variant": "Winter White",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6917779",
@@ -221,7 +248,8 @@
     "variant": "Winter White",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6917779",
@@ -229,7 +257,8 @@
     "variant": "Winter White",
     "piece": "Front Pocket - Top",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6917779",
@@ -237,7 +266,8 @@
     "variant": "Winter White",
     "piece": "Front Pocket - Bottom",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7555117",
@@ -245,7 +275,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Custom Pattern",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7555117",
@@ -253,7 +284,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7555117",
@@ -261,7 +293,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7555117",
@@ -269,7 +302,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7555117",
@@ -277,7 +311,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Front Pocket - Top",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7555117",
@@ -285,7 +320,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Front Pocket - Bottom",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7424422",
@@ -293,7 +329,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7424422",
@@ -301,7 +338,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7424422",
@@ -309,7 +347,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7424422",
@@ -317,7 +356,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7424422",
@@ -325,7 +365,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Front Pocket - Top",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ7424422",
@@ -333,7 +374,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Front Pocket - Bottom",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6389989",
@@ -341,7 +383,8 @@
     "variant": "Cabin Cider (Brown/Red)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6389989",
@@ -349,7 +392,8 @@
     "variant": "Cabin Cider (Brown/Red)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6389989",
@@ -357,7 +401,8 @@
     "variant": "Cabin Cider (Brown/Red)",
     "piece": "Inside/Outside Pocket",
     "color": "Red",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ6389989",
@@ -365,7 +410,8 @@
     "variant": "Cabin Cider (Brown/Red)",
     "piece": "Wings",
     "color": "Red",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ6389989",
@@ -373,7 +419,8 @@
     "variant": "Cabin Cider (Brown/Red)",
     "piece": "Front Pocket - Top",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ6389989",
@@ -381,7 +428,8 @@
     "variant": "Cabin Cider (Brown/Red)",
     "piece": "Front Pocket - Bottom",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6298248",
@@ -389,7 +437,8 @@
     "variant": "Twilight Bramble (Purple/Brown)",
     "piece": "Custom Pattern",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6298248",
@@ -397,7 +446,8 @@
     "variant": "Twilight Bramble (Purple/Brown)",
     "piece": "Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6298248",
@@ -405,7 +455,8 @@
     "variant": "Twilight Bramble (Purple/Brown)",
     "piece": "Inside/Outside Pocket",
     "color": "Brown",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6298248",
@@ -413,7 +464,8 @@
     "variant": "Twilight Bramble (Purple/Brown)",
     "piece": "Wings",
     "color": "Brown",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6298248",
@@ -421,7 +473,8 @@
     "variant": "Twilight Bramble (Purple/Brown)",
     "piece": "Front Pocket - Top",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ6298248",
@@ -429,7 +482,8 @@
     "variant": "Twilight Bramble (Purple/Brown)",
     "piece": "Front Pocket - Bottom",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ9731330",
@@ -437,7 +491,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ9731330",
@@ -445,7 +500,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ9731330",
@@ -453,7 +509,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Outer Mesh",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ9731330",
@@ -461,7 +518,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0868125",
@@ -469,7 +527,8 @@
     "variant": "Wild Violet (Purple)",
     "piece": "Custom Pattern",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0868125",
@@ -477,7 +536,8 @@
     "variant": "Wild Violet (Purple)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0868125",
@@ -485,7 +545,8 @@
     "variant": "Wild Violet (Purple)",
     "piece": "Outer Mesh",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0868125",
@@ -493,7 +554,8 @@
     "variant": "Wild Violet (Purple)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ1103253",
@@ -501,7 +563,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Custom Pattern",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ1103253",
@@ -509,7 +572,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ1103253",
@@ -517,7 +581,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Outer Mesh",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ1103253",
@@ -525,7 +590,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0107998",
@@ -533,7 +599,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Custom Pattern",
     "color": "Ranger Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0107998",
@@ -541,7 +608,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0107998",
@@ -549,7 +617,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Outer Mesh",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0107998",
@@ -557,7 +626,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0934585",
@@ -565,7 +635,8 @@
     "variant": "Alpine Lake (Teal)",
     "piece": "Custom Pattern",
     "color": "Teal",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0934585",
@@ -573,7 +644,8 @@
     "variant": "Alpine Lake (Teal)",
     "piece": "Inside/Outside Pocket",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0934585",
@@ -581,7 +653,8 @@
     "variant": "Alpine Lake (Teal)",
     "piece": "Outer Mesh",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0934585",
@@ -589,7 +662,8 @@
     "variant": "Alpine Lake (Teal)",
     "piece": "Wings",
     "color": "Black",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ4990472",
@@ -597,7 +671,8 @@
     "variant": "Wild Violet (Purple)",
     "piece": "Custom Pattern",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ2062380",
@@ -605,7 +680,8 @@
     "variant": "Misty Fern (Green)",
     "piece": "Custom Pattern",
     "color": "Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ9213609",
@@ -613,7 +689,8 @@
     "variant": "Honey Pinecone (Brown)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8450711",
@@ -621,7 +698,8 @@
     "variant": "Alpine Lake (Teal)",
     "piece": "Custom Pattern",
     "color": "Teal",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ4226941",
@@ -629,7 +707,8 @@
     "variant": "Midnight Pine (Black)",
     "piece": "Custom Pattern",
     "color": "Black",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ1135337",
@@ -637,7 +716,8 @@
     "variant": "Mesa Glow (Red)",
     "piece": "Custom Pattern",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3731643",
@@ -645,15 +725,17 @@
     "variant": "Canyon Blush (Peach)",
     "piece": "Custom Pattern",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ4657310",
     "product_name": "Mini Pouch - Summer",
     "variant": "Starlit Sky (Navy)",
     "piece": "Custom Pattern",
-    "color": "Navy Blue",
-    "quantity": 1
+    "color": "Navy",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3876749",
@@ -661,7 +743,8 @@
     "variant": "Bluebell (Blue)",
     "piece": "Custom Pattern",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ1418085",
@@ -669,7 +752,8 @@
     "variant": "Lavender Fields (Purple)",
     "piece": "Custom Pattern",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "Venom Gridstop ECO"
   },
   {
     "platform_sku": "SQ1993495",
@@ -677,7 +761,8 @@
     "variant": "Forget-me-not (Blue)",
     "piece": "Custom Pattern",
     "color": "Blue",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "Venom Gridstop ECO"
   },
   {
     "platform_sku": "SQ5250693",
@@ -685,7 +770,8 @@
     "variant": "Lily Pad (Green)",
     "piece": "Custom Pattern",
     "color": "Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "Venom Gridstop ECO"
   },
   {
     "platform_sku": "SQ3772204",
@@ -693,7 +779,8 @@
     "variant": "Lavender Fields (Purple)",
     "piece": "Custom Pattern",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "Venom Gridstop ECO"
   },
   {
     "platform_sku": "SQ1267524",
@@ -701,7 +788,8 @@
     "variant": "Forget-me-not (Blue)",
     "piece": "Custom Pattern",
     "color": "Blue",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "Venom Gridstop ECO"
   },
   {
     "platform_sku": "SQ4071032",
@@ -709,7 +797,8 @@
     "variant": "Lily Pad (Green)",
     "piece": "Custom Pattern",
     "color": "Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "Venom Gridstop ECO"
   },
   {
     "platform_sku": "SQ3829705",
@@ -717,7 +806,8 @@
     "variant": "Sagebrush (Gray/Greeen)",
     "piece": "Custom Pattern",
     "color": "Gray/Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "420D Robic"
   },
   {
     "platform_sku": "SQ8986626",
@@ -725,7 +815,8 @@
     "variant": "Toasted Cinnamon (Brown)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "420D Robic"
   },
   {
     "platform_sku": "SQ7220360",
@@ -733,7 +824,8 @@
     "variant": "Sagebrush (Gray/Greeen)",
     "piece": "Custom Pattern",
     "color": "Gray/Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "420D Robic"
   },
   {
     "platform_sku": "SQ0560910",
@@ -741,7 +833,8 @@
     "variant": "Toasted Cinnamon (Brown)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "420D Robic"
   },
   {
     "platform_sku": "SQ8999124",
@@ -749,7 +842,8 @@
     "variant": "Sagebrush (Gray/Greeen)",
     "piece": "Custom Pattern",
     "color": "Gray/Green",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "420D Robic"
   },
   {
     "platform_sku": "SQ7315822",
@@ -757,7 +851,8 @@
     "variant": "Toasted Cinnamon (Brown)",
     "piece": "Custom Pattern",
     "color": "Brown",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "420D Robic"
   },
   {
     "platform_sku": "SQ7753018",
@@ -765,23 +860,26 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Custom Pattern",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7753018",
     "product_name": "Pika Sling",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Wings",
-    "color": "Dark Blue",
-    "quantity": 2
+    "color": "Navy",
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7753018",
     "product_name": "Pika Sling",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Front Pocket - Top",
-    "color": "Dark Blue",
-    "quantity": 1
+    "color": "Navy",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7753018",
@@ -789,7 +887,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Front Pocket - Bottom",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3307582",
@@ -797,7 +896,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Custom Pattern",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3307582",
@@ -805,7 +905,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Wings",
     "color": "Red",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3307582",
@@ -813,7 +914,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Front Pocket - Top",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3307582",
@@ -821,7 +923,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Front Pocket - Bottom",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ8697453",
@@ -829,7 +932,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Custom Pattern",
     "color": "Pink",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8697453",
@@ -837,7 +941,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Wings",
     "color": "Purple",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8697453",
@@ -845,7 +950,8 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Front Pocket - Top",
     "color": "Purple",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ8697453",
@@ -853,15 +959,17 @@
     "variant": "Midsommar (Pink/Purple)",
     "piece": "Front Pocket - Bottom",
     "color": "Pink",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ5062987",
     "product_name": "Pika Sling",
     "variant": "Prickly Pear (Green/Peach)",
     "piece": "Custom Pattern",
-    "color": "Green",
-    "quantity": 1
+    "color": "Light Green",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ5062987",
@@ -869,7 +977,8 @@
     "variant": "Prickly Pear (Green/Peach)",
     "piece": "Wings",
     "color": "Peach",
-    "quantity": 2
+    "quantity": 2,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ5062987",
@@ -877,15 +986,17 @@
     "variant": "Prickly Pear (Green/Peach)",
     "piece": "Front Pocket - Top",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ5062987",
     "product_name": "Pika Sling",
     "variant": "Prickly Pear (Green/Peach)",
     "piece": "Front Pocket - Bottom",
-    "color": "Green",
-    "quantity": 1
+    "color": "Light Green",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0317396",
@@ -893,15 +1004,17 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Custom Pattern",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0317396",
     "product_name": "Sketcher - right handed",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Big Pocket",
-    "color": "Dark Blue",
-    "quantity": 1
+    "color": "Navy",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0317396",
@@ -909,7 +1022,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Small Pocket",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ2484362",
@@ -917,15 +1031,17 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Custom Pattern",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ2484362",
     "product_name": "Sketcher - left handed",
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Big Pocket",
-    "color": "Dark Blue",
-    "quantity": 1
+    "color": "Navy",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ2484362",
@@ -933,7 +1049,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Small Pocket",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3613460",
@@ -941,7 +1058,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Custom Pattern",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3613460",
@@ -949,7 +1067,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Big Pocket",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ3613460",
@@ -957,7 +1076,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Small Pocket",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7922526",
@@ -965,7 +1085,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Custom Pattern",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7922526",
@@ -973,7 +1094,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Big Pocket",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ7922526",
@@ -981,7 +1103,8 @@
     "variant": "Paintbrush (Peach/Red)",
     "piece": "Small Pocket",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ6820973",
@@ -989,7 +1112,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Custom Pattern",
     "color": "Bluebell",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ6820973",
@@ -997,7 +1121,8 @@
     "variant": "Lupine (Bluebell/Navy)",
     "piece": "Cutsom Marmot Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ0269814",
@@ -1005,7 +1130,8 @@
     "variant": "Canyon Blush (Peach)",
     "piece": "Custom Pattern",
     "color": "Peach",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ0269814",
@@ -1013,7 +1139,8 @@
     "variant": "Canyon Blush (Peach)",
     "piece": "Cutsom Marmot Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ5163911",
@@ -1021,7 +1148,8 @@
     "variant": "Mesa Glow (Red)",
     "piece": "Custom Pattern",
     "color": "Red",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ5163911",
@@ -1029,15 +1157,17 @@
     "variant": "Mesa Glow (Red)",
     "piece": "Cutsom Marmot Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   },
   {
     "platform_sku": "SQ5988197",
     "product_name": "Marmot",
     "variant": "Starlit Sky (Navy)",
     "piece": "Custom Pattern",
-    "color": "Dark Blue",
-    "quantity": 1
+    "color": "Navy",
+    "quantity": 1,
+    "fabric_type": "RX 30"
   },
   {
     "platform_sku": "SQ5988197",
@@ -1045,6 +1175,7 @@
     "variant": "Starlit Sky (Navy)",
     "piece": "Cutsom Marmot Liner",
     "color": "White",
-    "quantity": 1
+    "quantity": 1,
+    "fabric_type": "EPX 200"
   }
 ]

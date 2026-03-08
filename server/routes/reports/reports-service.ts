@@ -55,6 +55,7 @@ export async function getMaterialsReport(userId: string) {
 		.execute();
 
 	type FabricEntry = {
+		material_type: string;
 		product_name: string;
 		piece: string;
 		color: string;
@@ -108,6 +109,7 @@ export async function getMaterialsReport(userId: string) {
 
 			if (bom.measurement === 'area') {
 				fabricRaw.push({
+					material_type: bom.material_type ?? 'Unknown',
 					product_name: item.product_name,
 					piece: bom.piece,
 					color: bom.color ?? '',
@@ -131,7 +133,7 @@ export async function getMaterialsReport(userId: string) {
 
 	const fabricMap = new Map<string, FabricEntry>();
 	for (const entry of fabricRaw) {
-		const key = `${entry.product_name}|${entry.piece}|${entry.color}`;
+		const key = `${entry.material_type}|${entry.product_name}|${entry.piece}|${entry.color}`;
 		const existing = fabricMap.get(key);
 		if (existing) {
 			existing.total_quantity += entry.total_quantity;
@@ -162,7 +164,7 @@ export async function getMaterialsReport(userId: string) {
 	}
 
 	const fabric = [...fabricMap.values()].sort((a, b) =>
-		a.product_name.localeCompare(b.product_name) ||
+		a.material_type.localeCompare(b.material_type) ||
 		a.piece.localeCompare(b.piece),
 	);
 

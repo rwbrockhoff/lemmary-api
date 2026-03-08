@@ -16,6 +16,7 @@ type FabricEntry = {
 	variant: string;
 	piece: string;
 	color: string;
+	fabric_type: string;
 	quantity: number;
 };
 
@@ -111,12 +112,15 @@ async function seed() {
 	console.log('  Workflow stages seeded');
 
 	const materialTypes = [
-		{ name: 'X50 Fabric', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 0 },
-		{ name: 'Zipper Tape', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 1 },
-		{ name: 'Webbing', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 2 },
-		{ name: 'Elastic', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 3 },
-		{ name: 'Grosgrain', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 4 },
-		{ name: 'Hardware', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: true, position: 5 },
+		{ name: 'EPX 200', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 0 },
+		{ name: 'RX 30', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 1 },
+		{ name: 'Venom Gridstop ECO', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 2 },
+		{ name: '420D Robic', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 3 },
+		{ name: 'Zipper Tape', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 4 },
+		{ name: 'Webbing', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 5 },
+		{ name: 'Elastic', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 6 },
+		{ name: 'Grosgrain', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 7 },
+		{ name: 'Hardware', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: true, position: 8 },
 	];
 
 	await db.deleteFrom('bom_items').where('store_id', '=', DEV_STORE_ID).execute();
@@ -164,7 +168,7 @@ async function seed() {
 	let position = 0;
 
 	for (const entry of fabricData) {
-		const materialId = await getOrCreateMaterial('X50 Fabric', entry.color, null);
+		const materialId = await getOrCreateMaterial(entry.fabric_type, entry.color, null);
 		await db
 			.insertInto('bom_items')
 			.values({
