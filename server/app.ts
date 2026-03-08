@@ -8,6 +8,7 @@ import { batchesRoutes } from './routes/batches/batches-routes.js';
 import { authRoutes } from './routes/auth/auth-routes.js';
 import { settingsRoutes } from './routes/settings/settings-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
+import { bomRoutes } from './routes/bom/bom-routes.js';
 
 export const buildApp = () => {
 	const app = Fastify({ logger: true });
@@ -30,6 +31,7 @@ export const buildApp = () => {
 	app.register(batchesRoutes);
 	app.register(settingsRoutes);
 	app.register(productsRoutes);
+	app.register(bomRoutes);
 
 	return app;
 };
