@@ -15,7 +15,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ0474541",
@@ -69,7 +69,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ8081348",
@@ -123,7 +123,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ7852287",
@@ -177,7 +177,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ2989688",
@@ -231,7 +231,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ6917779",
@@ -285,7 +285,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ7555117",
@@ -339,7 +339,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ7424422",
@@ -393,7 +393,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ6389989",
@@ -447,7 +447,7 @@
     "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ6298248",
@@ -1119,10 +1119,10 @@
     "platform_sku": "SQ6820973",
     "product_name": "Marmot",
     "variant": "Lupine (Bluebell/Navy)",
-    "piece": "Cutsom Marmot Liner",
+    "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ0269814",
@@ -1137,10 +1137,10 @@
     "platform_sku": "SQ0269814",
     "product_name": "Marmot",
     "variant": "Canyon Blush (Peach)",
-    "piece": "Cutsom Marmot Liner",
+    "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ5163911",
@@ -1155,10 +1155,10 @@
     "platform_sku": "SQ5163911",
     "product_name": "Marmot",
     "variant": "Mesa Glow (Red)",
-    "piece": "Cutsom Marmot Liner",
+    "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   },
   {
     "platform_sku": "SQ5988197",
@@ -1173,9 +1173,9 @@
     "platform_sku": "SQ5988197",
     "product_name": "Marmot",
     "variant": "Starlit Sky (Navy)",
-    "piece": "Cutsom Marmot Liner",
+    "piece": "Liner",
     "color": "White",
     "quantity": 1,
-    "fabric_type": "EPX 200"
+    "fabric_type": "200D RBC"
   }
 ]

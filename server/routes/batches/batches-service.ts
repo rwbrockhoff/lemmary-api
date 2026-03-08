@@ -409,7 +409,7 @@ async function populateBatchData(
 					batch_id: batchId,
 					category: 'hardware',
 					product_name: item.product_name,
-					material_type: null,
+					material_type: bom.material_type,
 					piece: bom.piece,
 					color: null,
 					width: null,
@@ -427,7 +427,7 @@ async function populateBatchData(
 		} else if (entry.category === 'linear') {
 			key = `linear|${entry.material_type}|${entry.width}`;
 		} else {
-			key = `hardware|${entry.piece}`;
+			key = `hardware|${entry.material_type}|${entry.piece}`;
 		}
 
 		const existing = materialMap.get(key);
