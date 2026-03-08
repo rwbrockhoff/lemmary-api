@@ -39,20 +39,23 @@ export async function getMaterialsReport(userId: string) {
 
 	const bomItems = await db
 		.selectFrom('bom_items')
-		.innerJoin(
+		.leftJoin('materials', 'materials.id', 'bom_items.material_id')
+		.leftJoin(
 			'bom_material_types',
 			'bom_material_types.id',
-			'bom_items.material_type_id',
+			'materials.material_type_id',
 		)
 		.selectAll('bom_items')
 		.select([
 			'bom_material_types.name as material_type',
-			'bom_material_types.measurement',
+			'materials.color',
+			'materials.size',
 		])
 		.where('bom_items.store_id', '=', store.id)
 		.execute();
 
 	type FabricEntry = {
+		material_type: string;
 		product_name: string;
 		piece: string;
 		color: string;
@@ -60,12 +63,13 @@ export async function getMaterialsReport(userId: string) {
 	};
 
 	type LinearEntry = {
-		material_type: string;
+		material_type: string | null;
 		width: number | null;
 		total_inches: number;
 	};
 
 	type HardwareEntry = {
+		material_type: string;
 		piece: string;
 		total_count: number;
 	};
@@ -106,6 +110,7 @@ export async function getMaterialsReport(userId: string) {
 
 			if (bom.measurement === 'area') {
 				fabricRaw.push({
+					material_type: bom.material_type ?? 'Unknown',
 					product_name: item.product_name,
 					piece: bom.piece,
 					color: bom.color ?? '',
@@ -115,11 +120,12 @@ export async function getMaterialsReport(userId: string) {
 				const length = bom.length ? Number(bom.length) : 0;
 				linearRaw.push({
 					material_type: bom.material_type,
-					width: bom.width ? Number(bom.width) : null,
+					width: bom.size ? Number(bom.size) : null,
 					total_inches: length * totalQty,
 				});
 			} else {
 				hardwareRaw.push({
+					material_type: bom.material_type ?? 'Unknown',
 					piece: bom.piece,
 					total_count: totalQty,
 				});
@@ -129,7 +135,7 @@ export async function getMaterialsReport(userId: string) {
 
 	const fabricMap = new Map<string, FabricEntry>();
 	for (const entry of fabricRaw) {
-		const key = `${entry.product_name}|${entry.piece}|${entry.color}`;
+		const key = `${entry.material_type}|${entry.product_name}|${entry.piece}|${entry.color}`;
 		const existing = fabricMap.get(key);
 		if (existing) {
 			existing.total_quantity += entry.total_quantity;
@@ -151,16 +157,17 @@ export async function getMaterialsReport(userId: string) {
 
 	const hardwareMap = new Map<string, HardwareEntry>();
 	for (const entry of hardwareRaw) {
-		const existing = hardwareMap.get(entry.piece);
+		const key = `${entry.material_type}|${entry.piece}`;
+		const existing = hardwareMap.get(key);
 		if (existing) {
 			existing.total_count += entry.total_count;
 		} else {
-			hardwareMap.set(entry.piece, { ...entry });
+			hardwareMap.set(key, { ...entry });
 		}
 	}
 
 	const fabric = [...fabricMap.values()].sort((a, b) =>
-		a.product_name.localeCompare(b.product_name) ||
+		a.material_type.localeCompare(b.material_type) ||
 		a.piece.localeCompare(b.piece),
 	);
 
@@ -171,11 +178,12 @@ export async function getMaterialsReport(userId: string) {
 			feet_to_order: Math.ceil(entry.total_inches / 12),
 		}))
 		.sort((a, b) =>
-			a.material_type.localeCompare(b.material_type) ||
+			(a.material_type ?? '').localeCompare(b.material_type ?? '') ||
 			(a.width ?? 0) - (b.width ?? 0),
 		);
 
 	const hardware = [...hardwareMap.values()].sort((a, b) =>
+		a.material_type.localeCompare(b.material_type) ||
 		a.piece.localeCompare(b.piece),
 	);
 

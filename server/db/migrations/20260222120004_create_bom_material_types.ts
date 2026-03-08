@@ -15,7 +15,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('tracks_color', 'boolean', (col) =>
 			col.defaultTo(false).notNull(),
 		)
-		.addColumn('tracks_dimensions', 'boolean', (col) =>
+		.addColumn('tracks_size', 'boolean', (col) =>
 			col.defaultTo(false).notNull(),
 		)
 		.addColumn('position', 'integer', (col) => col.notNull())

@@ -5,7 +5,6 @@ import * as path from 'path';
 import pg from 'pg';
 import { Kysely, PostgresDialect } from 'kysely';
 import type { Database } from './database-types.js';
-import type { NewBomItem } from './database-types.js';
 import { DEV_USER_ID, DEV_STORE_ID } from '../config/constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +16,7 @@ type FabricEntry = {
 	variant: string;
 	piece: string;
 	color: string;
+	fabric_type: string;
 	quantity: number;
 };
 
@@ -112,61 +112,115 @@ async function seed() {
 	console.log('  Workflow stages seeded');
 
 	const materialTypes = [
-		{ name: 'X50 Fabric', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_dimensions: false, position: 0 },
-		{ name: 'Zipper Tape', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 1 },
-		{ name: 'Webbing', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 2 },
-		{ name: 'Elastic', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 3 },
-		{ name: 'Grosgrain', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_dimensions: true, position: 4 },
-		{ name: 'Hardware', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_dimensions: false, position: 5 },
+		{ name: 'EPX 200', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 0 },
+		{ name: 'RX 30', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 1 },
+		{ name: 'Venom Gridstop ECO', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 2 },
+		{ name: '200D RBC', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 3 },
+		{ name: '420D Robic', measurement: 'area' as const, unit: 'pieces' as const, tracks_color: true, tracks_size: false, position: 4 },
+		{ name: 'Zipper Tape', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 5 },
+		{ name: 'Webbing', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 6 },
+		{ name: 'Elastic', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 7 },
+		{ name: 'Grosgrain', measurement: 'linear' as const, unit: 'inches' as const, tracks_color: false, tracks_size: true, position: 8 },
+		{ name: 'Zipper Slider', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 9 },
+		{ name: 'Zipper Pull', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 10 },
+		{ name: 'Label', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 11 },
+		{ name: 'Belt Buckle', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 12 },
+		{ name: 'Slik Clips', measurement: 'count' as const, unit: 'pieces' as const, tracks_color: false, tracks_size: false, position: 13 },
 	];
 
 	await db.deleteFrom('bom_items').where('store_id', '=', DEV_STORE_ID).execute();
+	await db.deleteFrom('materials').where('store_id', '=', DEV_STORE_ID).execute();
 	await db.deleteFrom('bom_material_types').where('store_id', '=', DEV_STORE_ID).execute();
 
 	const insertedTypes = await db
 		.insertInto('bom_material_types')
 		.values(materialTypes.map((t) => ({ ...t, store_id: DEV_STORE_ID })))
-		.returning(['id', 'name'])
+		.returning(['id', 'name', 'measurement'])
 		.execute();
 
-	const typeIdByName = new Map(insertedTypes.map((t) => [t.name, t.id]));
+	const typeByName = new Map(insertedTypes.map((t) => [t.name, t]));
+
+	const materialCache = new Map<string, string>();
+
+	async function getOrCreateMaterial(
+		materialTypeName: string,
+		color: string | null,
+		size: string | null,
+	): Promise<string> {
+		const key = `${materialTypeName}|${color ?? ''}|${size ?? ''}`;
+		const cached = materialCache.get(key);
+		if (cached) return cached;
+
+		const type = typeByName.get(materialTypeName);
+		if (!type) throw new Error(`Unknown material type: ${materialTypeName}`);
+
+		const inserted = await db
+			.insertInto('materials')
+			.values({
+				store_id: DEV_STORE_ID,
+				material_type_id: type.id,
+				color,
+				size,
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		materialCache.set(key, inserted.id);
+		return inserted.id;
+	}
 
 	const fabricData = loadJson<FabricEntry[]>('bom-fabric.json');
-	const fabricRows: NewBomItem[] = fabricData.map((entry) => ({
-		store_id: DEV_STORE_ID,
-		material_type_id: typeIdByName.get('X50 Fabric')!,
-		platform_sku: entry.platform_sku,
-		product_name: entry.product_name,
-		variant: entry.variant,
-		piece: entry.piece,
-		color: entry.color,
-		quantity: entry.quantity,
-	}));
+	let position = 0;
 
-	const hardwareData = loadJson<HardwareEntry[]>('bom-hardware.json');
-	const hardwareRows: NewBomItem[] = hardwareData.map((entry) => ({
-		store_id: DEV_STORE_ID,
-		material_type_id: typeIdByName.get(entry.material_type)!,
-		platform_sku: entry.platform_sku,
-		product_name: entry.product_name,
-		variant: entry.variant,
-		piece: entry.piece,
-		length: entry.length?.toString() ?? null,
-		width: entry.width?.toString() ?? null,
-		quantity: entry.quantity,
-	}));
-
-	const allRows = [...fabricRows, ...hardwareRows];
-	const BATCH_SIZE = 100;
-
-	for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
+	for (const entry of fabricData) {
+		const materialId = await getOrCreateMaterial(entry.fabric_type, entry.color, null);
 		await db
 			.insertInto('bom_items')
-			.values(allRows.slice(i, i + BATCH_SIZE))
+			.values({
+				store_id: DEV_STORE_ID,
+				material_id: materialId,
+				measurement: 'area',
+				platform_sku: entry.platform_sku,
+				product_name: entry.product_name,
+				variant: entry.variant,
+				piece: entry.piece,
+				quantity: entry.quantity,
+				position: position++ * 1000,
+			})
 			.execute();
 	}
 
-	console.log(`  BOM: ${fabricRows.length} fabric + ${hardwareRows.length} hardware entries`);
+	const hardwareData = loadJson<HardwareEntry[]>('bom-hardware.json');
+
+	const linearTypes = new Set(['Zipper Tape', 'Webbing', 'Elastic', 'Grosgrain']);
+
+	for (const entry of hardwareData) {
+		const isLinear = linearTypes.has(entry.material_type);
+		const measurement = isLinear ? 'linear' : 'count';
+		const size = isLinear
+			? (entry.width?.toString() ?? null)
+			: (entry.width?.toString() ?? null);
+
+		const materialId = await getOrCreateMaterial(entry.material_type, null, size);
+		await db
+			.insertInto('bom_items')
+			.values({
+				store_id: DEV_STORE_ID,
+				material_id: materialId,
+				measurement: measurement as 'linear' | 'count',
+				platform_sku: entry.platform_sku,
+				product_name: entry.product_name,
+				variant: entry.variant,
+				piece: entry.piece,
+				length: entry.length?.toString() ?? null,
+				quantity: entry.quantity,
+				position: position++ * 1000,
+			})
+			.execute();
+	}
+
+	console.log(`  Materials: ${materialCache.size} unique materials`);
+	console.log(`  BOM: ${fabricData.length} fabric + ${hardwareData.length} hardware entries`);
 
 	await db.destroy();
 	console.log('Seed complete');

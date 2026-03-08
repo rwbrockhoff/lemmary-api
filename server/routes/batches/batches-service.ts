@@ -16,13 +16,13 @@ export async function getBatches(userId: string) {
 				'order_count',
 			),
 			sql<string>`(
-				select count(*)
+				select coalesce(sum(oi.quantity), 0)
 				from production_batch_orders pbo
 				inner join order_items oi on oi.order_id = pbo.order_id
 				where pbo.batch_id = production_batches.id
 			)`.as('item_count'),
 			sql<string>`(
-				select count(*)
+				select coalesce(sum(oi.quantity), 0)
 				from production_batch_orders pbo
 				inner join order_items oi on oi.order_id = pbo.order_id
 				inner join order_item_workflow_stages oiws on oiws.id = oi.workflow_stage_id
@@ -336,15 +336,17 @@ async function populateBatchData(
 
 	const bomItems = await trx
 		.selectFrom('bom_items')
-		.innerJoin(
+		.leftJoin('materials', 'materials.id', 'bom_items.material_id')
+		.leftJoin(
 			'bom_material_types',
 			'bom_material_types.id',
-			'bom_items.material_type_id',
+			'materials.material_type_id',
 		)
 		.selectAll('bom_items')
 		.select([
 			'bom_material_types.name as material_type',
-			'bom_material_types.measurement',
+			'materials.color',
+			'materials.size',
 		])
 		.where('bom_items.store_id', '=', storeId)
 		.execute();
@@ -384,9 +386,9 @@ async function populateBatchData(
 					batch_id: batchId,
 					category: 'fabric',
 					product_name: item.product_name,
-					material_type: null,
+					material_type: bom.material_type,
 					piece: bom.piece,
-					color: bom.color,
+					color: bom.color ?? null,
 					width: null,
 					quantity: qty,
 				});
@@ -399,7 +401,7 @@ async function populateBatchData(
 					material_type: bom.material_type,
 					piece: bom.piece,
 					color: null,
-					width: bom.width,
+					width: bom.size ?? null,
 					quantity: length * qty,
 				});
 			} else {
@@ -407,7 +409,7 @@ async function populateBatchData(
 					batch_id: batchId,
 					category: 'hardware',
 					product_name: item.product_name,
-					material_type: null,
+					material_type: bom.material_type,
 					piece: bom.piece,
 					color: null,
 					width: null,
@@ -421,11 +423,11 @@ async function populateBatchData(
 	for (const entry of materialsRaw) {
 		let key: string;
 		if (entry.category === 'fabric') {
-			key = `fabric|${entry.piece}|${entry.color}`;
+			key = `fabric|${entry.material_type}|${entry.product_name}|${entry.piece}|${entry.color}`;
 		} else if (entry.category === 'linear') {
 			key = `linear|${entry.material_type}|${entry.width}`;
 		} else {
-			key = `hardware|${entry.piece}`;
+			key = `hardware|${entry.material_type}|${entry.piece}`;
 		}
 
 		const existing = materialMap.get(key);

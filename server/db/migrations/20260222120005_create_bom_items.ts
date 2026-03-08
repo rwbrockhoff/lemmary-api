@@ -9,17 +9,17 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.addColumn('store_id', 'uuid', (col) =>
 			col.references('stores.id').onDelete('cascade').notNull(),
 		)
-		.addColumn('material_type_id', 'uuid', (col) =>
-			col.references('bom_material_types.id').onDelete('cascade').notNull(),
+		.addColumn('material_id', 'uuid', (col) =>
+			col.references('materials.id').onDelete('set null'),
 		)
+		.addColumn('measurement', 'text', (col) => col.notNull())
 		.addColumn('platform_sku', 'text', (col) => col.notNull())
 		.addColumn('product_name', 'text', (col) => col.notNull())
 		.addColumn('variant', 'text')
 		.addColumn('piece', 'text', (col) => col.notNull())
-		.addColumn('color', 'text')
 		.addColumn('length', 'numeric')
-		.addColumn('width', 'numeric')
 		.addColumn('quantity', 'integer', (col) => col.notNull())
+		.addColumn('position', 'numeric', (col) => col.defaultTo(0).notNull())
 		.addColumn('created_at', 'timestamptz', (col) =>
 			col.defaultTo(sql`now()`).notNull(),
 		)
@@ -35,9 +35,9 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.execute();
 
 	await db.schema
-		.createIndex('idx_bom_items_material_type_id')
+		.createIndex('idx_bom_items_material_id')
 		.on('bom_items')
-		.column('material_type_id')
+		.column('material_id')
 		.execute();
 
 	await db.schema
