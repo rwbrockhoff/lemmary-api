@@ -148,5 +148,26 @@ export async function getProduct(userId: string, productId: string) {
 		.orderBy('name', 'asc')
 		.execute();
 
-	return { ...product, variants };
+	const skus = variants
+		.map((v) => v.platform_sku)
+		.filter((sku): sku is string => sku !== null);
+
+	const bomCounts = skus.length > 0
+		? await db
+				.selectFrom('bom_items')
+				.select(['platform_sku', db.fn.count<number>('id').as('count')])
+				.where('store_id', '=', store.id)
+				.where('platform_sku', 'in', skus)
+				.groupBy('platform_sku')
+				.execute()
+		: [];
+
+	const countMap = new Map(bomCounts.map((r) => [r.platform_sku, Number(r.count)]));
+
+	const variantsWithCounts = variants.map((v) => ({
+		...v,
+		bom_item_count: v.platform_sku ? (countMap.get(v.platform_sku) ?? 0) : 0,
+	}));
+
+	return { ...product, variants: variantsWithCounts };
 }

@@ -16,6 +16,7 @@ import {
 	updateBomItem,
 	deleteBomItem,
 	getBomSuggestions,
+	copyBomFromVariant,
 } from './bom-service.js';
 
 export async function handleGetMaterialTypes(
@@ -227,6 +228,35 @@ export async function handleGetOrCreateMaterial(
 	} catch (error) {
 		request.log.error(error, 'Failed to get or create material');
 		return internalError(reply);
+	}
+}
+
+export async function handleCopyBomFromVariant(
+	request: FastifyRequest<{
+		Body: {
+			targetVariantId: string;
+			sourceVariantId: string;
+		};
+	}>,
+	reply: FastifyReply,
+) {
+	try {
+		const { targetVariantId, sourceVariantId } = request.body;
+
+		if (!targetVariantId || !sourceVariantId) {
+			return badRequest(reply, 'targetVariantId and sourceVariantId are required');
+		}
+
+		const items = await copyBomFromVariant(
+			request.userId,
+			targetVariantId,
+			sourceVariantId,
+		);
+
+		return successResponse(reply, items, 'BOM copied successfully');
+	} catch (error) {
+		request.log.error(error, 'Failed to copy BOM from variant');
+		return internalError(reply, 'Failed to copy BOM');
 	}
 }
 

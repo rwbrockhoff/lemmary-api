@@ -211,6 +211,70 @@ export async function deleteBomItem(userId: string, bomItemId: string) {
 	return result.numDeletedRows > 0n;
 }
 
+export async function copyBomFromVariant(
+	userId: string,
+	targetVariantId: string,
+	sourceVariantId: string,
+) {
+	const store = await getStoreForUser(userId);
+
+	const [sourceVariant, targetVariant] = await Promise.all([
+		db
+			.selectFrom('product_variants')
+			.innerJoin('products', 'products.id', 'product_variants.product_id')
+			.select([
+				'product_variants.platform_sku',
+				'product_variants.name',
+				'products.name as product_name',
+			])
+			.where('product_variants.id', '=', sourceVariantId)
+			.where('products.store_id', '=', store.id)
+			.executeTakeFirst(),
+		db
+			.selectFrom('product_variants')
+			.innerJoin('products', 'products.id', 'product_variants.product_id')
+			.select([
+				'product_variants.platform_sku',
+				'product_variants.name',
+				'products.name as product_name',
+			])
+			.where('product_variants.id', '=', targetVariantId)
+			.where('products.store_id', '=', store.id)
+			.executeTakeFirst(),
+	]);
+
+	if (!sourceVariant?.platform_sku || !targetVariant?.platform_sku) {
+		return [];
+	}
+
+	const sourceItems = await db
+		.selectFrom('bom_items')
+		.selectAll()
+		.where('store_id', '=', store.id)
+		.where('platform_sku', '=', sourceVariant.platform_sku)
+		.orderBy('position', 'asc')
+		.execute();
+
+	if (sourceItems.length === 0) return [];
+
+	const copies = sourceItems.map((item, index) => ({
+		store_id: store.id,
+		material_id: item.material_id,
+		measurement: item.measurement,
+		platform_sku: targetVariant.platform_sku!,
+		product_name: targetVariant.product_name,
+		variant: targetVariant.name,
+		piece: item.piece,
+		length: item.length,
+		quantity: item.quantity,
+		position: (index + 1) * 1000,
+	}));
+
+	await db.insertInto('bom_items').values(copies).execute();
+
+	return getBomForVariant(userId, targetVariantId);
+}
+
 export async function searchMaterialTypes(
 	userId: string,
 	query: string,
@@ -325,7 +389,7 @@ export async function getOrCreateMaterial(
 		.executeTakeFirst();
 
 	if (existing) {
-		if (purchaseUrl && existing.purchase_url !== purchaseUrl) {
+		if (existing.purchase_url !== purchaseUrl) {
 			await db
 				.updateTable('materials')
 				.set({ purchase_url: purchaseUrl, updated_at: new Date() })

@@ -10,6 +10,7 @@ import {
 	handleUpdateBomItem,
 	handleDeleteBomItem,
 	handleGetBomSuggestions,
+	handleCopyBomFromVariant,
 } from './bom-controller.js';
 
 export async function bomRoutes(app: FastifyInstance) {
@@ -20,6 +21,7 @@ export async function bomRoutes(app: FastifyInstance) {
 	app.post('/bom/materials', handleGetOrCreateMaterial);
 	app.get('/bom/suggestions', handleGetBomSuggestions);
 	app.get('/bom', handleGetBomForVariant);
+	app.post('/bom/copy', handleCopyBomFromVariant);
 	app.post('/bom', handleCreateBomItem);
 	app.put('/bom/:bomItemId', handleUpdateBomItem);
 	app.delete('/bom/:bomItemId', handleDeleteBomItem);
