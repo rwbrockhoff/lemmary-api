@@ -46,3 +46,37 @@ export async function registerUser({
 		needsEmailConfirmation: !data.user.email_confirmed_at,
 	};
 }
+
+type LoginUserParams = {
+	email: string;
+	password: string;
+};
+
+type LoginUserResult =
+	| { success: true; userId: string; email: string; refreshToken: string }
+	| { success: false; error: string; statusCode: 401 | 500 };
+
+export async function loginUser({
+	email,
+	password,
+}: LoginUserParams): Promise<LoginUserResult> {
+	const { data, error } = await supabase.auth.signInWithPassword({
+		email,
+		password,
+	});
+
+	if (error) {
+		return { success: false, error: error.message, statusCode: 401 };
+	}
+
+	if (!data.session || !data.user) {
+		return { success: false, error: 'Login failed', statusCode: 500 };
+	}
+
+	return {
+		success: true,
+		userId: data.user.id,
+		email: data.user.email ?? email,
+		refreshToken: data.session.refresh_token,
+	};
+}

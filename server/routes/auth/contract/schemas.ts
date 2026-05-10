@@ -14,3 +14,17 @@ export const RegisterResponseSchema = z
 		needsEmailConfirmation: z.boolean(),
 	})
 	.strict();
+
+export const LoginRequestSchema = z
+	.object({
+		email: z.string().trim().toLowerCase().pipe(z.email()),
+		password: z.string().min(1),
+	})
+	.strict();
+
+export const LoginResponseSchema = z
+	.object({
+		userId: z.uuid(),
+		email: z.email(),
+	})
+	.strict();
