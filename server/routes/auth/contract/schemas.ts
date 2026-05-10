@@ -41,3 +41,10 @@ export const ResetPasswordRequestSchema = z
 		newPassword: z.string().min(8),
 	})
 	.strict();
+
+export const AuthStatusResponseSchema = z
+	.object({
+		isAuthenticated: z.boolean(),
+		userId: z.uuid().nullable(),
+	})
+	.strict();

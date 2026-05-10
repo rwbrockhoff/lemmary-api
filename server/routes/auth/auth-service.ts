@@ -1,5 +1,10 @@
 import { supabase, supabaseAdmin } from '../../db/supabase-client.js';
 import { env } from '../../config/environment.js';
+import {
+	getCachedUserId,
+	setCachedUserId,
+	deleteCachedUserId,
+} from '../../utils/session-cache.js';
 
 type RegisterUserParams = {
 	email: string;
@@ -121,4 +126,45 @@ export async function resetPassword({
 	}
 
 	return { success: true };
+}
+
+type AuthenticateResult =
+	| { success: true; userId: string; newRefreshToken: string | null }
+	| { success: false };
+
+export async function authenticateRefreshToken(
+	refreshToken: string,
+): Promise<AuthenticateResult> {
+	if (!refreshToken) return { success: false };
+
+	const cachedUserId = getCachedUserId(refreshToken);
+	if (cachedUserId) {
+		return { success: true, userId: cachedUserId, newRefreshToken: null };
+	}
+
+	try {
+		const { data, error } = await supabase.auth.refreshSession({
+			refresh_token: refreshToken,
+		});
+
+		if (error || !data.session?.user?.id) {
+			deleteCachedUserId(refreshToken);
+			return { success: false };
+		}
+
+		const userId = data.session.user.id;
+		const newRefreshToken = data.session.refresh_token;
+
+		setCachedUserId(newRefreshToken, userId);
+
+		return {
+			success: true,
+			userId,
+			newRefreshToken:
+				newRefreshToken !== refreshToken ? newRefreshToken : null,
+		};
+	} catch {
+		deleteCachedUserId(refreshToken);
+		return { success: false };
+	}
 }

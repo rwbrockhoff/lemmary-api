@@ -7,11 +7,11 @@ import {
 	unauthorized,
 	internalError,
 } from '../../utils/api-responses.js';
-import { env } from '../../config/environment.js';
+import { REFRESH_TOKEN_COOKIE } from '../../config/constants.js';
 import {
-	REFRESH_TOKEN_COOKIE,
-	REFRESH_TOKEN_MAX_AGE,
-} from '../../config/constants.js';
+	refreshCookieOptions,
+	clearRefreshCookieOptions,
+} from '../../utils/cookies.js';
 import {
 	RegisterRequestSchema,
 	LoginRequestSchema,
@@ -82,15 +82,11 @@ export async function handleLogin(
 			return internalError(reply, result.error);
 		}
 
-		reply.setCookie(REFRESH_TOKEN_COOKIE, result.refreshToken, {
-			signed: true,
-			httpOnly: true,
-			secure: env.NODE_ENV === 'production',
-			sameSite: 'lax',
-			domain: env.NODE_ENV === 'production' ? '.lemmary.com' : undefined,
-			path: '/',
-			maxAge: REFRESH_TOKEN_MAX_AGE,
-		});
+		reply.setCookie(
+			REFRESH_TOKEN_COOKIE,
+			result.refreshToken,
+			refreshCookieOptions,
+		);
 
 		return successResponse(reply, {
 			userId: result.userId,
@@ -106,11 +102,21 @@ export async function handleLogout(
 	_request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	reply.clearCookie(REFRESH_TOKEN_COOKIE, {
-		path: '/',
-		domain: env.NODE_ENV === 'production' ? '.lemmary.com' : undefined,
-	});
+	reply.clearCookie(REFRESH_TOKEN_COOKIE, clearRefreshCookieOptions);
 	return successResponse(reply, null, 'Logged out');
+}
+
+export async function handleStatus(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	if (!request.userId) {
+		return successResponse(reply, { isAuthenticated: false, userId: null });
+	}
+	return successResponse(reply, {
+		isAuthenticated: true,
+		userId: request.userId,
+	});
 }
 
 export async function handleForgotPassword(

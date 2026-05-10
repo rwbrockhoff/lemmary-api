@@ -6,6 +6,7 @@ import {
 	LoginResponseSchema,
 	ForgotPasswordRequestSchema,
 	ResetPasswordRequestSchema,
+	AuthStatusResponseSchema,
 } from './schemas.js';
 
 export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
@@ -14,3 +15,4 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequestSchema>;
 export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
+export type AuthStatusResponse = z.infer<typeof AuthStatusResponseSchema>;
