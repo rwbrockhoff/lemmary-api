@@ -1,7 +1,7 @@
 {
-	"name": "assemblr-api",
+	"name": "lemmary-api",
 	"version": "0.1.0",
-	"description": "Assemblr — Production management API for makers",
+	"description": "Lemmary — Production management API for makers",
 	"author": "Ryan Brockhoff",
 	"private": true,
 	"type": "module",
@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@fastify/cors": "^11.2.0",
+		"@supabase/supabase-js": "^2.45.0",
 		"dotenv": "^17.3.1",
 		"fastify": "^5.7.4",
 		"kysely": "^0.28.11",

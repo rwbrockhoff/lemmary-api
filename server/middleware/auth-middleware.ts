@@ -3,7 +3,7 @@ import { DEV_USER_ID } from '../config/constants.js';
 import { env } from '../config/environment.js';
 import { getActiveToken } from '../routes/auth/auth-routes.js';
 
-const PUBLIC_ROUTES = ['/auth/login', '/health'];
+const PUBLIC_ROUTES = ['/auth/register', '/auth/login', '/health'];
 
 export async function authMiddleware(
 	request: FastifyRequest,

@@ -8,6 +8,9 @@ const envSchema = z.object({
 	SQUARESPACE_API_KEY: z.string().min(1),
 	NODE_ENV: z.string().default('development'),
 	AUTH_PASSWORD: z.string().min(1),
+	SUPABASE_CLIENT: z.url(),
+	SUPABASE_KEY: z.string().min(1),
+	SUPABASE_PRIVATE_KEY: z.string().min(1),
 });
 
 type Environment = z.infer<typeof envSchema>;
