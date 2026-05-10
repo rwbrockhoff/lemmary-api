@@ -2,7 +2,12 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { DEV_USER_ID } from '../config/constants.js';
 import { env } from '../config/environment.js';
 
-const PUBLIC_ROUTES = ['/auth/register', '/auth/login', '/health'];
+const PUBLIC_ROUTES = [
+	'/auth/register',
+	'/auth/login',
+	'/auth/logout',
+	'/health',
+];
 
 export async function authMiddleware(
 	request: FastifyRequest,

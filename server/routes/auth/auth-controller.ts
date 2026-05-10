@@ -94,3 +94,14 @@ export async function handleLogin(
 		return internalError(reply, 'Login failed');
 	}
 }
+
+export async function handleLogout(
+	_request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	reply.clearCookie(REFRESH_TOKEN_COOKIE, {
+		path: '/',
+		domain: env.NODE_ENV === 'production' ? '.lemmary.com' : undefined,
+	});
+	return successResponse(reply, null, 'Logged out');
+}
