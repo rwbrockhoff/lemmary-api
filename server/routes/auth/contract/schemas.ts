@@ -28,3 +28,16 @@ export const LoginResponseSchema = z
 		email: z.email(),
 	})
 	.strict();
+
+export const ForgotPasswordRequestSchema = z
+	.object({
+		email: z.string().trim().toLowerCase().pipe(z.email()),
+	})
+	.strict();
+
+export const ResetPasswordRequestSchema = z
+	.object({
+		accessToken: z.string().min(1),
+		newPassword: z.string().min(8),
+	})
+	.strict();

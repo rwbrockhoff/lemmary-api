@@ -15,8 +15,15 @@ import {
 import {
 	RegisterRequestSchema,
 	LoginRequestSchema,
+	ForgotPasswordRequestSchema,
+	ResetPasswordRequestSchema,
 } from './contract/schemas.js';
-import { registerUser, loginUser } from './auth-service.js';
+import {
+	registerUser,
+	loginUser,
+	requestPasswordReset,
+	resetPassword,
+} from './auth-service.js';
 
 export async function handleRegister(
 	request: FastifyRequest,
@@ -104,4 +111,56 @@ export async function handleLogout(
 		domain: env.NODE_ENV === 'production' ? '.lemmary.com' : undefined,
 	});
 	return successResponse(reply, null, 'Logged out');
+}
+
+export async function handleForgotPassword(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const parseResult = ForgotPasswordRequestSchema.safeParse(request.body);
+	if (!parseResult.success) {
+		return badRequest(reply, 'Invalid request', parseResult.error.format());
+	}
+
+	const { email } = parseResult.data;
+
+	try {
+		await requestPasswordReset(email);
+	} catch (error) {
+		request.log.error(error, 'Password reset request failed');
+	}
+
+	return successResponse(
+		reply,
+		null,
+		'If an account exists for that email, a reset link has been sent.',
+	);
+}
+
+export async function handleResetPassword(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const parseResult = ResetPasswordRequestSchema.safeParse(request.body);
+	if (!parseResult.success) {
+		return badRequest(reply, 'Invalid request', parseResult.error.format());
+	}
+
+	const { accessToken, newPassword } = parseResult.data;
+
+	try {
+		const result = await resetPassword({ accessToken, newPassword });
+
+		if (!result.success) {
+			if (result.statusCode === 401) {
+				return unauthorized(reply, result.error);
+			}
+			return badRequest(reply, result.error);
+		}
+
+		return successResponse(reply, null, 'Password updated successfully');
+	} catch (error) {
+		request.log.error(error, 'Password update failed');
+		return internalError(reply, 'Password update failed');
+	}
 }

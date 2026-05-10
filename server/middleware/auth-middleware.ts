@@ -6,6 +6,8 @@ const PUBLIC_ROUTES = [
 	'/auth/register',
 	'/auth/login',
 	'/auth/logout',
+	'/auth/forgot-password',
+	'/auth/reset-password',
 	'/health',
 ];
 

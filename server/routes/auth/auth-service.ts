@@ -1,4 +1,4 @@
-import { supabase } from '../../db/supabase-client.js';
+import { supabase, supabaseAdmin } from '../../db/supabase-client.js';
 import { env } from '../../config/environment.js';
 
 type RegisterUserParams = {
@@ -79,4 +79,46 @@ export async function loginUser({
 		email: data.user.email ?? email,
 		refreshToken: data.session.refresh_token,
 	};
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+	await supabase.auth.resetPasswordForEmail(email, {
+		redirectTo: `${env.FRONTEND_URL}/auth/reset-password`,
+	});
+}
+
+type ResetPasswordParams = {
+	accessToken: string;
+	newPassword: string;
+};
+
+type ResetPasswordResult =
+	| { success: true }
+	| { success: false; error: string; statusCode: 400 | 401 };
+
+export async function resetPassword({
+	accessToken,
+	newPassword,
+}: ResetPasswordParams): Promise<ResetPasswordResult> {
+	const { data: userData, error: getUserError } =
+		await supabase.auth.getUser(accessToken);
+
+	if (getUserError || !userData.user) {
+		return {
+			success: false,
+			error: 'Invalid or expired reset token',
+			statusCode: 401,
+		};
+	}
+
+	const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+		userData.user.id,
+		{ password: newPassword },
+	);
+
+	if (updateError) {
+		return { success: false, error: updateError.message, statusCode: 400 };
+	}
+
+	return { success: true };
 }
