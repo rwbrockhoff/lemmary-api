@@ -7,6 +7,7 @@ import { ordersRoutes } from './routes/orders/orders-routes.js';
 import { reportsRoutes } from './routes/reports/reports-routes.js';
 import { batchesRoutes } from './routes/batches/batches-routes.js';
 import { authRoutes } from './routes/auth/auth-routes.js';
+import { dashboardRoutes } from './routes/dashboard/dashboard-routes.js';
 import { settingsRoutes } from './routes/settings/settings-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
@@ -31,6 +32,7 @@ export const buildApp = () => {
 	});
 
 	app.register(authRoutes);
+	app.register(dashboardRoutes);
 	app.register(ordersRoutes);
 	app.register(reportsRoutes);
 	app.register(batchesRoutes);
