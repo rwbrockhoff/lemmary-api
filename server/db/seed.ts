@@ -52,12 +52,14 @@ async function seed() {
 		.values({
 			id: DEV_USER_ID,
 			email: 'jaclyn@salkadesigns.com',
-			full_name: 'Jaclyn Cage',
+			first_name: 'Jaclyn',
+			last_name: 'Cage',
 		})
 		.onConflict((oc) =>
 			oc.column('id').doUpdateSet({
 				email: 'jaclyn@salkadesigns.com',
-				full_name: 'Jaclyn Cage',
+				first_name: 'Jaclyn',
+				last_name: 'Cage',
 			}),
 		)
 		.execute();
