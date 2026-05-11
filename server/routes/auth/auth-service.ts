@@ -54,15 +54,22 @@ export async function registerUser({
 		};
 	}
 
-	await db
-		.insertInto('users')
-		.values({
-			id: data.user.id,
-			email,
-			first_name: firstName,
-			last_name: lastName,
-		})
-		.execute();
+	try {
+		await db
+			.insertInto('users')
+			.values({
+				id: data.user.id,
+				email,
+				first_name: firstName,
+				last_name: lastName,
+			})
+			.execute();
+	} catch (err) {
+		// roll back the auth user so the email can be retried
+		await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+		console.error('Local user insert failed, rolled back auth user', err);
+		return { success: false, error: 'Registration failed', statusCode: 500 };
+	}
 
 	return {
 		success: true,
@@ -224,16 +231,26 @@ export async function exchangeOauthSession({
 			(metadata.picture as string | undefined) ??
 			null;
 
-		await db
-			.insertInto('users')
-			.values({
-				id: data.user.id,
-				email,
-				first_name: firstName,
-				last_name: lastName,
-				avatar_url: avatarUrl,
-			})
-			.execute();
+		try {
+			await db
+				.insertInto('users')
+				.values({
+					id: data.user.id,
+					email,
+					first_name: firstName,
+					last_name: lastName,
+					avatar_url: avatarUrl,
+				})
+				.execute();
+		} catch (err) {
+			// auth.users row stays; next OAuth retry hits the same code path and re-inserts
+			console.error('Local user insert failed on OAuth exchange', err);
+			return {
+				success: false,
+				error: 'Account setup failed, please try again',
+				statusCode: 401,
+			};
+		}
 	}
 
 	setCachedUserId(refreshToken, data.user.id);
