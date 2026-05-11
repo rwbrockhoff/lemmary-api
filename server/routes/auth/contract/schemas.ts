@@ -48,3 +48,17 @@ export const AuthStatusResponseSchema = z
 		userId: z.uuid().nullable(),
 	})
 	.strict();
+
+export const OauthSessionRequestSchema = z
+	.object({
+		accessToken: z.string().min(1),
+		refreshToken: z.string().min(1),
+	})
+	.strict();
+
+export const OauthSessionResponseSchema = z
+	.object({
+		userId: z.uuid(),
+		email: z.email(),
+	})
+	.strict();

@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
 	'/auth/logout',
 	'/auth/forgot-password',
 	'/auth/reset-password',
+	'/auth/oauth/session',
 	'/auth/status',
 	'/health',
 ];

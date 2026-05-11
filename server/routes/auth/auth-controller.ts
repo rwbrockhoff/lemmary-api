@@ -17,12 +17,14 @@ import {
 	LoginRequestSchema,
 	ForgotPasswordRequestSchema,
 	ResetPasswordRequestSchema,
+	OauthSessionRequestSchema,
 } from './contract/schemas.js';
 import {
 	registerUser,
 	loginUser,
 	requestPasswordReset,
 	resetPassword,
+	exchangeOauthSession,
 } from './auth-service.js';
 
 export async function handleRegister(
@@ -141,6 +143,36 @@ export async function handleForgotPassword(
 		null,
 		'If an account exists for that email, a reset link has been sent.',
 	);
+}
+
+export async function handleOauthSession(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const parseResult = OauthSessionRequestSchema.safeParse(request.body);
+	if (!parseResult.success) {
+		return badRequest(reply, 'Invalid request', parseResult.error.format());
+	}
+
+	const { accessToken, refreshToken } = parseResult.data;
+
+	try {
+		const result = await exchangeOauthSession({ accessToken, refreshToken });
+
+		if (!result.success) {
+			return unauthorized(reply, result.error);
+		}
+
+		reply.setCookie(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions);
+
+		return successResponse(reply, {
+			userId: result.userId,
+			email: result.email,
+		});
+	} catch (error) {
+		request.log.error(error, 'OAuth session exchange failed');
+		return internalError(reply, 'OAuth session exchange failed');
+	}
 }
 
 export async function handleResetPassword(

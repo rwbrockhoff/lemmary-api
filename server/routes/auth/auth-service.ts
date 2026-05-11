@@ -128,6 +128,39 @@ export async function resetPassword({
 	return { success: true };
 }
 
+type ExchangeOauthSessionParams = {
+	accessToken: string;
+	refreshToken: string;
+};
+
+type ExchangeOauthSessionResult =
+	| { success: true; userId: string; email: string }
+	| { success: false; error: string; statusCode: 401 };
+
+export async function exchangeOauthSession({
+	accessToken,
+	refreshToken,
+}: ExchangeOauthSessionParams): Promise<ExchangeOauthSessionResult> {
+	const { data, error } = await supabase.auth.getUser(accessToken);
+
+	if (error || !data.user) {
+		return { success: false, error: 'Invalid OAuth session', statusCode: 401 };
+	}
+
+	const email = data.user.email;
+	if (!email) {
+		return {
+			success: false,
+			error: 'OAuth session missing email',
+			statusCode: 401,
+		};
+	}
+
+	setCachedUserId(refreshToken, data.user.id);
+
+	return { success: true, userId: data.user.id, email };
+}
+
 type AuthenticateResult =
 	| { success: true; userId: string; newRefreshToken: string | null }
 	| { success: false };
