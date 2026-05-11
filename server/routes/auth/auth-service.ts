@@ -49,7 +49,8 @@ export async function registerUser({
 	if (!isNewUser) {
 		return {
 			success: false,
-			error: 'Email already registered',
+			error:
+				"An account with this email already exists. Try signing in, or use 'Sign in with Google'.",
 			statusCode: 409,
 		};
 	}
@@ -97,7 +98,13 @@ export async function loginUser({
 	});
 
 	if (error) {
-		return { success: false, error: error.message, statusCode: 401 };
+		const isInvalidCreds = error.message
+			.toLowerCase()
+			.includes('invalid login credentials');
+		const message = isInvalidCreds
+			? "Invalid email or password. If you signed up with Google, use 'Sign in with Google'."
+			: error.message;
+		return { success: false, error: message, statusCode: 401 };
 	}
 
 	if (!data.session || !data.user) {
@@ -218,14 +225,20 @@ export async function exchangeOauthSession({
 
 	if (!existing) {
 		const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+		const fullName =
+			(metadata.full_name as string | undefined) ??
+			(metadata.name as string | undefined) ??
+			'';
+		const [splitFirst, ...splitRest] = fullName.split(' ');
 		const firstName =
 			(metadata.given_name as string | undefined) ??
 			(metadata.first_name as string | undefined) ??
+			splitFirst ??
 			null;
 		const lastName =
 			(metadata.family_name as string | undefined) ??
 			(metadata.last_name as string | undefined) ??
-			null;
+			(splitRest.length > 0 ? splitRest.join(' ') : null);
 		const avatarUrl =
 			(metadata.avatar_url as string | undefined) ??
 			(metadata.picture as string | undefined) ??
