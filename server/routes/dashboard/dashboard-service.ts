@@ -34,11 +34,16 @@ export type DashboardData = {
 		dueDate: Date | null;
 		daysUntilDue: number | null;
 		grandTotal: string | null;
+		itemCount: number;
+		itemsCompleted: number;
+		workflowStageName: string | null;
+		workflowStageColor: string | null;
 	}>;
 	ordersTrend: Array<{
 		date: string;
 		count: number;
 		revenue: string;
+		avgOrderValue: string;
 	}>;
 };
 
@@ -124,18 +129,33 @@ export async function getDashboard(
 
 	const dueSoonRaw = await db
 		.selectFrom('orders')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
 		.select([
-			'id',
-			'order_number',
-			'customer_name',
-			'order_date',
-			'due_date',
-			'grand_total',
+			'orders.id',
+			'orders.order_number',
+			'orders.customer_name',
+			'orders.order_date',
+			'orders.due_date',
+			'orders.grand_total',
+			'order_workflow_stages.name as workflow_stage_name',
+			'order_workflow_stages.color as workflow_stage_color',
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
+				'item_count',
+			),
+			sql<string>`(
+				select count(*) from order_items oi
+				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
+				where oi.order_id = orders.id and s.is_complete = true
+			)`.as('items_completed'),
 		])
-		.where('store_id', '=', store.id)
-		.where('fulfillment_status', '=', 'pending')
-		.where('due_date', 'is not', null)
-		.orderBy('due_date', 'asc')
+		.where('orders.store_id', '=', store.id)
+		.where('orders.fulfillment_status', '=', 'pending')
+		.where('orders.due_date', 'is not', null)
+		.orderBy('orders.due_date', 'asc')
 		.limit(5)
 		.execute();
 
@@ -152,6 +172,10 @@ export async function getDashboard(
 			dueDate,
 			daysUntilDue,
 			grandTotal: row.grand_total,
+			itemCount: Number(row.item_count),
+			itemsCompleted: Number(row.items_completed),
+			workflowStageName: row.workflow_stage_name,
+			workflowStageColor: row.workflow_stage_color,
 		};
 	});
 
@@ -171,11 +195,17 @@ export async function getDashboard(
 		.orderBy('date', 'asc')
 		.execute();
 
-	const ordersTrend = ordersTrendRaw.map((row) => ({
-		date: row.date,
-		count: Number(row.count),
-		revenue: row.revenue,
-	}));
+	const ordersTrend = ordersTrendRaw.map((row) => {
+		const count = Number(row.count);
+		const revenue = Number(row.revenue);
+		const aov = count > 0 ? revenue / count : 0;
+		return {
+			date: row.date,
+			count,
+			revenue: row.revenue,
+			avgOrderValue: aov.toFixed(2),
+		};
+	});
 
 	return {
 		range,
