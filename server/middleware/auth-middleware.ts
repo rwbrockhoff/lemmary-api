@@ -1,24 +1,55 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { DEV_USER_ID } from '../config/constants.js';
-import { env } from '../config/environment.js';
-import { getActiveToken } from '../routes/auth/auth-routes.js';
+import { REFRESH_TOKEN_COOKIE } from '../config/constants.js';
+// import { env } from '../config/environment.js';
+import { authenticateRefreshToken } from '../routes/auth/auth-service.js';
+import {
+	refreshCookieOptions,
+	clearRefreshCookieOptions,
+} from '../utils/cookies.js';
 
-const PUBLIC_ROUTES = ['/auth/login', '/health'];
+const PUBLIC_ROUTES = [
+	'/auth/register',
+	'/auth/login',
+	'/auth/logout',
+	'/auth/forgot-password',
+	'/auth/reset-password',
+	'/auth/oauth/session',
+	'/auth/status',
+	'/health',
+];
 
 export async function authMiddleware(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	request.userId = DEV_USER_ID;
+	const signedCookie = request.cookies[REFRESH_TOKEN_COOKIE];
+	if (signedCookie) {
+		const unsigned = request.unsignCookie(signedCookie);
+		if (unsigned.valid && unsigned.value) {
+			const result = await authenticateRefreshToken(unsigned.value);
+			if (result.success) {
+				request.userId = result.userId;
+				if (result.newRefreshToken) {
+					reply.setCookie(
+						REFRESH_TOKEN_COOKIE,
+						result.newRefreshToken,
+						refreshCookieOptions,
+					);
+				}
+			} else {
+				reply.clearCookie(REFRESH_TOKEN_COOKIE, clearRefreshCookieOptions);
+			}
+		}
+	}
 
-	if (env.NODE_ENV === 'development') return;
+	// dev fallback — uncomment to skip auth in local dev
+	// if (!request.userId && env.NODE_ENV === 'development') {
+	// 	request.userId = DEV_USER_ID;
+	// }
 
 	if (PUBLIC_ROUTES.includes(request.url)) return;
 
-	const authHeader = request.headers.authorization;
-	const token = authHeader?.replace('Bearer ', '');
-
-	if (!token || token !== getActiveToken()) {
+	if (!request.userId) {
 		return reply.status(401).send({ error: 'Unauthorized' });
 	}
 }

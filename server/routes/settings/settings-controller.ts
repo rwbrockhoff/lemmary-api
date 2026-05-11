@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { successResponse, internalError } from '../../utils/api-responses.js';
+import { successResponse, badRequest, internalError } from '../../utils/api-responses.js';
 import { getStoreSettings, updateLeadTime } from './settings-service.js';
 
 export async function handleGetSettings(
@@ -22,6 +22,7 @@ export async function handleUpdateLeadTime(
 	try {
 		const { leadTimeDays } = request.body;
 		const result = await updateLeadTime(request.userId, leadTimeDays);
+		if (!result) return badRequest(reply, 'Connect a store first');
 		return successResponse(reply, result);
 	} catch (error) {
 		request.log.error(error, 'Failed to update lead time');

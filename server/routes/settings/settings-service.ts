@@ -3,6 +3,9 @@ import { getStoreForUser } from '../../utils/store.js';
 
 export async function getStoreSettings(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) {
+		return { storeName: null, platform: null, leadTimeDays: null };
+	}
 
 	return {
 		storeName: store.store_name,
@@ -13,6 +16,7 @@ export async function getStoreSettings(userId: string) {
 
 export async function updateLeadTime(userId: string, leadTimeDays: number | null) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	await db
 		.updateTable('stores')

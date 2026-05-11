@@ -7,6 +7,7 @@ import type { Database } from '../../db/database-types.js';
 
 export async function getBatches(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	const batches = await db
 		.selectFrom('production_batches')
@@ -44,6 +45,7 @@ export async function getBatches(userId: string) {
 
 export async function getBatch(userId: string, batchId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const batch = await db
 		.selectFrom('production_batches')
@@ -138,6 +140,7 @@ export async function createBatch(
 	orderIds: string[],
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const orders = await db
 		.selectFrom('orders')
@@ -170,6 +173,7 @@ export async function updateBatch(
 	updates: { status?: string; name?: string; orderIds?: string[] },
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	return db.transaction().execute(async (trx) => {
 		const set: Record<string, unknown> = { updated_at: new Date() };
@@ -216,6 +220,7 @@ export async function updateBatch(
 
 export async function deleteBatch(userId: string, batchId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	return db.transaction().execute(async (trx) => {
 		await clearBatchData(trx, batchId);
@@ -454,6 +459,7 @@ async function populateBatchData(
 
 async function verifyBatchOwnership(userId: string, batchId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return undefined;
 
 	return db
 		.selectFrom('production_batches')

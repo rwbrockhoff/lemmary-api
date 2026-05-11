@@ -20,9 +20,11 @@ export interface Database {
 }
 
 export interface UserTable {
-	id: Generated<string>;
+	id: string;
 	email: string;
-	full_name: string;
+	first_name: string | null;
+	last_name: string | null;
+	avatar_url: string | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
@@ -220,8 +222,10 @@ export interface ProductionBatchOrderItemTable {
 	created_at: Generated<Date>;
 }
 
-export type ProductionBatchOrderItem = Selectable<ProductionBatchOrderItemTable>;
-export type NewProductionBatchOrderItem = Insertable<ProductionBatchOrderItemTable>;
+export type ProductionBatchOrderItem =
+	Selectable<ProductionBatchOrderItemTable>;
+export type NewProductionBatchOrderItem =
+	Insertable<ProductionBatchOrderItemTable>;
 
 export interface ProductionBatchItemTable {
 	id: Generated<string>;
@@ -253,7 +257,8 @@ export interface ProductionBatchMaterialTable {
 }
 
 export type ProductionBatchMaterial = Selectable<ProductionBatchMaterialTable>;
-export type NewProductionBatchMaterial = Insertable<ProductionBatchMaterialTable>;
+export type NewProductionBatchMaterial =
+	Insertable<ProductionBatchMaterialTable>;
 
 export interface ProductTable {
 	id: Generated<string>;

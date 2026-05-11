@@ -25,6 +25,7 @@ export async function handleSyncOrders(
 ) {
 	try {
 		const result = await syncOrders(request.userId);
+		if (!result) return badRequest(reply, 'Connect a store before syncing');
 		return successResponse(reply, result, `Synced ${result.synced} orders`);
 	} catch (error) {
 		request.log.error(error, 'Failed to sync orders');

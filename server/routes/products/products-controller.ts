@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
 	successResponse,
 	notFound,
+	badRequest,
 	internalError,
 } from '../../utils/api-responses.js';
 import { syncProducts, getProducts, getProduct } from './products-service.js';
@@ -12,6 +13,7 @@ export async function handleSyncProducts(
 ) {
 	try {
 		const result = await syncProducts(request.userId);
+		if (!result) return badRequest(reply, 'Connect a store before syncing');
 		return successResponse(reply, result, `Synced ${result.synced} products`);
 	} catch (error) {
 		request.log.error(error, 'Failed to sync products');

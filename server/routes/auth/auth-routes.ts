@@ -1,23 +1,20 @@
 import type { FastifyInstance } from 'fastify';
-import { env } from '../../config/environment.js';
-import crypto from 'node:crypto';
-
-let activeToken: string | null = null;
-
-export function getActiveToken() {
-	return activeToken;
-}
+import {
+	handleRegister,
+	handleLogin,
+	handleLogout,
+	handleForgotPassword,
+	handleResetPassword,
+	handleStatus,
+	handleOauthSession,
+} from './auth-controller.js';
 
 export async function authRoutes(app: FastifyInstance) {
-	app.post<{ Body: { password: string } }>('/auth/login', async (request, reply) => {
-		const { password } = request.body;
-
-		if (password !== env.AUTH_PASSWORD) {
-			return reply.status(401).send({ error: 'Invalid password' });
-		}
-
-		activeToken = crypto.randomBytes(32).toString('hex');
-
-		return { token: activeToken };
-	});
+	app.post('/auth/register', handleRegister);
+	app.post('/auth/login', handleLogin);
+	app.post('/auth/logout', handleLogout);
+	app.post('/auth/forgot-password', handleForgotPassword);
+	app.post('/auth/reset-password', handleResetPassword);
+	app.post('/auth/oauth/session', handleOauthSession);
+	app.get('/auth/status', handleStatus);
 }

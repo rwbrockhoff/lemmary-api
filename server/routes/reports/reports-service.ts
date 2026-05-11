@@ -5,6 +5,7 @@ import { extractBaseColor } from '../../utils/variants.js';
 
 export async function getProductionSummary(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	const summary = await db
 		.selectFrom('order_items')
@@ -34,6 +35,9 @@ export async function getProductionSummary(userId: string) {
 
 export async function getMaterialsReport(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) {
+		return { fabric: [], linear: [], hardware: [], mismatches: [] };
+	}
 
 	const productionSummary = await getProductionSummary(userId);
 

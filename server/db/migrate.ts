@@ -8,6 +8,7 @@ import {
 	Migrator,
 	PostgresDialect,
 	FileMigrationProvider,
+	NO_MIGRATIONS,
 } from 'kysely';
 
 function createMigrator() {
@@ -58,9 +59,11 @@ async function migrateToLatest() {
 	await db.destroy();
 }
 
-async function migrateDown() {
+async function migrateDown(all = false) {
 	const { db, migrator } = createMigrator();
-	const { error, results } = await migrator.migrateDown();
+	const { error, results } = all
+		? await migrator.migrateTo(NO_MIGRATIONS)
+		: await migrator.migrateDown();
 
 	results?.forEach((it) => {
 		if (it.status === 'Success') {
@@ -81,7 +84,9 @@ async function migrateDown() {
 
 const command = process.argv[2];
 
-if (command === 'down') {
+if (command === 'down:all') {
+	migrateDown(true);
+} else if (command === 'down') {
 	migrateDown();
 } else {
 	migrateToLatest();

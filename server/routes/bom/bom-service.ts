@@ -4,6 +4,7 @@ import { getStoreForUser } from '../../utils/store.js';
 
 export async function getMaterialTypes(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	return db
 		.selectFrom('bom_material_types')
@@ -15,6 +16,7 @@ export async function getMaterialTypes(userId: string) {
 
 export async function getBomForVariant(userId: string, variantId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	const variant = await db
 		.selectFrom('product_variants')
@@ -78,6 +80,7 @@ type CreateBomItemInput = {
 
 export async function createBomItem(userId: string, input: CreateBomItemInput) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const maxPosition = await db
 		.selectFrom('bom_items')
@@ -126,6 +129,7 @@ export async function updateBomItem(
 	input: UpdateBomItemInput,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	let materialId: string | null = null;
 
@@ -178,7 +182,7 @@ export async function updateBomItem(
 				input.size,
 				input.purchase_url,
 			);
-			materialId = material.id;
+			materialId = material?.id ?? null;
 		}
 	}
 
@@ -201,6 +205,7 @@ export async function updateBomItem(
 
 export async function deleteBomItem(userId: string, bomItemId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return false;
 
 	const result = await db
 		.deleteFrom('bom_items')
@@ -217,6 +222,7 @@ export async function copyBomFromVariant(
 	sourceVariantId: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	const [sourceVariant, targetVariant] = await Promise.all([
 		db
@@ -281,6 +287,7 @@ export async function searchMaterialTypes(
 	measurement?: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	let q = db
 		.selectFrom('bom_material_types')
@@ -303,6 +310,7 @@ export async function searchMaterialCatalog(
 	measurement?: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	let q = db
 		.selectFrom('materials')
@@ -337,6 +345,7 @@ export async function searchMaterials(
 	query: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	return db
 		.selectFrom('materials')
@@ -374,6 +383,7 @@ export async function getOrCreateMaterial(
 	purchaseUrl: string | null,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const existing = await db
 		.selectFrom('materials')
@@ -414,6 +424,7 @@ export async function getOrCreateMaterial(
 
 export async function getBomSuggestions(userId: string, query: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return [];
 
 	const suggestions = await db
 		.selectFrom('bom_items')

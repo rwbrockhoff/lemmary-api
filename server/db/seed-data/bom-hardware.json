@@ -3768,5 +3768,865 @@
     "length": null,
     "width": null,
     "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "",
+    "material_type": "Belt Buckle",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "",
+    "material_type": "Slik Clips",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "",
+    "material_type": "Zipper Pull",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Belt Elastic Loop",
+    "material_type": "Elastic",
+    "length": 2.5,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Belt Webbing",
+    "material_type": "Webbing",
+    "length": 43.5,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Belt Webbing Connector",
+    "material_type": "Webbing",
+    "length": 4.25,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Front Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Front Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 10.25,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Inside Grosgrain Tabs",
+    "material_type": "Grosgrain",
+    "length": 22.0,
+    "width": 0.75,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 3.0,
+    "width": 1.0,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 12.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ0638505",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "Salish Sea (Navy/Light Blue)",
+    "piece": "Wing Tabs",
+    "material_type": "Grosgrain",
+    "length": 4.0,
+    "width": 1.0,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ1518077",
+    "product_name": "Mini Pouch",
+    "variant": "Clover (Light Green)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ1518077",
+    "product_name": "Mini Pouch",
+    "variant": "Clover (Light Green)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ1518077",
+    "product_name": "Mini Pouch",
+    "variant": "Clover (Light Green)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ1518077",
+    "product_name": "Mini Pouch",
+    "variant": "Clover (Light Green)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ1688812",
+    "product_name": "Mini Pouch",
+    "variant": "Alpine Lake (Teal)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ1688812",
+    "product_name": "Mini Pouch",
+    "variant": "Alpine Lake (Teal)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ1688812",
+    "product_name": "Mini Pouch",
+    "variant": "Alpine Lake (Teal)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ1688812",
+    "product_name": "Mini Pouch",
+    "variant": "Alpine Lake (Teal)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "",
+    "material_type": "Zipper Pull",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "Elastic Loop",
+    "material_type": "Elastic",
+    "length": 10.0,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "Inside Grosgrain Tabs",
+    "material_type": "Grosgrain",
+    "length": 16.0,
+    "width": 0.75,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 3.0,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ2943326",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Left Handed (zipper on left hand side)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 10.75,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3736692",
+    "product_name": "Extra Hipbelt Strap (for S\u00e4lka Sling)",
+    "variant": "42 inches (Default for S\u00e4lka Slings)",
+    "piece": "",
+    "material_type": "Belt Buckle",
+    "length": null,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3736692",
+    "product_name": "Extra Hipbelt Strap (for S\u00e4lka Sling)",
+    "variant": "42 inches (Default for S\u00e4lka Slings)",
+    "piece": "",
+    "material_type": "Webbing",
+    "length": 42.0,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "",
+    "material_type": "Zipper Pull",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "",
+    "material_type": "Belt Buckle",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "",
+    "material_type": "Slik Clips",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Belt Elastic Loop",
+    "material_type": "Elastic",
+    "length": 2.5,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Belt Webbing",
+    "material_type": "Webbing",
+    "length": 43.5,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Belt Webbing Connector",
+    "material_type": "Webbing",
+    "length": 4.25,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Front Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Front Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 10.25,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Inside Grosgrain Tabs",
+    "material_type": "Grosgrain",
+    "length": 22.0,
+    "width": 0.75,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 3.0,
+    "width": 1.0,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 12.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ3879656",
+    "product_name": "S\u00e4lka Sling (Zipper Pocket)",
+    "variant": "English Garden - Limited Edition",
+    "piece": "Wing Tabs",
+    "material_type": "Grosgrain",
+    "length": 4.0,
+    "width": 1.0,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "",
+    "material_type": "Zipper Pull",
+    "length": null,
+    "width": null,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "Elastic Loop",
+    "material_type": "Elastic",
+    "length": 10.0,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "Inside Grosgrain Tabs",
+    "material_type": "Grosgrain",
+    "length": 16.0,
+    "width": 0.75,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 3.0,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ4588240",
+    "product_name": "Sketcher",
+    "variant": "English Garden - Limited Edition / Right Handed (zipper on right hand side)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 10.75,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4894877",
+    "product_name": "Mini Pouch",
+    "variant": "Fireweed (Pink)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4894877",
+    "product_name": "Mini Pouch",
+    "variant": "Fireweed (Pink)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ4894877",
+    "product_name": "Mini Pouch",
+    "variant": "Fireweed (Pink)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ4894877",
+    "product_name": "Mini Pouch",
+    "variant": "Fireweed (Pink)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ5163141",
+    "product_name": "Extra Hipbelt Strap (for S\u00e4lka Sling)",
+    "variant": "54 inches",
+    "piece": "",
+    "material_type": "Belt Buckle",
+    "length": null,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ5163141",
+    "product_name": "Extra Hipbelt Strap (for S\u00e4lka Sling)",
+    "variant": "54 inches",
+    "piece": "",
+    "material_type": "Webbing",
+    "length": 54.0,
+    "width": 1.0,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ7224126",
+    "product_name": "Mini Pouch",
+    "variant": "Honey Pinecone (Brown)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ7224126",
+    "product_name": "Mini Pouch",
+    "variant": "Honey Pinecone (Brown)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ7224126",
+    "product_name": "Mini Pouch",
+    "variant": "Honey Pinecone (Brown)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ7224126",
+    "product_name": "Mini Pouch",
+    "variant": "Honey Pinecone (Brown)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ7611771",
+    "product_name": "Mini Pouch",
+    "variant": "Wild Ivy (Dark Green)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ7611771",
+    "product_name": "Mini Pouch",
+    "variant": "Wild Ivy (Dark Green)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ7611771",
+    "product_name": "Mini Pouch",
+    "variant": "Wild Ivy (Dark Green)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ7611771",
+    "product_name": "Mini Pouch",
+    "variant": "Wild Ivy (Dark Green)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ8626237",
+    "product_name": "Mini Pouch",
+    "variant": "Midnight Pine (Black)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ8626237",
+    "product_name": "Mini Pouch",
+    "variant": "Midnight Pine (Black)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ8626237",
+    "product_name": "Mini Pouch",
+    "variant": "Midnight Pine (Black)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ8626237",
+    "product_name": "Mini Pouch",
+    "variant": "Midnight Pine (Black)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9381133",
+    "product_name": "Pencil Pouch",
+    "variant": "Toasted Cinnamon (Brown)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9381133",
+    "product_name": "Pencil Pouch",
+    "variant": "Toasted Cinnamon (Brown)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9381133",
+    "product_name": "Pencil Pouch",
+    "variant": "Toasted Cinnamon (Brown)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ9381133",
+    "product_name": "Pencil Pouch",
+    "variant": "Toasted Cinnamon (Brown)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 10.25,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9435819",
+    "product_name": "Mini Pouch",
+    "variant": "Misty Fern (Green)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9435819",
+    "product_name": "Mini Pouch",
+    "variant": "Misty Fern (Green)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9435819",
+    "product_name": "Mini Pouch",
+    "variant": "Misty Fern (Green)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ9435819",
+    "product_name": "Mini Pouch",
+    "variant": "Misty Fern (Green)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9492712",
+    "product_name": "Pencil Pouch",
+    "variant": "Sagebrush (Gray/Green)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9492712",
+    "product_name": "Pencil Pouch",
+    "variant": "Sagebrush (Gray/Green)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9492712",
+    "product_name": "Pencil Pouch",
+    "variant": "Sagebrush (Gray/Green)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ9492712",
+    "product_name": "Pencil Pouch",
+    "variant": "Sagebrush (Gray/Green)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 10.25,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9888103",
+    "product_name": "Mini Pouch",
+    "variant": "Wisteria (Purple)",
+    "piece": "",
+    "material_type": "Label",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9888103",
+    "product_name": "Mini Pouch",
+    "variant": "Wisteria (Purple)",
+    "piece": "",
+    "material_type": "Zipper Slider",
+    "length": null,
+    "width": null,
+    "quantity": 1
+  },
+  {
+    "platform_sku": "SQ9888103",
+    "product_name": "Mini Pouch",
+    "variant": "Wisteria (Purple)",
+    "piece": "Main Tabs",
+    "material_type": "Grosgrain",
+    "length": 1.5,
+    "width": 0.75,
+    "quantity": 2
+  },
+  {
+    "platform_sku": "SQ9888103",
+    "product_name": "Mini Pouch",
+    "variant": "Wisteria (Purple)",
+    "piece": "Main Zipper Tape",
+    "material_type": "Zipper Tape",
+    "length": 6.5,
+    "width": null,
+    "quantity": 1
   }
 ]

@@ -1,7 +1,7 @@
 {
-	"name": "assemblr-api",
+	"name": "lemmary-api",
 	"version": "0.1.0",
-	"description": "Assemblr — Production management API for makers",
+	"description": "Lemmary — Production management API for makers",
 	"author": "Ryan Brockhoff",
 	"private": true,
 	"type": "module",
@@ -21,12 +21,15 @@
 		"format:changed": "git diff --name-only --relative | xargs prettier --write",
 		"migrate:latest": "tsx server/db/migrate.ts",
 		"migrate:down": "tsx server/db/migrate.ts down",
+		"migrate:down:all": "tsx server/db/migrate.ts down:all",
 		"migrate:prod": "DOTENV_CONFIG_PATH=.env.production tsx server/db/migrate.ts",
 		"seed": "tsx server/db/seed.ts",
 		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed"
 	},
 	"dependencies": {
+		"@fastify/cookie": "^11.0.0",
 		"@fastify/cors": "^11.2.0",
+		"@supabase/supabase-js": "^2.45.0",
 		"dotenv": "^17.3.1",
 		"fastify": "^5.7.4",
 		"kysely": "^0.28.11",
