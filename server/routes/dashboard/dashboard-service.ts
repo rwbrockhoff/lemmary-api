@@ -2,14 +2,26 @@ import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 
+export const VALID_RANGES = [30, 90, 365] as const;
+export type DashboardRange = (typeof VALID_RANGES)[number];
+export type DashboardBucket = 'day' | 'week' | 'month';
+
+const bucketForRange = (range: DashboardRange): DashboardBucket => {
+	if (range === 30) return 'day';
+	if (range === 90) return 'week';
+	return 'month';
+};
+
 export type DashboardData = {
-	thisMonthRevenue: {
+	range: DashboardRange;
+	bucket: DashboardBucket;
+	revenue: {
 		current: string;
-		previousMonth: string;
+		previous: string;
 		changePercent: number;
 	};
 	ordersInProgress: number;
-	ordersCompletedThisMonth: number;
+	ordersCompletedInPeriod: number;
 	avgLeadTime: {
 		days: number | null;
 		target: number | null;
@@ -23,46 +35,53 @@ export type DashboardData = {
 		daysUntilDue: number | null;
 		grandTotal: string | null;
 	}>;
-	ordersByDay: Array<{
+	ordersTrend: Array<{
 		date: string;
 		count: number;
 		revenue: string;
 	}>;
 };
 
-const EMPTY_DASHBOARD: DashboardData = {
-	thisMonthRevenue: { current: '0', previousMonth: '0', changePercent: 0 },
+const emptyDashboard = (range: DashboardRange): DashboardData => ({
+	range,
+	bucket: bucketForRange(range),
+	revenue: { current: '0', previous: '0', changePercent: 0 },
 	ordersInProgress: 0,
-	ordersCompletedThisMonth: 0,
+	ordersCompletedInPeriod: 0,
 	avgLeadTime: { days: null, target: null },
 	dueSoon: [],
-	ordersByDay: [],
-};
+	ordersTrend: [],
+});
 
-export async function getDashboard(userId: string): Promise<DashboardData> {
+export async function getDashboard(
+	userId: string,
+	range: DashboardRange,
+): Promise<DashboardData> {
 	const store = await getStoreForUser(userId);
-	if (!store) return EMPTY_DASHBOARD;
+	if (!store) return emptyDashboard(range);
+
+	const bucket = bucketForRange(range);
+	const now = new Date();
+	const dayMs = 24 * 60 * 60 * 1000;
+	const periodStart = new Date(now.getTime() - range * dayMs);
+	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
 
 	const revenue = await db
 		.selectFrom('orders')
 		.select([
-			sql<string>`coalesce(sum(grand_total) filter (where order_date >= date_trunc('month', now())), 0)::text`.as(
-				'current_month',
+			sql<string>`coalesce(sum(grand_total) filter (where order_date >= ${periodStart}), 0)::text`.as(
+				'current_period',
 			),
-			sql<string>`coalesce(sum(grand_total) filter (where order_date >= date_trunc('month', now()) - interval '1 month' and order_date < date_trunc('month', now())), 0)::text`.as(
-				'previous_month',
+			sql<string>`coalesce(sum(grand_total) filter (where order_date >= ${previousPeriodStart} and order_date < ${periodStart}), 0)::text`.as(
+				'previous_period',
 			),
 		])
 		.where('store_id', '=', store.id)
-		.where(
-			'order_date',
-			'>=',
-			sql<Date>`date_trunc('month', now()) - interval '1 month'`,
-		)
+		.where('order_date', '>=', previousPeriodStart)
 		.executeTakeFirstOrThrow();
 
-	const currentRevenue = Number(revenue.current_month);
-	const previousRevenue = Number(revenue.previous_month);
+	const currentRevenue = Number(revenue.current_period);
+	const previousRevenue = Number(revenue.previous_period);
 	const changePercent =
 		previousRevenue > 0
 			? Math.round(
@@ -81,7 +100,7 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
 		.selectFrom('orders')
 		.select(db.fn.count<number>('id').as('count'))
 		.where('store_id', '=', store.id)
-		.where('fulfilled_on', '>=', sql<Date>`date_trunc('month', now())`)
+		.where('fulfilled_on', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
 	const leadTime = await db
@@ -95,6 +114,7 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
 		)
 		.where('store_id', '=', store.id)
 		.where('fulfilled_on', 'is not', null)
+		.where('fulfilled_on', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
 	const avgLeadTimeDays =
@@ -119,11 +139,10 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
 		.limit(5)
 		.execute();
 
-	const now = new Date();
 	const dueSoon = dueSoonRaw.map((row) => {
 		const dueDate = row.due_date;
 		const daysUntilDue = dueDate
-			? Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+			? Math.ceil((dueDate.getTime() - now.getTime()) / dayMs)
 			: null;
 		return {
 			id: row.id,
@@ -136,40 +155,43 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
 		};
 	});
 
-	const ordersByDayRaw = await db
+	const bucketLit = sql.lit(bucket);
+	const ordersTrendRaw = await db
 		.selectFrom('orders')
 		.select([
-			sql<string>`to_char(date_trunc('day', order_date), 'YYYY-MM-DD')`.as(
+			sql<string>`to_char(date_trunc(${bucketLit}, order_date), 'YYYY-MM-DD')`.as(
 				'date',
 			),
 			sql<string>`count(*)::text`.as('count'),
 			sql<string>`coalesce(sum(grand_total), 0)::text`.as('revenue'),
 		])
 		.where('store_id', '=', store.id)
-		.where('order_date', '>=', sql<Date>`now() - interval '30 days'`)
-		.groupBy(sql`date_trunc('day', order_date)`)
+		.where('order_date', '>=', periodStart)
+		.groupBy(sql`date_trunc(${bucketLit}, order_date)`)
 		.orderBy('date', 'asc')
 		.execute();
 
-	const ordersByDay = ordersByDayRaw.map((row) => ({
+	const ordersTrend = ordersTrendRaw.map((row) => ({
 		date: row.date,
 		count: Number(row.count),
 		revenue: row.revenue,
 	}));
 
 	return {
-		thisMonthRevenue: {
-			current: revenue.current_month,
-			previousMonth: revenue.previous_month,
+		range,
+		bucket,
+		revenue: {
+			current: revenue.current_period,
+			previous: revenue.previous_period,
 			changePercent,
 		},
 		ordersInProgress: Number(inProgress.count),
-		ordersCompletedThisMonth: Number(completed.count),
+		ordersCompletedInPeriod: Number(completed.count),
 		avgLeadTime: {
 			days: avgLeadTimeDays,
 			target: store.lead_time_days,
 		},
 		dueSoon,
-		ordersByDay,
+		ordersTrend,
 	};
 }
