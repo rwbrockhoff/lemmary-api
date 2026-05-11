@@ -120,6 +120,7 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTime
 
 export async function syncOrders(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 	const orders = await fetchOrdersFromPlatform(store);
 	const synced = await upsertOrders(store.id, orders, store.lead_time_days);
 
@@ -134,6 +135,7 @@ export async function syncOrders(userId: string) {
 
 export async function getOrders(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return { orders: [], lastSyncedAt: null };
 
 	const orders = await db
 		.selectFrom('orders')
@@ -182,6 +184,7 @@ export async function getOrders(userId: string) {
 
 export async function getOrdersWithItems(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return { orders: [], lastSyncedAt: null };
 
 	const orders = await db
 		.selectFrom('orders')
@@ -253,6 +256,7 @@ export async function getOrdersWithItems(userId: string) {
 
 export async function getCompletedOrders(userId: string, limit: number, offset: number) {
 	const store = await getStoreForUser(userId);
+	if (!store) return { orders: [], hasMore: false };
 
 	const orders = await db
 		.selectFrom('orders')
@@ -291,6 +295,7 @@ export async function getCompletedOrders(userId: string, limit: number, offset: 
 
 export async function getOrderWithItems(userId: string, orderId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const order = await db
 		.selectFrom('orders')
@@ -326,6 +331,7 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 
 export async function getWorkflowStages(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return { orderStages: [], itemStages: [] };
 
 	const orderStages = await db
 		.selectFrom('order_workflow_stages')
@@ -350,6 +356,7 @@ export async function updateOrderStage(
 	stageId: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	return db
 		.updateTable('orders')
@@ -366,6 +373,7 @@ export async function updateOrderNotes(
 	notes: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	return db
 		.updateTable('orders')
@@ -417,6 +425,7 @@ function workflowOrdersBase(storeId: string) {
 
 export async function getWorkflowBoard(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return { orders: [], stages: [], activeBatches: [] };
 
 	const openOrders = await workflowOrdersBase(store.id)
 		.where('order_workflow_stages.is_complete', '!=', true)
@@ -464,6 +473,7 @@ export async function updateOrderItemStage(
 	stageId: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const order = await db
 		.selectFrom('orders')
@@ -488,6 +498,7 @@ export async function completeAllOrderItems(
 	orderId: string,
 ) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const order = await db
 		.selectFrom('orders')

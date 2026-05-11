@@ -72,6 +72,7 @@ export async function handleCreateBatch(
 			name.trim(),
 			orderIds,
 		);
+		if (!batch) return badRequest(reply, 'Connect a store first');
 		return createdSuccess(reply, batch);
 	} catch (error) {
 		if (

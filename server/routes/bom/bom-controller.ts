@@ -67,6 +67,7 @@ export async function handleCreateBomItem(
 ) {
 	try {
 		const item = await createBomItem(request.userId, request.body);
+		if (!item) return badRequest(reply, 'Connect a store first');
 		return successResponse(reply, item, 'BOM item created');
 	} catch (error) {
 		request.log.error(error, 'Failed to create BOM item');
@@ -224,6 +225,7 @@ export async function handleGetOrCreateMaterial(
 			purchase_url,
 		);
 
+		if (!material) return badRequest(reply, 'Connect a store first');
 		return successResponse(reply, material);
 	} catch (error) {
 		request.log.error(error, 'Failed to get or create material');

@@ -75,6 +75,7 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 
 export async function syncProducts(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 	const products = await fetchProductsFromPlatform(store);
 	const synced = await upsertProducts(store.id, products);
 
@@ -89,6 +90,7 @@ export async function syncProducts(userId: string) {
 
 export async function getProducts(userId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return { products: [], lastSyncedAt: null };
 
 	const products = await db
 		.selectFrom('products')
@@ -131,6 +133,7 @@ export async function getProducts(userId: string) {
 
 export async function getProduct(userId: string, productId: string) {
 	const store = await getStoreForUser(userId);
+	if (!store) return null;
 
 	const product = await db
 		.selectFrom('products')
