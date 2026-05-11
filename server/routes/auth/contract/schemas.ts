@@ -4,6 +4,8 @@ export const RegisterRequestSchema = z
 	.object({
 		email: z.string().trim().toLowerCase().pipe(z.email()),
 		password: z.string().min(8),
+		firstName: z.string().trim().min(1).max(100),
+		lastName: z.string().trim().min(1).max(100),
 	})
 	.strict();
 
@@ -42,10 +44,20 @@ export const ResetPasswordRequestSchema = z
 	})
 	.strict();
 
+export const AuthUserSchema = z
+	.object({
+		userId: z.uuid(),
+		email: z.email(),
+		firstName: z.string().nullable(),
+		lastName: z.string().nullable(),
+		avatarUrl: z.string().nullable(),
+	})
+	.strict();
+
 export const AuthStatusResponseSchema = z
 	.object({
 		isAuthenticated: z.boolean(),
-		userId: z.uuid().nullable(),
+		user: AuthUserSchema.nullable(),
 	})
 	.strict();
 

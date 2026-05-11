@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from '../../db/supabase-client.js';
+import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
 import {
 	getCachedUserId,
@@ -9,6 +10,8 @@ import {
 type RegisterUserParams = {
 	email: string;
 	password: string;
+	firstName: string;
+	lastName: string;
 };
 
 type RegisterUserResult =
@@ -18,12 +21,18 @@ type RegisterUserResult =
 export async function registerUser({
 	email,
 	password,
+	firstName,
+	lastName,
 }: RegisterUserParams): Promise<RegisterUserResult> {
 	const { data, error } = await supabase.auth.signUp({
 		email,
 		password,
 		options: {
-			emailRedirectTo: `${env.FRONTEND_URL}/auth/verify`,
+			emailRedirectTo: `${env.FRONTEND_URL}/auth/callback`,
+			data: {
+				first_name: firstName,
+				last_name: lastName,
+			},
 		},
 	});
 
@@ -44,6 +53,16 @@ export async function registerUser({
 			statusCode: 409,
 		};
 	}
+
+	await db
+		.insertInto('users')
+		.values({
+			id: data.user.id,
+			email,
+			first_name: firstName,
+			last_name: lastName,
+		})
+		.execute();
 
 	return {
 		success: true,
@@ -83,6 +102,34 @@ export async function loginUser({
 		userId: data.user.id,
 		email: data.user.email ?? email,
 		refreshToken: data.session.refresh_token,
+	};
+}
+
+export type CurrentUser = {
+	userId: string;
+	email: string;
+	firstName: string | null;
+	lastName: string | null;
+	avatarUrl: string | null;
+};
+
+export async function getCurrentUser(
+	userId: string,
+): Promise<CurrentUser | null> {
+	const row = await db
+		.selectFrom('users')
+		.select(['id', 'email', 'first_name', 'last_name', 'avatar_url'])
+		.where('id', '=', userId)
+		.executeTakeFirst();
+
+	if (!row) return null;
+
+	return {
+		userId: row.id,
+		email: row.email,
+		firstName: row.first_name,
+		lastName: row.last_name,
+		avatarUrl: row.avatar_url,
 	};
 }
 
@@ -154,6 +201,39 @@ export async function exchangeOauthSession({
 			error: 'OAuth session missing email',
 			statusCode: 401,
 		};
+	}
+
+	const existing = await db
+		.selectFrom('users')
+		.select('id')
+		.where('id', '=', data.user.id)
+		.executeTakeFirst();
+
+	if (!existing) {
+		const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+		const firstName =
+			(metadata.given_name as string | undefined) ??
+			(metadata.first_name as string | undefined) ??
+			null;
+		const lastName =
+			(metadata.family_name as string | undefined) ??
+			(metadata.last_name as string | undefined) ??
+			null;
+		const avatarUrl =
+			(metadata.avatar_url as string | undefined) ??
+			(metadata.picture as string | undefined) ??
+			null;
+
+		await db
+			.insertInto('users')
+			.values({
+				id: data.user.id,
+				email,
+				first_name: firstName,
+				last_name: lastName,
+				avatar_url: avatarUrl,
+			})
+			.execute();
 	}
 
 	setCachedUserId(refreshToken, data.user.id);

@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { DEV_USER_ID, REFRESH_TOKEN_COOKIE } from '../config/constants.js';
-import { env } from '../config/environment.js';
+import { REFRESH_TOKEN_COOKIE } from '../config/constants.js';
+// import { env } from '../config/environment.js';
 import { authenticateRefreshToken } from '../routes/auth/auth-service.js';
 import {
 	refreshCookieOptions,
@@ -42,9 +42,10 @@ export async function authMiddleware(
 		}
 	}
 
-	if (!request.userId && env.NODE_ENV === 'development') {
-		request.userId = DEV_USER_ID;
-	}
+	// dev fallback — uncomment to skip auth in local dev
+	// if (!request.userId && env.NODE_ENV === 'development') {
+	// 	request.userId = DEV_USER_ID;
+	// }
 
 	if (PUBLIC_ROUTES.includes(request.url)) return;
 

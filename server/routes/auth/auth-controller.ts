@@ -25,6 +25,7 @@ import {
 	requestPasswordReset,
 	resetPassword,
 	exchangeOauthSession,
+	getCurrentUser,
 } from './auth-service.js';
 
 export async function handleRegister(
@@ -36,10 +37,10 @@ export async function handleRegister(
 		return badRequest(reply, 'Invalid request', parseResult.error.format());
 	}
 
-	const { email, password } = parseResult.data;
+	const { email, password, firstName, lastName } = parseResult.data;
 
 	try {
-		const result = await registerUser({ email, password });
+		const result = await registerUser({ email, password, firstName, lastName });
 
 		if (!result.success) {
 			if (result.statusCode === 409) {
@@ -113,12 +114,15 @@ export async function handleStatus(
 	reply: FastifyReply,
 ) {
 	if (!request.userId) {
-		return successResponse(reply, { isAuthenticated: false, userId: null });
+		return successResponse(reply, { isAuthenticated: false, user: null });
 	}
-	return successResponse(reply, {
-		isAuthenticated: true,
-		userId: request.userId,
-	});
+
+	const user = await getCurrentUser(request.userId);
+	if (!user) {
+		return successResponse(reply, { isAuthenticated: false, user: null });
+	}
+
+	return successResponse(reply, { isAuthenticated: true, user });
 }
 
 export async function handleForgotPassword(
