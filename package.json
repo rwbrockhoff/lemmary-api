@@ -23,7 +23,8 @@
 		"migrate:down": "tsx server/db/migrate.ts down",
 		"migrate:down:all": "tsx server/db/migrate.ts down:all",
 		"migrate:prod": "DOTENV_CONFIG_PATH=.env.production tsx server/db/migrate.ts",
-		"seed": "tsx server/db/seed.ts",
+		"seed": "tsx server/db/seeds/01_seed_dev_store.ts",
+		"seed:demo": "tsx server/db/seeds/02_seed_demo_store.ts",
 		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed"
 	},
 	"dependencies": {
