@@ -34,8 +34,7 @@ erDiagram
 
 ## Related
 
-- [lemmary-app](https://github.com/rwbrockhoff/lemmary-app) — React SPA
-- [lemmary-landing](https://github.com/rwbrockhoff/lemmary-landing) — Astro marketing site
+- [lemmary-app](https://github.com/rwbrockhoff/lemmary-app) — React application
 
 ---
 
