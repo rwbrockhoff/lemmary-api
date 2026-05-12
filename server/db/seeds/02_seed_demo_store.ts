@@ -329,7 +329,10 @@ async function seedDemo() {
 					unit_price: variant.price.toString(),
 					workflow_stage_id: spec.fulfilled
 						? finishedItemStageId
-						: notStartedItemStageId,
+						: item.itemStageName
+							? (itemStageByName.get(item.itemStageName) ??
+								notStartedItemStageId)
+							: notStartedItemStageId,
 				})
 				.execute();
 		}

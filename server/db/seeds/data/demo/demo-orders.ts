@@ -1,6 +1,7 @@
 export type DemoOrderItem = {
 	platformSku: string;
 	quantity: number;
+	itemStageName?: string;
 };
 
 export type DemoOrderSpec = {
@@ -36,7 +37,7 @@ export const DEMO_ORDERS: DemoOrderSpec[] = [
 		customerIndex: 2,
 		stageName: 'Cutting',
 		fulfilled: false,
-		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1 }],
+		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1, itemStageName: 'Cut' }],
 	},
 	{
 		dayOffset: 3,
@@ -59,8 +60,8 @@ export const DEMO_ORDERS: DemoOrderSpec[] = [
 		stageName: 'Cutting',
 		fulfilled: false,
 		items: [
-			{ platformSku: 'TS-LAP-15-BLK', quantity: 1 },
-			{ platformSku: 'TS-CRD-COG', quantity: 1 },
+			{ platformSku: 'TS-LAP-15-BLK', quantity: 1, itemStageName: 'Cut' },
+			{ platformSku: 'TS-CRD-COG', quantity: 1, itemStageName: 'Not Started' },
 		],
 	},
 	{
@@ -76,7 +77,7 @@ export const DEMO_ORDERS: DemoOrderSpec[] = [
 		customerIndex: 7,
 		stageName: 'Stitching',
 		fulfilled: false,
-		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1 }],
+		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1, itemStageName: 'Cut' }],
 	},
 	{
 		dayOffset: 7,
@@ -102,7 +103,9 @@ export const DEMO_ORDERS: DemoOrderSpec[] = [
 		customerIndex: 10,
 		stageName: 'Stitching',
 		fulfilled: false,
-		items: [{ platformSku: 'TS-TOT-BLK', quantity: 1 }],
+		items: [
+			{ platformSku: 'TS-TOT-BLK', quantity: 1, itemStageName: 'Stitched' },
+		],
 	},
 	{
 		dayOffset: 10,
@@ -117,7 +120,9 @@ export const DEMO_ORDERS: DemoOrderSpec[] = [
 		customerIndex: 12,
 		stageName: 'Edge Finishing',
 		fulfilled: false,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
+		items: [
+			{ platformSku: 'TS-CRO-TAN', quantity: 1, itemStageName: 'Stitched' },
+		],
 	},
 	{
 		dayOffset: 13,
@@ -133,8 +138,8 @@ export const DEMO_ORDERS: DemoOrderSpec[] = [
 		stageName: 'Edge Finishing',
 		fulfilled: false,
 		items: [
-			{ platformSku: 'TS-WAL-COG', quantity: 1 },
-			{ platformSku: 'TS-CRD-BLK', quantity: 1 },
+			{ platformSku: 'TS-WAL-COG', quantity: 1, itemStageName: 'Finished' },
+			{ platformSku: 'TS-CRD-BLK', quantity: 1, itemStageName: 'Stitched' },
 		],
 	},
 	{
