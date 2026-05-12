@@ -12,6 +12,7 @@ import {
 import { DEMO_MATERIAL_TYPES } from './data/demo/demo-material-types.js';
 import { DEMO_ORDERS } from './data/demo/demo-orders.js';
 import { DEMO_BATCHES } from './data/demo/demo-batches.js';
+import { populateBatchData } from '../../utils/batch-aggregation.js';
 
 const daysAgo = (n: number) => {
 	const d = new Date();
@@ -277,7 +278,7 @@ async function seedDemo() {
 		const orderNumber = `TS-${String(1000 + i).padStart(4, '0')}`;
 		const stageId = stageByName.get(spec.stageName) ?? null;
 		const fulfilledOn = spec.fulfilled
-			? daysAgo(Math.max(0, spec.dayOffset - 10))
+			? daysAgo(spec.fulfilledDayOffset ?? Math.max(0, spec.dayOffset - 8))
 			: null;
 
 		const orderTotal = spec.items.reduce((sum, item) => {
@@ -357,16 +358,45 @@ async function seedDemo() {
 				o.fulfilled === batch.assignByDayRange.fulfilled,
 		);
 
-		for (const order of matchingOrders) {
-			await db
-				.insertInto('production_batch_orders')
-				.values({
-					batch_id: insertedBatch.id,
-					order_id: order.id,
-					completed: order.fulfilled,
-				})
-				.execute();
-		}
+		if (matchingOrders.length === 0) continue;
+
+		const matchingOrderIds = matchingOrders.map((o) => o.id);
+		const allFulfilled = batch.assignByDayRange.fulfilled;
+
+		await db.transaction().execute(async (trx) => {
+			await populateBatchData(
+				trx,
+				insertedBatch.id,
+				matchingOrderIds,
+				DEMO_STORE_ID,
+			);
+
+			if (allFulfilled) {
+				await trx
+					.updateTable('production_batch_orders')
+					.set({ completed: true })
+					.where('batch_id', '=', insertedBatch.id)
+					.execute();
+
+				await trx
+					.updateTable('production_batch_order_items')
+					.set({ completed: true, completed_qty: sql`quantity` })
+					.where('batch_id', '=', insertedBatch.id)
+					.execute();
+
+				await trx
+					.updateTable('production_batch_items')
+					.set({ completed: true })
+					.where('batch_id', '=', insertedBatch.id)
+					.execute();
+
+				await trx
+					.updateTable('production_batch_materials')
+					.set({ completed: true })
+					.where('batch_id', '=', insertedBatch.id)
+					.execute();
+			}
+		});
 	}
 	console.log(`  Batches: ${DEMO_BATCHES.length}`);
 

@@ -1,5 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { REFRESH_TOKEN_COOKIE } from '../config/constants.js';
+import {
+	REFRESH_TOKEN_COOKIE,
+	DEMO_SESSION_TOKEN,
+	DEMO_USER_ID,
+} from '../config/constants.js';
 // import { env } from '../config/environment.js';
 import { authenticateRefreshToken } from '../routes/auth/auth-service.js';
 import {
@@ -10,6 +14,7 @@ import {
 const PUBLIC_ROUTES = [
 	'/auth/register',
 	'/auth/login',
+	'/auth/demo',
 	'/auth/logout',
 	'/auth/forgot-password',
 	'/auth/reset-password',
@@ -17,6 +22,8 @@ const PUBLIC_ROUTES = [
 	'/auth/status',
 	'/health',
 ];
+
+const DEMO_WRITE_ALLOWLIST = ['/auth/logout'];
 
 export async function authMiddleware(
 	request: FastifyRequest,
@@ -26,18 +33,22 @@ export async function authMiddleware(
 	if (signedCookie) {
 		const unsigned = request.unsignCookie(signedCookie);
 		if (unsigned.valid && unsigned.value) {
-			const result = await authenticateRefreshToken(unsigned.value);
-			if (result.success) {
-				request.userId = result.userId;
-				if (result.newRefreshToken) {
-					reply.setCookie(
-						REFRESH_TOKEN_COOKIE,
-						result.newRefreshToken,
-						refreshCookieOptions,
-					);
-				}
+			if (unsigned.value === DEMO_SESSION_TOKEN) {
+				request.userId = DEMO_USER_ID;
 			} else {
-				reply.clearCookie(REFRESH_TOKEN_COOKIE, clearRefreshCookieOptions);
+				const result = await authenticateRefreshToken(unsigned.value);
+				if (result.success) {
+					request.userId = result.userId;
+					if (result.newRefreshToken) {
+						reply.setCookie(
+							REFRESH_TOKEN_COOKIE,
+							result.newRefreshToken,
+							refreshCookieOptions,
+						);
+					}
+				} else {
+					reply.clearCookie(REFRESH_TOKEN_COOKIE, clearRefreshCookieOptions);
+				}
 			}
 		}
 	}
@@ -51,6 +62,16 @@ export async function authMiddleware(
 
 	if (!request.userId) {
 		return reply.status(401).send({ error: 'Unauthorized' });
+	}
+
+	if (
+		request.userId === DEMO_USER_ID &&
+		request.method !== 'GET' &&
+		!DEMO_WRITE_ALLOWLIST.includes(request.url)
+	) {
+		return reply
+			.status(403)
+			.send({ error: 'Demo mode is read-only. Sign up to make changes.' });
 	}
 }
 
