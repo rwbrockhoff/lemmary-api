@@ -7,7 +7,11 @@ import {
 	unauthorized,
 	internalError,
 } from '../../utils/api-responses.js';
-import { REFRESH_TOKEN_COOKIE } from '../../config/constants.js';
+import {
+	REFRESH_TOKEN_COOKIE,
+	DEMO_SESSION_TOKEN,
+	DEMO_USER_ID,
+} from '../../config/constants.js';
 import {
 	refreshCookieOptions,
 	clearRefreshCookieOptions,
@@ -99,6 +103,22 @@ export async function handleLogin(
 		request.log.error(error, 'Login failed');
 		return internalError(reply, 'Login failed');
 	}
+}
+
+export async function handleDemoLogin(
+	_request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	reply.setCookie(
+		REFRESH_TOKEN_COOKIE,
+		DEMO_SESSION_TOKEN,
+		refreshCookieOptions,
+	);
+	return successResponse(reply, {
+		userId: DEMO_USER_ID,
+		email: 'demo@twelvestitch.com',
+		isDemo: true,
+	});
 }
 
 export async function handleLogout(
