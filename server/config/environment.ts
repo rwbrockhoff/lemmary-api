@@ -6,6 +6,7 @@ const envSchema = z.object({
 	FRONTEND_URL: z.string().default('http://localhost:5173'),
 	DATABASE_URL: z.string().min(1),
 	SQUARESPACE_API_KEY: z.string().min(1),
+	STORE_ENCRYPTION_KEY: z.string().min(32),
 	NODE_ENV: z.string().default('development'),
 	COOKIE_SECRET: z.string().min(32),
 	SUPABASE_CLIENT: z.url(),
