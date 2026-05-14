@@ -11,9 +11,6 @@
 			"path": "./node_modules/cz-conventional-changelog"
 		}
 	},
-	"lint-staged": {
-		"*.ts": "eslint"
-	},
 	"scripts": {
 		"commit": "cz",
 		"dev": "tsx watch server/index.ts",
