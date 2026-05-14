@@ -94,6 +94,7 @@ async function upsertOrders(
 						tracking_number: order.tracking_number,
 						tracking_url: order.tracking_url,
 						carrier_name: order.carrier_name,
+						workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
 						updated_at: new Date(),
 					}),
 				)
@@ -119,6 +120,7 @@ async function upsertOrders(
 								quantity: item.quantity,
 								unit_price: item.unit_price,
 								image_url: item.image_url,
+								workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
 								updated_at: new Date(),
 							}),
 						)
@@ -356,7 +358,6 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 
 	return { ...order, items };
 }
-
 
 export async function updateOrderStage(
 	userId: string,
