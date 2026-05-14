@@ -357,26 +357,6 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 	return { ...order, items };
 }
 
-export async function getWorkflowStages(userId: string) {
-	const store = await getStoreForUser(userId);
-	if (!store) return { orderStages: [], itemStages: [] };
-
-	const orderStages = await db
-		.selectFrom('order_workflow_stages')
-		.selectAll()
-		.where('store_id', '=', store.id)
-		.orderBy('position', 'asc')
-		.execute();
-
-	const itemStages = await db
-		.selectFrom('order_item_workflow_stages')
-		.selectAll()
-		.where('store_id', '=', store.id)
-		.orderBy('position', 'asc')
-		.execute();
-
-	return { orderStages, itemStages };
-}
 
 export async function updateOrderStage(
 	userId: string,

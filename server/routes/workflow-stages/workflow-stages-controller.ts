@@ -6,7 +6,23 @@ import {
 	internalError,
 } from '../../utils/api-responses.js';
 import { UpdateWorkflowStageRequestSchema } from './contract/schemas.js';
-import { updateWorkflowStage } from './workflow-stages-service.js';
+import {
+	getWorkflowStages,
+	updateWorkflowStage,
+} from './workflow-stages-service.js';
+
+export async function handleGetWorkflowStages(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	try {
+		const stages = await getWorkflowStages(request.userId);
+		return successResponse(reply, stages);
+	} catch (error) {
+		request.log.error(error, 'Failed to fetch workflow stages');
+		return internalError(reply);
+	}
+}
 
 export async function handleUpdateWorkflowStage(
 	request: FastifyRequest<{ Params: { id: string } }>,

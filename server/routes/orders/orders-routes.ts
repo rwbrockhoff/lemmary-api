@@ -3,7 +3,6 @@ import {
 	handleSyncOrders,
 	handleGetOrders,
 	handleGetOrder,
-	handleGetWorkflowStages,
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
 	handleUpdateOrderItemStage,
@@ -18,7 +17,6 @@ export async function ordersRoutes(app: FastifyInstance) {
 	app.get('/orders', handleGetOrders);
 	app.get('/orders/with-items', handleGetOrdersWithItems);
 	app.get('/orders/completed', handleGetCompletedOrders);
-	app.get('/orders/workflow-stages', handleGetWorkflowStages);
 	app.get('/orders/workflow-board', handleGetWorkflowBoard);
 	app.get('/orders/:orderId', handleGetOrder);
 	app.put('/orders/:orderId/stage', handleUpdateOrderStage);

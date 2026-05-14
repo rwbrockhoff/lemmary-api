@@ -10,7 +10,6 @@ import {
 	getOrders,
 	getOrdersWithItems,
 	getOrderWithItems,
-	getWorkflowStages,
 	updateOrderStage,
 	updateOrderNotes,
 	updateOrderItemStage,
@@ -91,19 +90,6 @@ export async function handleGetOrder(
 		return successResponse(reply, order);
 	} catch (error) {
 		request.log.error(error, 'Failed to fetch order');
-		return internalError(reply);
-	}
-}
-
-export async function handleGetWorkflowStages(
-	request: FastifyRequest,
-	reply: FastifyReply,
-) {
-	try {
-		const stages = await getWorkflowStages(request.userId);
-		return successResponse(reply, stages);
-	} catch (error) {
-		request.log.error(error, 'Failed to fetch workflow stages');
 		return internalError(reply);
 	}
 }

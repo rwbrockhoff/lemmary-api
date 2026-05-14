@@ -3,6 +3,27 @@ import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 import type { UpdateWorkflowStageRequestSchema } from './contract/schemas.js';
 
+export async function getWorkflowStages(userId: string) {
+	const store = await getStoreForUser(userId);
+	if (!store) return { orderStages: [], itemStages: [] };
+
+	const orderStages = await db
+		.selectFrom('order_workflow_stages')
+		.selectAll()
+		.where('store_id', '=', store.id)
+		.orderBy('position', 'asc')
+		.execute();
+
+	const itemStages = await db
+		.selectFrom('order_item_workflow_stages')
+		.selectAll()
+		.where('store_id', '=', store.id)
+		.orderBy('position', 'asc')
+		.execute();
+
+	return { orderStages, itemStages };
+}
+
 type UpdateWorkflowStageInput = z.infer<
 	typeof UpdateWorkflowStageRequestSchema
 >;
