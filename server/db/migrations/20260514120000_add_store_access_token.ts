@@ -25,6 +25,8 @@ export async function up(db: Kysely<any>): Promise<void> {
 		.alterTable('stores')
 		.alterColumn('store_access_token', (col) => col.setNotNull())
 		.execute();
+
+	await db.schema.alterTable('orders').dropColumn('order_url').execute();
 }
 
 export async function down(db: Kysely<any>): Promise<void> {
@@ -34,6 +36,8 @@ export async function down(db: Kysely<any>): Promise<void> {
 			'STORE_ENCRYPTION_KEY must be set to roll back this migration',
 		);
 	}
+
+	await db.schema.alterTable('orders').addColumn('order_url', 'text').execute();
 
 	await db.schema.alterTable('stores').addColumn('api_key', 'text').execute();
 

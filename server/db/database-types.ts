@@ -96,7 +96,6 @@ export interface OrderTable {
 	grand_total: string | null;
 	shipping_method: string | null;
 	order_notes: string | null;
-	order_url: string | null;
 	fulfilled_on: Date | null;
 	tracking_number: string | null;
 	tracking_url: string | null;

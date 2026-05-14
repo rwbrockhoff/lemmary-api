@@ -11,18 +11,26 @@ import {
 	type NormalizedOrder,
 } from './platforms/squarespace.js';
 
+function getStoreUrl(platformConfig: unknown): string | null {
+	return (
+		(platformConfig as { store_url?: string | null } | null)?.store_url ?? null
+	);
+}
+
+function buildOrderUrl(
+	storeUrl: string | null,
+	platformOrderId: string,
+): string | null {
+	return storeUrl
+		? `${storeUrl}/commerce/orders/${platformOrderId}/authenticated`
+		: null;
+}
+
 async function fetchOrdersFromPlatform(
 	store: StoreWithAccessToken,
 ): Promise<NormalizedOrder[]> {
 	if (store.platform === 'squarespace') {
-		const storeUrl =
-			(store.platform_config as { store_url?: string | null } | null)
-				?.store_url ?? null;
-		return fetchSquarespaceOrders(
-			store.access_token,
-			store.last_synced_at,
-			storeUrl,
-		);
+		return fetchSquarespaceOrders(store.access_token, store.last_synced_at);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
@@ -89,7 +97,6 @@ async function upsertOrders(
 						shipping_total: order.shipping_total,
 						grand_total: order.grand_total,
 						shipping_method: order.shipping_method,
-						order_url: order.order_url,
 						fulfilled_on: order.fulfilled_on,
 						tracking_number: order.tracking_number,
 						tracking_url: order.tracking_url,
@@ -193,11 +200,14 @@ export async function getOrders(userId: string) {
 		.orderBy('order_date', 'desc')
 		.execute();
 
+	const storeUrl = getStoreUrl(store.platform_config);
+
 	return {
 		orders: orders.map((row) => ({
 			...row,
 			item_count: Number(row.item_count),
 			items_completed: Number(row.items_completed),
+			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 		})),
 		lastSyncedAt: store.last_synced_at,
 	};
@@ -267,12 +277,15 @@ export async function getOrdersWithItems(userId: string) {
 		itemsByOrder.set(item.order_id, group);
 	}
 
+	const storeUrl = getStoreUrl(store.platform_config);
+
 	return {
 		orders: orders.map((row) => ({
 			...row,
 			item_count: Number(row.item_count),
 			items_completed: Number(row.items_completed),
 			items: itemsByOrder.get(row.id) ?? [],
+			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 		})),
 		lastSyncedAt: store.last_synced_at,
 	};
@@ -310,6 +323,7 @@ export async function getCompletedOrders(
 
 	const hasMore = orders.length > limit;
 	const trimmed = hasMore ? orders.slice(0, limit) : orders;
+	const storeUrl = getStoreUrl(store.platform_config);
 
 	return {
 		orders: trimmed.map((row) => ({
@@ -318,6 +332,7 @@ export async function getCompletedOrders(
 			items_completed: 0,
 			batch_name: null,
 			batch_id: null,
+			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 		})),
 		hasMore,
 	};
@@ -356,7 +371,13 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		.orderBy('order_items.id', 'asc')
 		.execute();
 
-	return { ...order, items };
+	const storeUrl = getStoreUrl(store.platform_config);
+
+	return {
+		...order,
+		items,
+		order_url: buildOrderUrl(storeUrl, order.platform_order_id),
+	};
 }
 
 export async function updateOrderStage(
@@ -466,11 +487,14 @@ export async function getWorkflowBoard(userId: string) {
 		.orderBy('created_at', 'desc')
 		.execute();
 
+	const storeUrl = getStoreUrl(store.platform_config);
+
 	return {
 		orders: orders.map((row) => ({
 			...row,
 			item_count: Number(row.item_count),
 			items_completed: Number(row.items_completed),
+			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 		})),
 		stages,
 		activeBatches,
