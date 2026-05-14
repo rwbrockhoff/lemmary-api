@@ -11,6 +11,9 @@
 			"path": "./node_modules/cz-conventional-changelog"
 		}
 	},
+	"lint-staged": {
+		"*.ts": "eslint"
+	},
 	"scripts": {
 		"commit": "cz",
 		"dev": "tsx watch server/index.ts",
@@ -25,7 +28,8 @@
 		"migrate:prod": "DOTENV_CONFIG_PATH=.env.production tsx server/db/migrate.ts",
 		"seed": "tsx server/db/seeds/01_seed_dev_store.ts",
 		"seed:demo": "tsx server/db/seeds/02_seed_demo_store.ts",
-		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed"
+		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"@fastify/cookie": "^11.0.0",
@@ -43,6 +47,8 @@
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
 		"eslint": "^10.0.1",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.0.4",
 		"prettier": "^3.8.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
