@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest a new feature for Lemmary
 title: ''
-labels: enhancement
+labels: feature
 assignees: rwbrockhoff
 
 ---
