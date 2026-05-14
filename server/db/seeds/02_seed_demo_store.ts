@@ -53,7 +53,7 @@ async function seedDemo() {
 			user_id: DEMO_USER_ID,
 			platform: 'squarespace',
 			store_name: 'Twelve Stitch',
-			api_key: 'demo-key-not-used',
+			store_access_token: sql<Buffer>`pgp_sym_encrypt('demo-key-not-used', ${process.env.STORE_ENCRYPTION_KEY})`,
 			lead_time_days: 14,
 			platform_config: {
 				base_url: 'https://api.squarespace.com/1.0',

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import * as path from 'path';
 import pg from 'pg';
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, sql } from 'kysely';
 import type { Database } from '../database-types.js';
 import { DEV_USER_ID, DEV_STORE_ID } from '../../config/constants.js';
 
@@ -64,6 +64,8 @@ async function seed() {
 		)
 		.execute();
 
+	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${process.env.SQUARESPACE_API_KEY ?? ''}, ${process.env.STORE_ENCRYPTION_KEY})`;
+
 	await db
 		.insertInto('stores')
 		.values({
@@ -71,7 +73,7 @@ async function seed() {
 			user_id: DEV_USER_ID,
 			platform: 'squarespace',
 			store_name: 'Salka Designs',
-			api_key: process.env.SQUARESPACE_API_KEY ?? '',
+			store_access_token: encryptedToken,
 			lead_time_days: 21,
 			platform_config: {
 				base_url: 'https://api.squarespace.com/1.0',
@@ -80,7 +82,7 @@ async function seed() {
 		})
 		.onConflict((oc) =>
 			oc.column('id').doUpdateSet({
-				api_key: process.env.SQUARESPACE_API_KEY ?? '',
+				store_access_token: encryptedToken,
 				store_name: 'Salka Designs',
 			}),
 		)

@@ -1,7 +1,10 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
-import type { Store } from '../../db/database-types.js';
-import { getStoreForUser } from '../../utils/store.js';
+import {
+	getStoreForUser,
+	getStoreWithAccessToken,
+	type StoreWithAccessToken,
+} from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
 import {
 	fetchSquarespaceOrders,
@@ -9,10 +12,10 @@ import {
 } from './platforms/squarespace.js';
 
 async function fetchOrdersFromPlatform(
-	store: Store,
+	store: StoreWithAccessToken,
 ): Promise<NormalizedOrder[]> {
 	if (store.platform === 'squarespace') {
-		return fetchSquarespaceOrders(store.api_key, store.last_synced_at);
+		return fetchSquarespaceOrders(store.access_token, store.last_synced_at);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
@@ -39,14 +42,21 @@ async function getDefaultStageIds(storeId: string) {
 	};
 }
 
-function calculateDueDate(orderDate: Date, leadTimeDays: number | null): Date | null {
+function calculateDueDate(
+	orderDate: Date,
+	leadTimeDays: number | null,
+): Date | null {
 	if (!leadTimeDays) return null;
 	const due = new Date(orderDate);
 	due.setDate(due.getDate() + leadTimeDays);
 	return due;
 }
 
-async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTimeDays: number | null) {
+async function upsertOrders(
+	storeId: string,
+	orders: NormalizedOrder[],
+	leadTimeDays: number | null,
+) {
 	const { orderStageId, itemStageId } = await getDefaultStageIds(storeId);
 
 	return db.transaction().execute(async (trx) => {
@@ -96,16 +106,14 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTime
 							workflow_stage_id: itemStageId,
 						})
 						.onConflict((oc) =>
-							oc
-								.columns(['order_id', 'platform_line_item_id'])
-								.doUpdateSet({
-									product_name: item.product_name,
-									variant_label: variantJson,
-									quantity: item.quantity,
-									unit_price: item.unit_price,
-									image_url: item.image_url,
-									updated_at: new Date(),
-								}),
+							oc.columns(['order_id', 'platform_line_item_id']).doUpdateSet({
+								product_name: item.product_name,
+								variant_label: variantJson,
+								quantity: item.quantity,
+								unit_price: item.unit_price,
+								image_url: item.image_url,
+								updated_at: new Date(),
+							}),
 						)
 						.execute();
 				}
@@ -119,7 +127,7 @@ async function upsertOrders(storeId: string, orders: NormalizedOrder[], leadTime
 }
 
 export async function syncOrders(userId: string) {
-	const store = await getStoreForUser(userId);
+	const store = await getStoreWithAccessToken(userId);
 	if (!store) return null;
 	const orders = await fetchOrdersFromPlatform(store);
 	const synced = await upsertOrders(store.id, orders, store.lead_time_days);
@@ -146,8 +154,12 @@ export async function getOrders(userId: string) {
 			'orders.workflow_stage_id',
 		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
-			sql<string>`(select count(*) from order_items join order_item_workflow_stages on order_item_workflow_stages.id = order_items.workflow_stage_id where order_items.order_id = orders.id and order_item_workflow_stages.is_complete = true)`.as('items_completed'),
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
+				'item_count',
+			),
+			sql<string>`(select count(*) from order_items join order_item_workflow_stages on order_item_workflow_stages.id = order_items.workflow_stage_id where order_items.order_id = orders.id and order_item_workflow_stages.is_complete = true)`.as(
+				'items_completed',
+			),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 			sql<string | null>`(
@@ -195,7 +207,9 @@ export async function getOrdersWithItems(userId: string) {
 			'orders.workflow_stage_id',
 		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
+				'item_count',
+			),
 			sql<string>`(
 				select count(*) from order_items oi
 				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
@@ -227,14 +241,15 @@ export async function getOrdersWithItems(userId: string) {
 
 	const orderIds = orders.map((o) => o.id);
 
-	const items = orderIds.length > 0
-		? await db
-				.selectFrom('order_items')
-				.selectAll('order_items')
-				.where('order_id', 'in', orderIds)
-				.orderBy('created_at', 'asc')
-				.execute()
-		: [];
+	const items =
+		orderIds.length > 0
+			? await db
+					.selectFrom('order_items')
+					.selectAll('order_items')
+					.where('order_id', 'in', orderIds)
+					.orderBy('created_at', 'asc')
+					.execute()
+			: [];
 
 	const itemsByOrder = new Map<string, typeof items>();
 	for (const item of items) {
@@ -254,7 +269,11 @@ export async function getOrdersWithItems(userId: string) {
 	};
 }
 
-export async function getCompletedOrders(userId: string, limit: number, offset: number) {
+export async function getCompletedOrders(
+	userId: string,
+	limit: number,
+	offset: number,
+) {
 	const store = await getStoreForUser(userId);
 	if (!store) return { orders: [], hasMore: false };
 
@@ -267,7 +286,9 @@ export async function getCompletedOrders(userId: string, limit: number, offset: 
 			'orders.workflow_stage_id',
 		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
+				'item_count',
+			),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 		])
@@ -394,7 +415,9 @@ function workflowOrdersBase(storeId: string) {
 			'orders.workflow_stage_id',
 		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as('item_count'),
+			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
+				'item_count',
+			),
 			sql<string>`(
 				select count(*) from order_items oi
 				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
@@ -493,10 +516,7 @@ export async function updateOrderItemStage(
 		.executeTakeFirst();
 }
 
-export async function completeAllOrderItems(
-	userId: string,
-	orderId: string,
-) {
+export async function completeAllOrderItems(userId: string, orderId: string) {
 	const store = await getStoreForUser(userId);
 	if (!store) return null;
 
