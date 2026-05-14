@@ -1,6 +1,8 @@
+import type { UpdateObject } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
+import type { Database } from '../../db/database-types.js';
 import type {
 	CreateWorkflowStageRequestSchema,
 	UpdateWorkflowStageRequestSchema,
@@ -94,9 +96,21 @@ export async function updateWorkflowStage(
 	const store = await getStoreForUser(userId);
 	if (!store) return { ok: false, error: 'no_store' };
 
+	const set: UpdateObject<Database, 'order_workflow_stages'> = {
+		updated_at: new Date(),
+	};
+
+	if (updates.name !== undefined) {
+		set.name = updates.name;
+	}
+
+	if (updates.color !== undefined) {
+		set.color = updates.color;
+	}
+
 	const updated = await db
 		.updateTable('order_workflow_stages')
-		.set({ name: updates.name, updated_at: new Date() })
+		.set(set)
 		.where('id', '=', stageId)
 		.where('store_id', '=', store.id)
 		.returning(['id', 'name', 'position', 'color'])
