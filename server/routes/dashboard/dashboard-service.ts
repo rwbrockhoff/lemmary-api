@@ -74,10 +74,10 @@ export async function getDashboard(
 	const revenue = await db
 		.selectFrom('orders')
 		.select([
-			sql<string>`coalesce(sum(grand_total) filter (where order_date >= ${periodStart}), 0)::text`.as(
+			sql<string>`coalesce(sum(subtotal) filter (where order_date >= ${periodStart}), 0)::text`.as(
 				'current_period',
 			),
-			sql<string>`coalesce(sum(grand_total) filter (where order_date >= ${previousPeriodStart} and order_date < ${periodStart}), 0)::text`.as(
+			sql<string>`coalesce(sum(subtotal) filter (where order_date >= ${previousPeriodStart} and order_date < ${periodStart}), 0)::text`.as(
 				'previous_period',
 			),
 		])
@@ -187,7 +187,7 @@ export async function getDashboard(
 				'date',
 			),
 			sql<string>`count(*)::text`.as('count'),
-			sql<string>`coalesce(sum(grand_total), 0)::text`.as('revenue'),
+			sql<string>`coalesce(sum(subtotal), 0)::text`.as('revenue'),
 		])
 		.where('store_id', '=', store.id)
 		.where('order_date', '>=', periodStart)
