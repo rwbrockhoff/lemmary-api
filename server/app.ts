@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth/auth-routes.js';
 import { dashboardRoutes } from './routes/dashboard/dashboard-routes.js';
 import { settingsRoutes } from './routes/settings/settings-routes.js';
 import { storeRoutes } from './routes/store/store-routes.js';
+import { workflowStagesRoutes } from './routes/workflow-stages/workflow-stages-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
 
@@ -39,6 +40,7 @@ export const buildApp = () => {
 	app.register(batchesRoutes);
 	app.register(settingsRoutes);
 	app.register(storeRoutes);
+	app.register(workflowStagesRoutes);
 	app.register(productsRoutes);
 	app.register(bomRoutes);
 
