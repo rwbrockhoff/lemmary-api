@@ -1,0 +1,71 @@
+import { sql, type UpdateObject } from 'kysely';
+import { z } from 'zod';
+import { db } from '../../db/connection.js';
+import { env } from '../../config/environment.js';
+import { getStoreForUser } from '../../utils/store.js';
+import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
+import type { Database } from '../../db/database-types.js';
+import type { UpdateStoreRequestSchema } from './contract/schemas.js';
+
+type UpdateStoreInput = z.infer<typeof UpdateStoreRequestSchema>;
+
+type UpdateStoreSuccess = {
+	ok: true;
+	storeName: string;
+	platform: string;
+	leadTimeDays: number | null;
+};
+
+type UpdateStoreError = {
+	ok: false;
+	error: 'no_store' | 'invalid_token';
+};
+
+type UpdateStoreResult = UpdateStoreSuccess | UpdateStoreError;
+
+export async function updateStore(
+	userId: string,
+	updates: UpdateStoreInput,
+): Promise<UpdateStoreResult> {
+	const store = await getStoreForUser(userId);
+	if (!store) return { ok: false, error: 'no_store' };
+
+	if (updates.accessToken && store.platform === 'squarespace') {
+		const valid = await testSquarespaceConnection(updates.accessToken);
+		if (!valid) return { ok: false, error: 'invalid_token' };
+	}
+
+	const set: UpdateObject<Database, 'stores'> = { updated_at: new Date() };
+
+	if (updates.storeName !== undefined) {
+		set.store_name = updates.storeName;
+	}
+
+	if (updates.leadTimeDays !== undefined) {
+		set.lead_time_days = updates.leadTimeDays;
+	}
+
+	if (updates.accessToken) {
+		set.store_access_token = sql<Buffer>`pgp_sym_encrypt(${updates.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	}
+
+	if (updates.storeUrl !== undefined) {
+		const existingConfig = (store.platform_config ?? {}) as Record<
+			string,
+			unknown
+		>;
+		set.platform_config = { ...existingConfig, store_url: updates.storeUrl };
+	}
+
+	await db.updateTable('stores').set(set).where('id', '=', store.id).execute();
+
+	const updated = await getStoreForUser(userId);
+	if (!updated) return { ok: false, error: 'no_store' };
+
+	return {
+		ok: true,
+		storeName: updated.store_name,
+		platform: updated.platform,
+		leadTimeDays: updated.lead_time_days,
+	};
+}

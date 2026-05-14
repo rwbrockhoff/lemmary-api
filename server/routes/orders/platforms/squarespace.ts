@@ -198,6 +198,19 @@ async function fetchAllPages(
 	return allOrders;
 }
 
+export async function testSquarespaceConnection(
+	apiKey: string,
+): Promise<boolean> {
+	const response = await fetch(`${BASE_URL}?fulfillmentStatus=PENDING`, {
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+		},
+	});
+
+	return response.ok;
+}
+
 export async function fetchSquarespaceOrders(
 	apiKey: string,
 	lastSyncedAt: Date | null,
