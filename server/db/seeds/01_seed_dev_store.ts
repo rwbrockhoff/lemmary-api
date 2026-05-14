@@ -51,20 +51,26 @@ async function seed() {
 		.insertInto('users')
 		.values({
 			id: DEV_USER_ID,
-			email: 'jaclyn@salkadesigns.com',
-			first_name: 'Jaclyn',
-			last_name: 'Cage',
+			email: 'dev@lemmary.com',
+			first_name: 'Dev',
+			last_name: 'User',
 		})
 		.onConflict((oc) =>
 			oc.column('id').doUpdateSet({
-				email: 'jaclyn@salkadesigns.com',
-				first_name: 'Jaclyn',
-				last_name: 'Cage',
+				email: 'dev@lemmary.com',
+				first_name: 'Dev',
+				last_name: 'User',
 			}),
 		)
 		.execute();
 
 	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${process.env.SQUARESPACE_API_KEY ?? ''}, ${process.env.STORE_ENCRYPTION_KEY})`;
+
+	const platformConfig = {
+		base_url: 'https://api.squarespace.com/1.0',
+		api_version: '1.0',
+		store_url: process.env.SQUARESPACE_STORE_URL ?? null,
+	};
 
 	await db
 		.insertInto('stores')
@@ -72,18 +78,16 @@ async function seed() {
 			id: DEV_STORE_ID,
 			user_id: DEV_USER_ID,
 			platform: 'squarespace',
-			store_name: 'Salka Designs',
+			store_name: 'Dev Store',
 			store_access_token: encryptedToken,
 			lead_time_days: 21,
-			platform_config: {
-				base_url: 'https://api.squarespace.com/1.0',
-				api_version: '1.0',
-			},
+			platform_config: platformConfig,
 		})
 		.onConflict((oc) =>
 			oc.column('id').doUpdateSet({
 				store_access_token: encryptedToken,
-				store_name: 'Salka Designs',
+				store_name: 'Dev Store',
+				platform_config: platformConfig,
 			}),
 		)
 		.execute();

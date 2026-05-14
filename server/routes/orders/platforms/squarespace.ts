@@ -74,7 +74,12 @@ export type NormalizedOrder = {
 
 async function fetchPage(
 	apiKey: string,
-	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string; modifiedBefore?: string },
+	params?: {
+		fulfillmentStatus?: string;
+		cursor?: string;
+		modifiedAfter?: string;
+		modifiedBefore?: string;
+	},
 ): Promise<SquarespaceResponse> {
 	const searchParams = new URLSearchParams();
 
@@ -86,7 +91,10 @@ async function fetchPage(
 		}
 		if (params?.modifiedAfter) {
 			searchParams.set('modifiedAfter', params.modifiedAfter);
-			searchParams.set('modifiedBefore', params.modifiedBefore ?? new Date().toISOString());
+			searchParams.set(
+				'modifiedBefore',
+				params.modifiedBefore ?? new Date().toISOString(),
+			);
 		}
 	}
 
@@ -108,7 +116,10 @@ async function fetchPage(
 	return response.json() as Promise<SquarespaceResponse>;
 }
 
-function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
+function normalizeOrder(
+	raw: SquarespaceOrder,
+	storeUrl: string | null,
+): NormalizedOrder {
 	const firstName = raw.shippingAddress?.firstName ?? '';
 	const lastName = raw.shippingAddress?.lastName ?? '';
 	const customerName = [firstName, lastName].filter(Boolean).join(' ');
@@ -133,30 +144,38 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 			raw.internalNotes?.length > 0
 				? raw.internalNotes.map((n) => n.content).join('\n')
 				: null,
-		order_url: `https://salka-designs.squarespace.com/commerce/orders/${raw.id}/authenticated`,
+		order_url: storeUrl
+			? `${storeUrl}/commerce/orders/${raw.id}/authenticated`
+			: null,
 	};
 
-	const items: Omit<NewOrderItem, 'order_id'>[] = raw.lineItems.map(
-		(item) => ({
-			platform_line_item_id: item.id,
-			platform_sku: item.sku || null,
-			product_name: item.productName,
-			variant_label:
+	const items: Omit<NewOrderItem, 'order_id'>[] = raw.lineItems.map((item) => ({
+		platform_line_item_id: item.id,
+		platform_sku: item.sku || null,
+		product_name: item.productName,
+		variant_label:
 			item.variantOptions?.length > 0
-				? item.variantOptions.map((v) => ({ name: v.optionName, value: v.value }))
+				? item.variantOptions.map((v) => ({
+						name: v.optionName,
+						value: v.value,
+					}))
 				: null,
-			quantity: item.quantity,
-			unit_price: item.unitPricePaid?.value ?? null,
-			image_url: item.imageUrl || null,
-		}),
-	);
+		quantity: item.quantity,
+		unit_price: item.unitPricePaid?.value ?? null,
+		image_url: item.imageUrl || null,
+	}));
 
 	return { order, items };
 }
 
 async function fetchAllPages(
 	apiKey: string,
-	options: { fulfillmentStatus?: string; modifiedAfter?: string; modifiedBefore?: string },
+	storeUrl: string | null,
+	options: {
+		fulfillmentStatus?: string;
+		modifiedAfter?: string;
+		modifiedBefore?: string;
+	},
 ): Promise<NormalizedOrder[]> {
 	const allOrders: NormalizedOrder[] = [];
 	let cursor: string | null = null;
@@ -170,7 +189,7 @@ async function fetchAllPages(
 		});
 
 		for (const raw of page.result) {
-			allOrders.push(normalizeOrder(raw));
+			allOrders.push(normalizeOrder(raw, storeUrl));
 		}
 
 		cursor = page.pagination?.nextPageCursor ?? null;
@@ -182,17 +201,22 @@ async function fetchAllPages(
 export async function fetchSquarespaceOrders(
 	apiKey: string,
 	lastSyncedAt: Date | null,
+	storeUrl: string | null,
 ): Promise<NormalizedOrder[]> {
 	if (!lastSyncedAt) {
-		return fetchAllPages(apiKey, {});
+		return fetchAllPages(apiKey, storeUrl, {});
 	}
 
 	const modifiedAfter = lastSyncedAt.toISOString();
 	const modifiedBefore = new Date().toISOString();
 
 	const [pending, fulfilled] = await Promise.all([
-		fetchAllPages(apiKey, { fulfillmentStatus: 'PENDING' }),
-		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter, modifiedBefore }),
+		fetchAllPages(apiKey, storeUrl, { fulfillmentStatus: 'PENDING' }),
+		fetchAllPages(apiKey, storeUrl, {
+			fulfillmentStatus: 'FULFILLED',
+			modifiedAfter,
+			modifiedBefore,
+		}),
 	]);
 
 	return [...pending, ...fulfilled];

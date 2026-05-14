@@ -6,12 +6,17 @@ const envSchema = z.object({
 	FRONTEND_URL: z.string().default('http://localhost:5173'),
 	DATABASE_URL: z.string().min(1),
 	SQUARESPACE_API_KEY: z.string().min(1),
+	SQUARESPACE_STORE_URL: z.url().optional(),
 	STORE_ENCRYPTION_KEY: z.string().min(32),
 	NODE_ENV: z.string().default('development'),
 	COOKIE_SECRET: z.string().min(32),
 	SUPABASE_CLIENT: z.url(),
 	SUPABASE_KEY: z.string().min(1),
 	SUPABASE_PRIVATE_KEY: z.string().min(1),
+	DEV_USER_ID: z.uuid(),
+	DEV_STORE_ID: z.uuid(),
+	DEMO_USER_ID: z.uuid(),
+	DEMO_STORE_ID: z.uuid(),
 });
 
 type Environment = z.infer<typeof envSchema>;

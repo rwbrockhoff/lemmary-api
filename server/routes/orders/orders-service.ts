@@ -15,7 +15,14 @@ async function fetchOrdersFromPlatform(
 	store: StoreWithAccessToken,
 ): Promise<NormalizedOrder[]> {
 	if (store.platform === 'squarespace') {
-		return fetchSquarespaceOrders(store.access_token, store.last_synced_at);
+		const storeUrl =
+			(store.platform_config as { store_url?: string | null } | null)
+				?.store_url ?? null;
+		return fetchSquarespaceOrders(
+			store.access_token,
+			store.last_synced_at,
+			storeUrl,
+		);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
