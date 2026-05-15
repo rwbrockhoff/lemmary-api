@@ -1,7 +1,6 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
-import { extractBaseColor } from '../../utils/variants.js';
 
 export async function getProductionSummary(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -114,14 +113,8 @@ export async function getMaterialsReport(userId: string) {
 	const mismatches: Mismatch[] = [];
 
 	for (const item of productionSummary) {
-		const baseColor = extractBaseColor(item.variant_label);
-
 		const matches = bomItems.filter(
-			(bom) =>
-				bom.platform_sku === item.platform_sku &&
-				(baseColor === ''
-					? true
-					: bom.variant?.toLowerCase().includes(baseColor.toLowerCase())),
+			(bom) => bom.platform_sku === item.platform_sku,
 		);
 
 		if (matches.length === 0) {
