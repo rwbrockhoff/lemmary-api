@@ -47,6 +47,80 @@ async function getTopProducts(storeId: string, rangeDays: number) {
 	return { products };
 }
 
+type CustomerMixRow = {
+	current_new: string;
+	current_returning: string;
+	current_total: string;
+	prior_new: string;
+	prior_returning: string;
+	prior_total: string;
+};
+
+async function getCustomerMix(storeId: string, rangeDays: number) {
+	const rows = await sql<CustomerMixRow>`
+		WITH customer_first_order AS (
+			SELECT
+				customer_email,
+				MIN(order_date) AS first_order_date
+			FROM orders
+			WHERE store_id = ${storeId}
+				AND customer_email IS NOT NULL
+			GROUP BY customer_email
+		),
+		current_customers AS (
+			SELECT DISTINCT customer_email
+			FROM orders
+			WHERE store_id = ${storeId}
+				AND order_date >= NOW() - (${rangeDays} || ' days')::interval
+				AND customer_email IS NOT NULL
+		),
+		current_repeat AS (
+			SELECT DISTINCT o.customer_email
+			FROM orders o
+			INNER JOIN customer_first_order cfo USING (customer_email)
+			WHERE o.store_id = ${storeId}
+				AND o.order_date >= NOW() - (${rangeDays} || ' days')::interval
+				AND o.order_date > cfo.first_order_date
+				AND o.customer_email IS NOT NULL
+		),
+		prior_customers AS (
+			SELECT DISTINCT customer_email
+			FROM orders
+			WHERE store_id = ${storeId}
+				AND order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+				AND order_date < NOW() - (${rangeDays} || ' days')::interval
+				AND customer_email IS NOT NULL
+		),
+		prior_repeat AS (
+			SELECT DISTINCT o.customer_email
+			FROM orders o
+			INNER JOIN customer_first_order cfo USING (customer_email)
+			WHERE o.store_id = ${storeId}
+				AND o.order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+				AND o.order_date < NOW() - (${rangeDays} || ' days')::interval
+				AND o.order_date > cfo.first_order_date
+				AND o.customer_email IS NOT NULL
+		)
+		SELECT
+			(SELECT COUNT(*) FROM current_repeat)::text AS current_returning,
+			((SELECT COUNT(*) FROM current_customers) - (SELECT COUNT(*) FROM current_repeat))::text AS current_new,
+			(SELECT COUNT(*) FROM current_customers)::text AS current_total,
+			(SELECT COUNT(*) FROM prior_repeat)::text AS prior_returning,
+			((SELECT COUNT(*) FROM prior_customers) - (SELECT COUNT(*) FROM prior_repeat))::text AS prior_new,
+			(SELECT COUNT(*) FROM prior_customers)::text AS prior_total
+	`.execute(db);
+
+	const row = rows.rows[0];
+	return {
+		newCount: Number(row?.current_new ?? 0),
+		returningCount: Number(row?.current_returning ?? 0),
+		totalCount: Number(row?.current_total ?? 0),
+		priorNewCount: Number(row?.prior_new ?? 0),
+		priorReturningCount: Number(row?.prior_returning ?? 0),
+		priorTotalCount: Number(row?.prior_total ?? 0),
+	};
+}
+
 async function getStageBottleneck(storeId: string, rangeDays: number) {
 	const rows = await sql<StageBottleneckRow>`
 		WITH transitions AS (
@@ -92,15 +166,24 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		return {
 			stageBottleneck: { stages: [] },
 			topProducts: { products: [] },
+			customerMix: {
+				newCount: 0,
+				returningCount: 0,
+				totalCount: 0,
+				priorNewCount: 0,
+				priorReturningCount: 0,
+				priorTotalCount: 0,
+			},
 		};
 	}
 
 	const rangeDays = Number(input.range);
 
-	const [stageBottleneck, topProducts] = await Promise.all([
+	const [stageBottleneck, topProducts, customerMix] = await Promise.all([
 		getStageBottleneck(store.id, rangeDays),
 		getTopProducts(store.id, rangeDays),
+		getCustomerMix(store.id, rangeDays),
 	]);
 
-	return { stageBottleneck, topProducts };
+	return { stageBottleneck, topProducts, customerMix };
 }
