@@ -43,6 +43,7 @@ export async function getWorkflowStages(userId: string) {
 		.selectFrom('order_workflow_stages')
 		.selectAll()
 		.where('store_id', '=', store.id)
+		.where('archived_at', 'is', null)
 		.orderBy('position', 'asc')
 		.execute();
 
@@ -50,6 +51,7 @@ export async function getWorkflowStages(userId: string) {
 		.selectFrom('order_item_workflow_stages')
 		.selectAll()
 		.where('store_id', '=', store.id)
+		.where('archived_at', 'is', null)
 		.orderBy('position', 'asc')
 		.execute();
 
@@ -132,6 +134,7 @@ export async function deleteWorkflowStage(
 		.select(['id', 'is_default'])
 		.where('id', '=', stageId)
 		.where('store_id', '=', store.id)
+		.where('archived_at', 'is', null)
 		.executeTakeFirst();
 
 	if (!stage) return { ok: false, error: 'not_found' };
@@ -147,7 +150,8 @@ export async function deleteWorkflowStage(
 	if (orderUsing) return { ok: false, error: 'has_orders' };
 
 	await db
-		.deleteFrom('order_workflow_stages')
+		.updateTable('order_workflow_stages')
+		.set({ archived_at: new Date(), updated_at: new Date() })
 		.where('id', '=', stageId)
 		.where('store_id', '=', store.id)
 		.execute();
