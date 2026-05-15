@@ -58,6 +58,28 @@ export async function getMaterialsReport(userId: string) {
 		.where('bom_items.store_id', '=', store.id)
 		.execute();
 
+	const variantRows = await db
+		.selectFrom('product_variants')
+		.innerJoin('products', 'products.id', 'product_variants.product_id')
+		.select([
+			'product_variants.platform_sku',
+			'product_variants.id as variant_id',
+			'products.id as product_id',
+		])
+		.where('products.store_id', '=', store.id)
+		.where('product_variants.platform_sku', 'is not', null)
+		.execute();
+
+	const skuLookup = new Map<string, { productId: string; variantId: string }>();
+	for (const row of variantRows) {
+		if (row.platform_sku) {
+			skuLookup.set(row.platform_sku, {
+				productId: row.product_id,
+				variantId: row.variant_id,
+			});
+		}
+	}
+
 	type FabricEntry = {
 		material_type: string;
 		product_name: string;
@@ -82,6 +104,8 @@ export async function getMaterialsReport(userId: string) {
 		platform_sku: string | null;
 		product_name: string;
 		variant_label: { name: string; value: string }[] | null;
+		product_id: string | null;
+		variant_id: string | null;
 	};
 
 	const fabricRaw: FabricEntry[] = [];
@@ -101,10 +125,15 @@ export async function getMaterialsReport(userId: string) {
 		);
 
 		if (matches.length === 0) {
+			const skuMatch = item.platform_sku
+				? skuLookup.get(item.platform_sku)
+				: undefined;
 			mismatches.push({
 				platform_sku: item.platform_sku,
 				product_name: item.product_name,
 				variant_label: item.variant_label,
+				product_id: skuMatch?.productId ?? null,
+				variant_id: skuMatch?.variantId ?? null,
 			});
 			continue;
 		}
