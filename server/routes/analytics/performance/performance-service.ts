@@ -14,6 +14,39 @@ type StageBottleneckRow = {
 	transition_count: string;
 };
 
+type TopProductRow = {
+	product_name: string;
+	total_units: string;
+	total_revenue: string;
+	order_count: string;
+};
+
+async function getTopProducts(storeId: string, rangeDays: number) {
+	const rows = await sql<TopProductRow>`
+		SELECT
+			oi.product_name,
+			SUM(oi.quantity)::text AS total_units,
+			SUM(oi.quantity * COALESCE(oi.unit_price::numeric, 0))::text AS total_revenue,
+			COUNT(DISTINCT oi.order_id)::text AS order_count
+		FROM order_items oi
+		INNER JOIN orders o ON o.id = oi.order_id
+		WHERE o.store_id = ${storeId}
+			AND o.order_date >= NOW() - (${rangeDays} || ' days')::interval
+		GROUP BY oi.product_name
+		ORDER BY SUM(oi.quantity * COALESCE(oi.unit_price::numeric, 0)) DESC
+		LIMIT 5
+	`.execute(db);
+
+	const products = rows.rows.map((row) => ({
+		productName: row.product_name,
+		totalUnits: Number(row.total_units),
+		totalRevenue: Number(row.total_revenue),
+		orderCount: Number(row.order_count),
+	}));
+
+	return { products };
+}
+
 async function getStageBottleneck(storeId: string, rangeDays: number) {
 	const rows = await sql<StageBottleneckRow>`
 		WITH transitions AS (
@@ -56,14 +89,18 @@ async function getStageBottleneck(storeId: string, rangeDays: number) {
 export async function getPerformance(userId: string, input: PerformanceInput) {
 	const store = await getStoreForUser(userId);
 	if (!store) {
-		return { stageBottleneck: { stages: [] } };
+		return {
+			stageBottleneck: { stages: [] },
+			topProducts: { products: [] },
+		};
 	}
 
 	const rangeDays = Number(input.range);
 
-	const [stageBottleneck] = await Promise.all([
+	const [stageBottleneck, topProducts] = await Promise.all([
 		getStageBottleneck(store.id, rangeDays),
+		getTopProducts(store.id, rangeDays),
 	]);
 
-	return { stageBottleneck };
+	return { stageBottleneck, topProducts };
 }
