@@ -1,20 +1,20 @@
 import { sql } from 'kysely';
-import { db } from '../../db/connection.js';
-import { getStoreForUser } from '../../utils/store.js';
+import { db } from '../../../db/connection.js';
+import { getStoreForUser } from '../../../utils/store.js';
 
 export const VALID_RANGES = [30, 90, 365] as const;
-export type DashboardRange = (typeof VALID_RANGES)[number];
-export type DashboardBucket = 'day' | 'week' | 'month';
+export type OperationsRange = (typeof VALID_RANGES)[number];
+export type OperationsBucket = 'day' | 'week' | 'month';
 
-const bucketForRange = (range: DashboardRange): DashboardBucket => {
+const bucketForRange = (range: OperationsRange): OperationsBucket => {
 	if (range === 30) return 'day';
 	if (range === 90) return 'week';
 	return 'month';
 };
 
-export type DashboardData = {
-	range: DashboardRange;
-	bucket: DashboardBucket;
+export type OperationsData = {
+	range: OperationsRange;
+	bucket: OperationsBucket;
 	revenue: {
 		current: string;
 		previous: string;
@@ -47,7 +47,7 @@ export type DashboardData = {
 	}>;
 };
 
-const emptyDashboard = (range: DashboardRange): DashboardData => ({
+const emptyDashboard = (range: OperationsRange): OperationsData => ({
 	range,
 	bucket: bucketForRange(range),
 	revenue: { current: '0', previous: '0', changePercent: 0 },
@@ -58,10 +58,10 @@ const emptyDashboard = (range: DashboardRange): DashboardData => ({
 	ordersTrend: [],
 });
 
-export async function getDashboard(
+export async function getOperations(
 	userId: string,
-	range: DashboardRange,
-): Promise<DashboardData> {
+	range: OperationsRange,
+): Promise<OperationsData> {
 	const store = await getStoreForUser(userId);
 	if (!store) return emptyDashboard(range);
 
