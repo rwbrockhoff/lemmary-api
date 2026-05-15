@@ -1,6 +1,7 @@
 import { supabase, supabaseAdmin } from '../../db/supabase-client.js';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
+import { DEMO_USER_ID } from '../../config/constants.js';
 import {
 	getCachedUserId,
 	setCachedUserId,
@@ -125,6 +126,7 @@ export type CurrentUser = {
 	firstName: string | null;
 	lastName: string | null;
 	avatarUrl: string | null;
+	isDemo: boolean;
 };
 
 export async function getCurrentUser(
@@ -144,6 +146,7 @@ export async function getCurrentUser(
 		firstName: row.first_name,
 		lastName: row.last_name,
 		avatarUrl: row.avatar_url,
+		isDemo: row.id === DEMO_USER_ID,
 	};
 }
 
