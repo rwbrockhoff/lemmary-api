@@ -1,6 +1,5 @@
 import { sql, type Transaction } from 'kysely';
 import type { Database } from '../db/database-types.js';
-import { extractBaseColor } from './variants.js';
 import { toJsonb } from './json.js';
 
 type MaterialSnapshot = {
@@ -110,15 +109,10 @@ export async function populateBatchData(
 	const materialsRaw: MaterialSnapshot[] = [];
 
 	for (const item of summary) {
-		const baseColor = extractBaseColor(item.variant_label);
 		const totalQty = Number(item.total_quantity);
 
 		const matches = bomItems.filter(
-			(bom) =>
-				bom.platform_sku === item.platform_sku &&
-				(baseColor === ''
-					? true
-					: bom.variant?.toLowerCase().includes(baseColor.toLowerCase())),
+			(bom) => bom.platform_sku === item.platform_sku,
 		);
 
 		for (const bom of matches) {

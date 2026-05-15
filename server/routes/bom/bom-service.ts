@@ -21,10 +21,7 @@ export async function getBomForVariant(userId: string, variantId: string) {
 	const variant = await db
 		.selectFrom('product_variants')
 		.innerJoin('products', 'products.id', 'product_variants.product_id')
-		.select([
-			'product_variants.platform_sku',
-			'product_variants.name',
-		])
+		.select(['product_variants.platform_sku', 'product_variants.name'])
 		.where('product_variants.id', '=', variantId)
 		.where('products.store_id', '=', store.id)
 		.executeTakeFirst();
@@ -117,7 +114,14 @@ type UpdateBomItemInput = {
 	purchase_url: string | null;
 };
 
-const MEASUREMENT_DEFAULTS: Record<string, { unit: 'pieces' | 'inches' | 'sq_ft' | 'yards'; tracks_color: boolean; tracks_size: boolean }> = {
+const MEASUREMENT_DEFAULTS: Record<
+	string,
+	{
+		unit: 'pieces' | 'inches' | 'sq_ft' | 'yards';
+		tracks_color: boolean;
+		tracks_size: boolean;
+	}
+> = {
 	area: { unit: 'sq_ft', tracks_color: true, tracks_size: false },
 	linear: { unit: 'inches', tracks_color: false, tracks_size: true },
 	count: { unit: 'pieces', tracks_color: false, tracks_size: true },
@@ -139,13 +143,22 @@ export async function updateBomItem(
 		let typeId = input.material_type_id;
 
 		if (!typeId && input.material_type_name) {
-			const existing = await db
-				.selectFrom('bom_material_types')
-				.selectAll()
-				.where('store_id', '=', store.id)
-				.where('name', 'ilike', input.material_type_name)
-				.where('measurement', '=', input.measurement as 'area' | 'linear' | 'count')
-				.executeTakeFirst();
+			const trimmedName = input.material_type_name.trim();
+
+			const findByName = () =>
+				db
+					.selectFrom('bom_material_types')
+					.select('id')
+					.where('store_id', '=', store.id)
+					.where(sql<boolean>`lower(name) = lower(${trimmedName})`)
+					.where(
+						'measurement',
+						'=',
+						input.measurement as 'area' | 'linear' | 'count',
+					)
+					.executeTakeFirst();
+
+			const existing = await findByName();
 
 			if (existing) {
 				typeId = existing.id;
@@ -156,21 +169,28 @@ export async function updateBomItem(
 					.where('store_id', '=', store.id)
 					.executeTakeFirst();
 
-				const defaults = MEASUREMENT_DEFAULTS[input.measurement] ?? MEASUREMENT_DEFAULTS.count;
+				const defaults =
+					MEASUREMENT_DEFAULTS[input.measurement] ?? MEASUREMENT_DEFAULTS.count;
 
-				const newType = await db
+				const inserted = await db
 					.insertInto('bom_material_types')
 					.values({
 						store_id: store.id,
-						name: input.material_type_name,
+						name: trimmedName,
 						measurement: input.measurement as 'area' | 'linear' | 'count',
 						...defaults,
 						position: (maxPos?.max_pos ?? 0) + 1,
 					})
-					.returningAll()
-					.executeTakeFirstOrThrow();
+					.onConflict((oc) => oc.doNothing())
+					.returning('id')
+					.executeTakeFirst();
 
-				typeId = newType.id;
+				if (inserted) {
+					typeId = inserted.id;
+				} else {
+					const raced = await findByName();
+					typeId = raced?.id ?? null;
+				}
 			}
 		}
 
@@ -333,7 +353,11 @@ export async function searchMaterialCatalog(
 		.limit(10);
 
 	if (measurement) {
-		q = q.where('bom_material_types.measurement', '=', measurement as 'area' | 'linear' | 'count');
+		q = q.where(
+			'bom_material_types.measurement',
+			'=',
+			measurement as 'area' | 'linear' | 'count',
+		);
 	}
 
 	return q.execute();
@@ -390,12 +414,8 @@ export async function getOrCreateMaterial(
 		.selectAll()
 		.where('store_id', '=', store.id)
 		.where('material_type_id', '=', materialTypeId)
-		.where((eb) =>
-			color ? eb('color', '=', color) : eb('color', 'is', null),
-		)
-		.where((eb) =>
-			size ? eb('size', '=', size) : eb('size', 'is', null),
-		)
+		.where((eb) => (color ? eb('color', '=', color) : eb('color', 'is', null)))
+		.where((eb) => (size ? eb('size', '=', size) : eb('size', 'is', null)))
 		.executeTakeFirst();
 
 	if (existing) {

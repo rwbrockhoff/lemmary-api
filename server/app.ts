@@ -7,7 +7,7 @@ import { ordersRoutes } from './routes/orders/orders-routes.js';
 import { reportsRoutes } from './routes/reports/reports-routes.js';
 import { batchesRoutes } from './routes/batches/batches-routes.js';
 import { authRoutes } from './routes/auth/auth-routes.js';
-import { dashboardRoutes } from './routes/dashboard/dashboard-routes.js';
+import { analyticsRoutes } from './routes/analytics/analytics-routes.js';
 import { settingsRoutes } from './routes/settings/settings-routes.js';
 import { storeRoutes } from './routes/store/store-routes.js';
 import { workflowStagesRoutes } from './routes/workflow-stages/workflow-stages-routes.js';
@@ -34,7 +34,7 @@ export const buildApp = () => {
 	});
 
 	app.register(authRoutes);
-	app.register(dashboardRoutes);
+	app.register(analyticsRoutes);
 	app.register(ordersRoutes);
 	app.register(reportsRoutes);
 	app.register(batchesRoutes);

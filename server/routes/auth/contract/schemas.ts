@@ -51,6 +51,7 @@ export const AuthUserSchema = z
 		firstName: z.string().nullable(),
 		lastName: z.string().nullable(),
 		avatarUrl: z.string().nullable(),
+		isDemo: z.boolean(),
 	})
 	.strict();
 

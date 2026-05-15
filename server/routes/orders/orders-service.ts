@@ -26,6 +26,23 @@ function buildOrderUrl(
 		: null;
 }
 
+function logStageTransition(
+	orderId: string,
+	fromStageId: string | null,
+	toStageId: string,
+) {
+	db.insertInto('order_stage_history')
+		.values({
+			order_id: orderId,
+			from_stage_id: fromStageId,
+			to_stage_id: toStageId,
+		})
+		.execute()
+		.catch((err) => {
+			console.error('Failed to log stage transition', err);
+		});
+}
+
 async function fetchOrdersFromPlatform(
 	store: StoreWithAccessToken,
 ): Promise<NormalizedOrder[]> {
@@ -388,13 +405,26 @@ export async function updateOrderStage(
 	const store = await getStoreForUser(userId);
 	if (!store) return null;
 
-	return db
+	const current = await db
+		.selectFrom('orders')
+		.select('workflow_stage_id')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	const updated = await db
 		.updateTable('orders')
 		.set({ workflow_stage_id: stageId, updated_at: new Date() })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
 		.executeTakeFirst();
+
+	if (updated && current && current.workflow_stage_id !== stageId) {
+		logStageTransition(orderId, current.workflow_stage_id, stageId);
+	}
+
+	return updated;
 }
 
 export async function updateOrderNotes(

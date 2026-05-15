@@ -17,6 +17,7 @@ export interface Database {
 	production_batch_materials: ProductionBatchMaterialTable;
 	products: ProductTable;
 	product_variants: ProductVariantTable;
+	order_stage_history: OrderStageHistoryTable;
 }
 
 export interface UserTable {
@@ -58,6 +59,7 @@ export interface OrderWorkflowStageTable {
 	color: string | null;
 	is_default: Generated<boolean>;
 	is_complete: Generated<boolean>;
+	archived_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
@@ -73,12 +75,24 @@ export interface OrderItemWorkflowStageTable {
 	color: string | null;
 	is_default: Generated<boolean>;
 	is_complete: Generated<boolean>;
+	archived_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;
 }
 
 export type OrderItemWorkflowStage = Selectable<OrderItemWorkflowStageTable>;
 export type NewOrderItemWorkflowStage = Insertable<OrderItemWorkflowStageTable>;
+
+export interface OrderStageHistoryTable {
+	id: Generated<string>;
+	order_id: string;
+	from_stage_id: string | null;
+	to_stage_id: string;
+	transitioned_at: Generated<Date>;
+}
+
+export type OrderStageHistory = Selectable<OrderStageHistoryTable>;
+export type NewOrderStageHistory = Insertable<OrderStageHistoryTable>;
 
 export interface OrderTable {
 	id: Generated<string>;
