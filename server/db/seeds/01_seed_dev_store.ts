@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import * as path from 'path';
 import pg from 'pg';
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, sql } from 'kysely';
 import type { Database } from '../database-types.js';
 import { DEV_USER_ID, DEV_STORE_ID } from '../../config/constants.js';
 
@@ -51,18 +51,26 @@ async function seed() {
 		.insertInto('users')
 		.values({
 			id: DEV_USER_ID,
-			email: 'jaclyn@salkadesigns.com',
-			first_name: 'Jaclyn',
-			last_name: 'Cage',
+			email: 'dev@lemmary.com',
+			first_name: 'Dev',
+			last_name: 'User',
 		})
 		.onConflict((oc) =>
 			oc.column('id').doUpdateSet({
-				email: 'jaclyn@salkadesigns.com',
-				first_name: 'Jaclyn',
-				last_name: 'Cage',
+				email: 'dev@lemmary.com',
+				first_name: 'Dev',
+				last_name: 'User',
 			}),
 		)
 		.execute();
+
+	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${process.env.SQUARESPACE_API_KEY ?? ''}, ${process.env.STORE_ENCRYPTION_KEY})`;
+
+	const platformConfig = {
+		base_url: 'https://api.squarespace.com/1.0',
+		api_version: '1.0',
+		store_url: process.env.SQUARESPACE_STORE_URL ?? null,
+	};
 
 	await db
 		.insertInto('stores')
@@ -70,18 +78,16 @@ async function seed() {
 			id: DEV_STORE_ID,
 			user_id: DEV_USER_ID,
 			platform: 'squarespace',
-			store_name: 'Salka Designs',
-			api_key: process.env.SQUARESPACE_API_KEY ?? '',
+			store_name: 'Dev Store',
+			store_access_token: encryptedToken,
 			lead_time_days: 21,
-			platform_config: {
-				base_url: 'https://api.squarespace.com/1.0',
-				api_version: '1.0',
-			},
+			platform_config: platformConfig,
 		})
 		.onConflict((oc) =>
 			oc.column('id').doUpdateSet({
-				api_key: process.env.SQUARESPACE_API_KEY ?? '',
-				store_name: 'Salka Designs',
+				store_access_token: encryptedToken,
+				store_name: 'Dev Store',
+				platform_config: platformConfig,
 			}),
 		)
 		.execute();
@@ -102,7 +108,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'New',
 				position: 0,
-				color: 'gray',
+				color: 'slate',
 				is_default: true,
 				is_complete: false,
 			},
@@ -110,7 +116,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'In Progress 🔄',
 				position: 1,
-				color: 'blue',
+				color: 'cobalt',
 				is_default: false,
 				is_complete: false,
 			},
@@ -118,7 +124,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Order Finished 🙌🏻',
 				position: 2,
-				color: 'purple',
+				color: 'lavender',
 				is_default: false,
 				is_complete: false,
 			},
@@ -126,7 +132,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Ready to Ship 📦',
 				position: 3,
-				color: 'purple',
+				color: 'lavender',
 				is_default: false,
 				is_complete: false,
 			},
@@ -134,7 +140,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Fulfilled 👏🏻',
 				position: 4,
-				color: 'green',
+				color: 'pine',
 				is_default: false,
 				is_complete: true,
 			},
@@ -148,7 +154,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Not Started',
 				position: 0,
-				color: 'gray',
+				color: 'slate',
 				is_default: true,
 				is_complete: false,
 			},
@@ -156,7 +162,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Fabric Cut ✂️',
 				position: 1,
-				color: 'blue',
+				color: 'cobalt',
 				is_default: false,
 				is_complete: false,
 			},
@@ -164,7 +170,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Components Ready 📎',
 				position: 2,
-				color: 'blue',
+				color: 'cobalt',
 				is_default: false,
 				is_complete: false,
 			},
@@ -172,7 +178,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'In Progress 🔄',
 				position: 3,
-				color: 'purple',
+				color: 'lavender',
 				is_default: false,
 				is_complete: false,
 			},
@@ -180,7 +186,7 @@ async function seed() {
 				store_id: DEV_STORE_ID,
 				name: 'Done 👏🏻',
 				position: 4,
-				color: 'green',
+				color: 'pine',
 				is_default: false,
 				is_complete: true,
 			},

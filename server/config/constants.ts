@@ -1,8 +1,10 @@
-export const DEV_USER_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
-export const DEV_STORE_ID = 'b2c3d4e5-0000-0000-0000-000000000001';
+import { env } from './environment.js';
 
-export const DEMO_USER_ID = 'd3e4f5a6-0000-0000-0000-000000000001';
-export const DEMO_STORE_ID = 'e4f5a6b7-0000-0000-0000-000000000001';
+export const DEV_USER_ID = env.DEV_USER_ID;
+export const DEV_STORE_ID = env.DEV_STORE_ID;
+
+export const DEMO_USER_ID = env.DEMO_USER_ID;
+export const DEMO_STORE_ID = env.DEMO_STORE_ID;
 export const DEMO_SESSION_TOKEN = 'demo-session-readonly';
 
 export const REFRESH_TOKEN_COOKIE = 'refresh-token';

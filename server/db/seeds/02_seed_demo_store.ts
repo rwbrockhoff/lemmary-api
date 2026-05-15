@@ -46,6 +46,13 @@ async function seedDemo() {
 		)
 		.execute();
 
+	const encryptedToken = sql<Buffer>`pgp_sym_encrypt('demo-key-not-used', ${process.env.STORE_ENCRYPTION_KEY})`;
+
+	const platformConfig = {
+		base_url: 'https://api.squarespace.com/1.0',
+		api_version: '1.0',
+	};
+
 	await db
 		.insertInto('stores')
 		.values({
@@ -53,12 +60,9 @@ async function seedDemo() {
 			user_id: DEMO_USER_ID,
 			platform: 'squarespace',
 			store_name: 'Twelve Stitch',
-			api_key: 'demo-key-not-used',
+			store_access_token: encryptedToken,
 			lead_time_days: 14,
-			platform_config: {
-				base_url: 'https://api.squarespace.com/1.0',
-				api_version: '1.0',
-			},
+			platform_config: platformConfig,
 		})
 		.onConflict((oc) =>
 			oc

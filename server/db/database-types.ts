@@ -38,7 +38,7 @@ export interface StoreTable {
 	user_id: string;
 	platform: 'squarespace' | 'shopify' | 'etsy';
 	store_name: string;
-	api_key: string;
+	store_access_token: Buffer;
 	platform_config: Record<string, unknown> | null;
 	lead_time_days: number | null;
 	last_synced_at: Date | null;
@@ -96,7 +96,6 @@ export interface OrderTable {
 	grand_total: string | null;
 	shipping_method: string | null;
 	order_notes: string | null;
-	order_url: string | null;
 	fulfilled_on: Date | null;
 	tracking_number: string | null;
 	tracking_url: string | null;

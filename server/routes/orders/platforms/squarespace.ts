@@ -74,7 +74,12 @@ export type NormalizedOrder = {
 
 async function fetchPage(
 	apiKey: string,
-	params?: { fulfillmentStatus?: string; cursor?: string; modifiedAfter?: string; modifiedBefore?: string },
+	params?: {
+		fulfillmentStatus?: string;
+		cursor?: string;
+		modifiedAfter?: string;
+		modifiedBefore?: string;
+	},
 ): Promise<SquarespaceResponse> {
 	const searchParams = new URLSearchParams();
 
@@ -86,7 +91,10 @@ async function fetchPage(
 		}
 		if (params?.modifiedAfter) {
 			searchParams.set('modifiedAfter', params.modifiedAfter);
-			searchParams.set('modifiedBefore', params.modifiedBefore ?? new Date().toISOString());
+			searchParams.set(
+				'modifiedBefore',
+				params.modifiedBefore ?? new Date().toISOString(),
+			);
 		}
 	}
 
@@ -133,30 +141,34 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 			raw.internalNotes?.length > 0
 				? raw.internalNotes.map((n) => n.content).join('\n')
 				: null,
-		order_url: `https://salka-designs.squarespace.com/commerce/orders/${raw.id}/authenticated`,
 	};
 
-	const items: Omit<NewOrderItem, 'order_id'>[] = raw.lineItems.map(
-		(item) => ({
-			platform_line_item_id: item.id,
-			platform_sku: item.sku || null,
-			product_name: item.productName,
-			variant_label:
+	const items: Omit<NewOrderItem, 'order_id'>[] = raw.lineItems.map((item) => ({
+		platform_line_item_id: item.id,
+		platform_sku: item.sku || null,
+		product_name: item.productName,
+		variant_label:
 			item.variantOptions?.length > 0
-				? item.variantOptions.map((v) => ({ name: v.optionName, value: v.value }))
+				? item.variantOptions.map((v) => ({
+						name: v.optionName,
+						value: v.value,
+					}))
 				: null,
-			quantity: item.quantity,
-			unit_price: item.unitPricePaid?.value ?? null,
-			image_url: item.imageUrl || null,
-		}),
-	);
+		quantity: item.quantity,
+		unit_price: item.unitPricePaid?.value ?? null,
+		image_url: item.imageUrl || null,
+	}));
 
 	return { order, items };
 }
 
 async function fetchAllPages(
 	apiKey: string,
-	options: { fulfillmentStatus?: string; modifiedAfter?: string; modifiedBefore?: string },
+	options: {
+		fulfillmentStatus?: string;
+		modifiedAfter?: string;
+		modifiedBefore?: string;
+	},
 ): Promise<NormalizedOrder[]> {
 	const allOrders: NormalizedOrder[] = [];
 	let cursor: string | null = null;
@@ -179,6 +191,19 @@ async function fetchAllPages(
 	return allOrders;
 }
 
+export async function testSquarespaceConnection(
+	apiKey: string,
+): Promise<boolean> {
+	const response = await fetch(`${BASE_URL}?fulfillmentStatus=PENDING`, {
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+		},
+	});
+
+	return response.ok;
+}
+
 export async function fetchSquarespaceOrders(
 	apiKey: string,
 	lastSyncedAt: Date | null,
@@ -192,7 +217,11 @@ export async function fetchSquarespaceOrders(
 
 	const [pending, fulfilled] = await Promise.all([
 		fetchAllPages(apiKey, { fulfillmentStatus: 'PENDING' }),
-		fetchAllPages(apiKey, { fulfillmentStatus: 'FULFILLED', modifiedAfter, modifiedBefore }),
+		fetchAllPages(apiKey, {
+			fulfillmentStatus: 'FULFILLED',
+			modifiedAfter,
+			modifiedBefore,
+		}),
 	]);
 
 	return [...pending, ...fulfilled];

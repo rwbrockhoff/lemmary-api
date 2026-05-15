@@ -1,16 +1,19 @@
 import { db } from '../../db/connection.js';
-import type { Store } from '../../db/database-types.js';
-import { getStoreForUser } from '../../utils/store.js';
+import {
+	getStoreForUser,
+	getStoreWithAccessToken,
+	type StoreWithAccessToken,
+} from '../../utils/store.js';
 import {
 	fetchSquarespaceProducts,
 	type NormalizedProduct,
 } from './platforms/squarespace.js';
 
 async function fetchProductsFromPlatform(
-	store: Store,
+	store: StoreWithAccessToken,
 ): Promise<NormalizedProduct[]> {
 	if (store.platform === 'squarespace') {
-		return fetchSquarespaceProducts(store.api_key);
+		return fetchSquarespaceProducts(store.access_token);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
@@ -49,19 +52,17 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 						product_id: result.id,
 					})
 					.onConflict((oc) =>
-						oc
-							.columns(['product_id', 'platform_variant_id'])
-							.doUpdateSet({
-								platform_sku: variant.platform_sku,
-								name: variant.name,
-								price: variant.price,
-								sale_price: variant.sale_price,
-								on_sale: variant.on_sale,
-								stock_quantity: variant.stock_quantity,
-								stock_unlimited: variant.stock_unlimited,
-								image_url: variant.image_url,
-								updated_at: new Date(),
-							}),
+						oc.columns(['product_id', 'platform_variant_id']).doUpdateSet({
+							platform_sku: variant.platform_sku,
+							name: variant.name,
+							price: variant.price,
+							sale_price: variant.sale_price,
+							on_sale: variant.on_sale,
+							stock_quantity: variant.stock_quantity,
+							stock_unlimited: variant.stock_unlimited,
+							image_url: variant.image_url,
+							updated_at: new Date(),
+						}),
 					)
 					.execute();
 			}
@@ -74,7 +75,7 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 }
 
 export async function syncProducts(userId: string) {
-	const store = await getStoreForUser(userId);
+	const store = await getStoreWithAccessToken(userId);
 	if (!store) return null;
 	const products = await fetchProductsFromPlatform(store);
 	const synced = await upsertProducts(store.id, products);
@@ -102,14 +103,15 @@ export async function getProducts(userId: string) {
 
 	const productIds = products.map((p) => p.id);
 
-	const variants = productIds.length > 0
-		? await db
-				.selectFrom('product_variants')
-				.selectAll()
-				.where('product_id', 'in', productIds)
-				.orderBy('name', 'asc')
-				.execute()
-		: [];
+	const variants =
+		productIds.length > 0
+			? await db
+					.selectFrom('product_variants')
+					.selectAll()
+					.where('product_id', 'in', productIds)
+					.orderBy('name', 'asc')
+					.execute()
+			: [];
 
 	const variantsByProduct = new Map<string, typeof variants>();
 	for (const variant of variants) {
@@ -155,17 +157,20 @@ export async function getProduct(userId: string, productId: string) {
 		.map((v) => v.platform_sku)
 		.filter((sku): sku is string => sku !== null);
 
-	const bomCounts = skus.length > 0
-		? await db
-				.selectFrom('bom_items')
-				.select(['platform_sku', db.fn.count<number>('id').as('count')])
-				.where('store_id', '=', store.id)
-				.where('platform_sku', 'in', skus)
-				.groupBy('platform_sku')
-				.execute()
-		: [];
+	const bomCounts =
+		skus.length > 0
+			? await db
+					.selectFrom('bom_items')
+					.select(['platform_sku', db.fn.count<number>('id').as('count')])
+					.where('store_id', '=', store.id)
+					.where('platform_sku', 'in', skus)
+					.groupBy('platform_sku')
+					.execute()
+			: [];
 
-	const countMap = new Map(bomCounts.map((r) => [r.platform_sku, Number(r.count)]));
+	const countMap = new Map(
+		bomCounts.map((r) => [r.platform_sku, Number(r.count)]),
+	);
 
 	const variantsWithCounts = variants.map((v) => ({
 		...v,
