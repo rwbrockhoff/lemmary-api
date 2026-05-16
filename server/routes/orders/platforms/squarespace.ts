@@ -41,6 +41,13 @@ type SquarespaceFulfillment = {
 	carrierName: string | null;
 };
 
+type SquarespaceDiscountLine = {
+	name: string;
+	description: string;
+	amount: SquarespaceMoneyValue;
+	promoCode: string | null;
+};
+
 type SquarespaceOrder = {
 	id: string;
 	orderNumber: string;
@@ -56,6 +63,8 @@ type SquarespaceOrder = {
 	internalNotes: SquarespaceInternalNote[];
 	shippingLines: SquarespaceShippingLine[];
 	fulfillments: SquarespaceFulfillment[];
+	discountTotal: SquarespaceMoneyValue;
+	discountLines: SquarespaceDiscountLine[];
 };
 
 type SquarespaceResponse = {
@@ -131,6 +140,9 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 		subtotal: raw.subtotal?.value ?? null,
 		shipping_total: raw.shippingTotal?.value ?? null,
 		grand_total: raw.grandTotal?.value ?? null,
+		promo_code:
+			raw.discountLines?.find((line) => line.promoCode)?.promoCode ?? null,
+		discount_total: raw.discountTotal?.value ?? '0',
 		currency: raw.grandTotal?.currency ?? 'USD',
 		fulfilled_on: raw.fulfilledOn ? new Date(raw.fulfilledOn) : null,
 		tracking_number: raw.fulfillments?.[0]?.trackingNumber ?? null,
