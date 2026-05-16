@@ -121,6 +121,58 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 	};
 }
 
+type CouponUsageRow = {
+	current_with_promo: string;
+	current_total: string;
+	avg_discount: string | null;
+	prior_with_promo: string;
+	prior_total: string;
+};
+
+async function getCouponUsage(storeId: string, rangeDays: number) {
+	const rows = await sql<CouponUsageRow>`
+		SELECT
+			COUNT(*) FILTER (
+				WHERE order_date >= NOW() - (${rangeDays} || ' days')::interval
+					AND promo_code IS NOT NULL
+			)::text AS current_with_promo,
+			COUNT(*) FILTER (
+				WHERE order_date >= NOW() - (${rangeDays} || ' days')::interval
+			)::text AS current_total,
+			AVG(discount_total::numeric) FILTER (
+				WHERE order_date >= NOW() - (${rangeDays} || ' days')::interval
+					AND promo_code IS NOT NULL
+			)::text AS avg_discount,
+			COUNT(*) FILTER (
+				WHERE order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+					AND order_date < NOW() - (${rangeDays} || ' days')::interval
+					AND promo_code IS NOT NULL
+			)::text AS prior_with_promo,
+			COUNT(*) FILTER (
+				WHERE order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+					AND order_date < NOW() - (${rangeDays} || ' days')::interval
+			)::text AS prior_total
+		FROM orders
+		WHERE store_id = ${storeId}
+	`.execute(db);
+
+	const row = rows.rows[0];
+	const withPromoCount = Number(row?.current_with_promo ?? 0);
+	const totalCount = Number(row?.current_total ?? 0);
+	const priorWithPromoCount = Number(row?.prior_with_promo ?? 0);
+	const priorTotalCount = Number(row?.prior_total ?? 0);
+
+	return {
+		withPromoCount,
+		noPromoCount: totalCount - withPromoCount,
+		totalCount,
+		avgDiscount: row?.avg_discount ? Number(row.avg_discount) : 0,
+		priorWithPromoCount,
+		priorNoPromoCount: priorTotalCount - priorWithPromoCount,
+		priorTotalCount,
+	};
+}
+
 async function getStageBottleneck(storeId: string, rangeDays: number) {
 	const rows = await sql<StageBottleneckRow>`
 		WITH transitions AS (
@@ -174,16 +226,27 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 				priorReturningCount: 0,
 				priorTotalCount: 0,
 			},
+			couponUsage: {
+				withPromoCount: 0,
+				noPromoCount: 0,
+				totalCount: 0,
+				avgDiscount: 0,
+				priorWithPromoCount: 0,
+				priorNoPromoCount: 0,
+				priorTotalCount: 0,
+			},
 		};
 	}
 
 	const rangeDays = Number(input.range);
 
-	const [stageBottleneck, topProducts, customerMix] = await Promise.all([
-		getStageBottleneck(store.id, rangeDays),
-		getTopProducts(store.id, rangeDays),
-		getCustomerMix(store.id, rangeDays),
-	]);
+	const [stageBottleneck, topProducts, customerMix, couponUsage] =
+		await Promise.all([
+			getStageBottleneck(store.id, rangeDays),
+			getTopProducts(store.id, rangeDays),
+			getCustomerMix(store.id, rangeDays),
+			getCouponUsage(store.id, rangeDays),
+		]);
 
-	return { stageBottleneck, topProducts, customerMix };
+	return { stageBottleneck, topProducts, customerMix, couponUsage };
 }
