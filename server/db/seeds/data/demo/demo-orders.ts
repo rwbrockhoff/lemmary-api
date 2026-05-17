@@ -1,3 +1,6 @@
+import { faker } from '@faker-js/faker';
+import { DEMO_CUSTOMERS } from './demo-customers.js';
+
 export type DemoOrderItem = {
 	platformSku: string;
 	quantity: number;
@@ -11,475 +14,126 @@ export type DemoOrderSpec = {
 	fulfilled: boolean;
 	fulfilledDayOffset?: number;
 	items: DemoOrderItem[];
+	promoCode?: string;
+	discountTotal?: number;
 };
 
-export const DEMO_ORDERS: DemoOrderSpec[] = [
-	// Last 30 days — 22 orders, varied daily volume, mix of pending + recently fulfilled.
-	{
-		dayOffset: 1,
-		customerIndex: 0,
-		stageName: 'New',
-		fulfilled: false,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 2,
-		customerIndex: 1,
-		stageName: 'New',
-		fulfilled: false,
-		items: [
-			{ platformSku: 'TS-WAL-BLK', quantity: 1 },
-			{ platformSku: 'TS-FOB-COG', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 3,
-		customerIndex: 2,
-		stageName: 'Cutting',
-		fulfilled: false,
-		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1, itemStageName: 'Cut' }],
-	},
-	{
-		dayOffset: 3,
-		customerIndex: 3,
-		stageName: 'New',
-		fulfilled: false,
-		items: [{ platformSku: 'TS-CRD-BUR', quantity: 1 }],
-	},
-	{
-		dayOffset: 4,
-		customerIndex: 4,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 1,
-		items: [{ platformSku: 'TS-WAL-COG', quantity: 1 }],
-	},
-	{
-		dayOffset: 5,
-		customerIndex: 5,
-		stageName: 'Cutting',
-		fulfilled: false,
-		items: [
-			{ platformSku: 'TS-LAP-15-BLK', quantity: 1, itemStageName: 'Cut' },
-			{ platformSku: 'TS-CRD-COG', quantity: 1, itemStageName: 'Not Started' },
-		],
-	},
-	{
-		dayOffset: 6,
-		customerIndex: 6,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 2,
-		items: [{ platformSku: 'TS-FOB-BLK', quantity: 2 }],
-	},
-	{
-		dayOffset: 7,
-		customerIndex: 7,
-		stageName: 'Stitching',
-		fulfilled: false,
-		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1, itemStageName: 'Cut' }],
-	},
-	{
-		dayOffset: 7,
-		customerIndex: 8,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 3,
-		items: [{ platformSku: 'TS-WAL-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 8,
-		customerIndex: 9,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 4,
-		items: [
-			{ platformSku: 'TS-LAP-13-TAN', quantity: 1 },
-			{ platformSku: 'TS-FOB-NVY', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 9,
-		customerIndex: 10,
-		stageName: 'Stitching',
-		fulfilled: false,
-		items: [
-			{ platformSku: 'TS-TOT-BLK', quantity: 1, itemStageName: 'Stitched' },
-		],
-	},
-	{
-		dayOffset: 10,
-		customerIndex: 11,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 5,
-		items: [{ platformSku: 'TS-CRD-TAN', quantity: 2 }],
-	},
-	{
-		dayOffset: 11,
-		customerIndex: 12,
-		stageName: 'Edge Finishing',
-		fulfilled: false,
-		items: [
-			{ platformSku: 'TS-CRO-TAN', quantity: 1, itemStageName: 'Stitched' },
-		],
-	},
-	{
-		dayOffset: 13,
-		customerIndex: 13,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 7,
-		items: [{ platformSku: 'TS-LAP-15-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 14,
-		customerIndex: 14,
-		stageName: 'Edge Finishing',
-		fulfilled: false,
-		items: [
-			{ platformSku: 'TS-WAL-COG', quantity: 1, itemStageName: 'Finished' },
-			{ platformSku: 'TS-CRD-BLK', quantity: 1, itemStageName: 'Stitched' },
-		],
-	},
-	{
-		dayOffset: 16,
-		customerIndex: 15,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 9,
-		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 17,
-		customerIndex: 16,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 10,
-		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 19,
-		customerIndex: 17,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 12,
-		items: [{ platformSku: 'TS-WAL-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 22,
-		customerIndex: 18,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 14,
-		items: [
-			{ platformSku: 'TS-LAP-13-BLK', quantity: 1 },
-			{ platformSku: 'TS-FOB-TAN', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 25,
-		customerIndex: 19,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 17,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 27,
-		customerIndex: 20,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 20,
-		items: [{ platformSku: 'TS-LAP-15-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 29,
-		customerIndex: 21,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 22,
-		items: [
-			{ platformSku: 'TS-TOT-BLK', quantity: 1 },
-			{ platformSku: 'TS-CRD-COG', quantity: 1 },
-		],
-	},
+const ORDER_COUNT = 140;
+const MAX_DAY_OFFSET = 180;
+const LEAD_TIME_DAYS = 14;
+const MIN_DAYS_UNTIL_DUE = 2;
+const PENDING_ORDER_RATE = 0.1;
+const RETURNING_CUSTOMER_RATE = 0.08;
 
-	// 30–90 days — 20 fulfilled orders, steady production cadence.
-	{
-		dayOffset: 33,
-		customerIndex: 22,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 25,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 35,
-		customerIndex: 23,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 28,
-		items: [{ platformSku: 'TS-WAL-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 38,
-		customerIndex: 24,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 30,
-		items: [{ platformSku: 'TS-LAP-15-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 40,
-		customerIndex: 25,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 33,
-		items: [
-			{ platformSku: 'TS-WAL-COG', quantity: 1 },
-			{ platformSku: 'TS-CRD-COG', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 43,
-		customerIndex: 26,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 36,
-		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 45,
-		customerIndex: 27,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 38,
-		items: [{ platformSku: 'TS-FOB-COG', quantity: 3 }],
-	},
-	{
-		dayOffset: 48,
-		customerIndex: 28,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 40,
-		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 51,
-		customerIndex: 29,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 44,
-		items: [{ platformSku: 'TS-CRD-BUR', quantity: 1 }],
-	},
-	{
-		dayOffset: 53,
-		customerIndex: 30,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 45,
-		items: [
-			{ platformSku: 'TS-LAP-13-TAN', quantity: 1 },
-			{ platformSku: 'TS-FOB-TAN', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 56,
-		customerIndex: 31,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 48,
-		items: [{ platformSku: 'TS-WAL-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 58,
-		customerIndex: 32,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 50,
-		items: [{ platformSku: 'TS-TOT-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 61,
-		customerIndex: 33,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 54,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 64,
-		customerIndex: 34,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 56,
-		items: [
-			{ platformSku: 'TS-CRD-TAN', quantity: 2 },
-			{ platformSku: 'TS-FOB-NVY', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 67,
-		customerIndex: 35,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 60,
-		items: [{ platformSku: 'TS-LAP-15-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 70,
-		customerIndex: 36,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 62,
-		items: [{ platformSku: 'TS-WAL-COG', quantity: 1 }],
-	},
-	{
-		dayOffset: 73,
-		customerIndex: 37,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 65,
-		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 76,
-		customerIndex: 38,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 68,
-		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 79,
-		customerIndex: 39,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 72,
-		items: [
-			{ platformSku: 'TS-LAP-13-BLK', quantity: 1 },
-			{ platformSku: 'TS-CRD-BLK', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 83,
-		customerIndex: 40,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 75,
-		items: [{ platformSku: 'TS-WAL-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 87,
-		customerIndex: 41,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 79,
-		items: [{ platformSku: 'TS-TOT-BLK', quantity: 1 }],
-	},
-
-	// 90–120 days — 12 fulfilled orders, trailing history.
-	{
-		dayOffset: 92,
-		customerIndex: 42,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 84,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 94,
-		customerIndex: 43,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 86,
-		items: [{ platformSku: 'TS-WAL-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 97,
-		customerIndex: 44,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 89,
-		items: [{ platformSku: 'TS-LAP-15-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 100,
-		customerIndex: 45,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 92,
-		items: [
-			{ platformSku: 'TS-CRD-COG', quantity: 1 },
-			{ platformSku: 'TS-FOB-COG', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 103,
-		customerIndex: 46,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 95,
-		items: [{ platformSku: 'TS-TOT-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 106,
-		customerIndex: 47,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 98,
-		items: [{ platformSku: 'TS-CRO-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 109,
-		customerIndex: 48,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 101,
-		items: [{ platformSku: 'TS-WAL-COG', quantity: 1 }],
-	},
-	{
-		dayOffset: 112,
-		customerIndex: 49,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 104,
-		items: [
-			{ platformSku: 'TS-LAP-13-TAN', quantity: 1 },
-			{ platformSku: 'TS-CRD-TAN', quantity: 1 },
-		],
-	},
-	{
-		dayOffset: 114,
-		customerIndex: 50,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 106,
-		items: [{ platformSku: 'TS-TOT-BLK', quantity: 1 }],
-	},
-	{
-		dayOffset: 116,
-		customerIndex: 51,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 108,
-		items: [{ platformSku: 'TS-WAL-TAN', quantity: 1 }],
-	},
-	{
-		dayOffset: 118,
-		customerIndex: 52,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 110,
-		items: [{ platformSku: 'TS-CRD-BUR', quantity: 2 }],
-	},
-	{
-		dayOffset: 119,
-		customerIndex: 53,
-		stageName: 'Shipped',
-		fulfilled: true,
-		fulfilledDayOffset: 111,
-		items: [{ platformSku: 'TS-CRO-TAN', quantity: 1 }],
-	},
+const SKUS = [
+	'TS-CRO-TAN',
+	'TS-CRO-BLK',
+	'TS-WAL-BLK',
+	'TS-WAL-COG',
+	'TS-WAL-TAN',
+	'TS-FOB-BLK',
+	'TS-FOB-COG',
+	'TS-FOB-NVY',
+	'TS-FOB-TAN',
+	'TS-CRD-BLK',
+	'TS-CRD-BUR',
+	'TS-CRD-COG',
+	'TS-CRD-TAN',
+	'TS-TOT-BLK',
+	'TS-TOT-TAN',
 ];
+
+const PENDING_STAGE_WEIGHTS = [
+	{ weight: 4, value: 'New' },
+	{ weight: 3, value: 'Cutting' },
+	{ weight: 2, value: 'Stitching' },
+	{ weight: 1, value: 'Edge Finishing' },
+];
+
+const ITEM_STAGE_FOR: Record<string, string> = {
+	New: 'Not Started',
+	Cutting: 'Cut',
+	Stitching: 'Stitched',
+	'Edge Finishing': 'Stitched',
+};
+
+const PROMO_CODES = ['LAUNCH20', 'WELCOME10', 'SUMMER15', 'FIRSTORDER'];
+
+function generateOrder(
+	customerIndex: number,
+	isPending: boolean,
+): DemoOrderSpec {
+	let dayOffset: number;
+	let stageName: string;
+	let itemStageName: string;
+	let fulfilledDayOffset: number | undefined;
+
+	if (isPending) {
+		dayOffset = faker.number.int({
+			min: 1,
+			max: LEAD_TIME_DAYS - MIN_DAYS_UNTIL_DUE,
+		});
+		stageName = faker.helpers.weightedArrayElement(PENDING_STAGE_WEIGHTS);
+		itemStageName = ITEM_STAGE_FOR[stageName];
+	} else {
+		dayOffset = faker.number.int({ min: LEAD_TIME_DAYS, max: MAX_DAY_OFFSET });
+		stageName = 'Shipped';
+		itemStageName = 'Finished';
+		fulfilledDayOffset = Math.max(
+			1,
+			dayOffset - faker.number.int({ min: 6, max: 12 }),
+		);
+	}
+
+	const itemCount = faker.number.int({ min: 1, max: 3 });
+	const orderSkus = faker.helpers.arrayElements(SKUS, itemCount);
+	const items: DemoOrderItem[] = orderSkus.map((sku) => ({
+		platformSku: sku,
+		quantity: faker.number.int({ min: 1, max: 2 }),
+		itemStageName,
+	}));
+
+	const hasPromo = faker.number.float({ min: 0, max: 1 }) < 0.25;
+
+	return {
+		dayOffset,
+		customerIndex,
+		stageName,
+		fulfilled: !isPending,
+		fulfilledDayOffset,
+		items,
+		promoCode: hasPromo ? faker.helpers.arrayElement(PROMO_CODES) : undefined,
+		discountTotal: hasPromo
+			? faker.number.float({ min: 5, max: 20, fractionDigits: 2 })
+			: undefined,
+	};
+}
+
+function generateDemoOrders(): DemoOrderSpec[] {
+	faker.seed(42);
+	const seenCustomers: number[] = [];
+	let nextCustomerIdx = 0;
+
+	const orders = Array.from({ length: ORDER_COUNT }, () => {
+		const isReturning =
+			seenCustomers.length > 0 &&
+			faker.number.float({ min: 0, max: 1 }) < RETURNING_CUSTOMER_RATE;
+
+		let customerIndex: number;
+		if (isReturning) {
+			customerIndex = faker.helpers.arrayElement(seenCustomers);
+		} else {
+			customerIndex = nextCustomerIdx % DEMO_CUSTOMERS.length;
+			seenCustomers.push(customerIndex);
+			nextCustomerIdx++;
+		}
+
+		const isPending =
+			faker.number.float({ min: 0, max: 1 }) < PENDING_ORDER_RATE;
+		return generateOrder(customerIndex, isPending);
+	});
+
+	return orders.sort((a, b) => b.dayOffset - a.dayOffset);
+}
+
+export const DEMO_ORDERS: DemoOrderSpec[] = generateDemoOrders();

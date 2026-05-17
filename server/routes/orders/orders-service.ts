@@ -118,6 +118,8 @@ async function upsertOrders(
 						tracking_number: order.tracking_number,
 						tracking_url: order.tracking_url,
 						carrier_name: order.carrier_name,
+						promo_code: order.promo_code,
+						discount_total: order.discount_total,
 						workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
 						updated_at: new Date(),
 					}),
