@@ -173,6 +173,75 @@ async function getCouponUsage(storeId: string, rangeDays: number) {
 	};
 }
 
+type MaterialConsumptionRow = {
+	material_type: string;
+	color: string | null;
+	measurement: 'linear' | 'area' | 'count';
+	current_qty: string;
+	prior_qty: string;
+};
+
+async function getMaterialConsumption(storeId: string, rangeDays: number) {
+	const rows = await sql<MaterialConsumptionRow>`
+		WITH consumption AS (
+			SELECT
+				bmt.id AS material_type_id,
+				bmt.name AS material_type,
+				m.color,
+				b.measurement,
+				SUM(
+					CASE
+						WHEN b.measurement = 'linear'
+							THEN COALESCE(b.length::numeric, 0) * b.quantity * oi.quantity
+						ELSE b.quantity * oi.quantity
+					END
+				) FILTER (
+					WHERE o.order_date >= NOW() - (${rangeDays} || ' days')::interval
+				) AS current_qty,
+				SUM(
+					CASE
+						WHEN b.measurement = 'linear'
+							THEN COALESCE(b.length::numeric, 0) * b.quantity * oi.quantity
+						ELSE b.quantity * oi.quantity
+					END
+				) FILTER (
+					WHERE o.order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+						AND o.order_date < NOW() - (${rangeDays} || ' days')::interval
+				) AS prior_qty
+			FROM order_items oi
+			INNER JOIN orders o ON o.id = oi.order_id
+			INNER JOIN bom_items b ON b.platform_sku = oi.platform_sku AND b.store_id = ${storeId}
+			INNER JOIN materials m ON m.id = b.material_id
+			INNER JOIN bom_material_types bmt ON bmt.id = m.material_type_id
+			WHERE o.store_id = ${storeId}
+				AND o.order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+			GROUP BY bmt.id, bmt.name, m.color, b.measurement
+		)
+		SELECT
+			material_type,
+			color,
+			measurement,
+			COALESCE(current_qty, 0)::text AS current_qty,
+			COALESCE(prior_qty, 0)::text AS prior_qty
+		FROM consumption
+		WHERE current_qty > 0
+			AND prior_qty > 0
+			AND current_qty != prior_qty
+		ORDER BY (current_qty - prior_qty) / (prior_qty + 1) DESC
+		LIMIT 5
+	`.execute(db);
+
+	const materials = rows.rows.map((row) => ({
+		materialType: row.material_type,
+		color: row.color,
+		measurement: row.measurement,
+		currentQty: Number(row.current_qty),
+		priorQty: Number(row.prior_qty),
+	}));
+
+	return { materials };
+}
+
 async function getStageBottleneck(storeId: string, rangeDays: number) {
 	const rows = await sql<StageBottleneckRow>`
 		WITH transitions AS (
@@ -235,18 +304,31 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 				priorNoPromoCount: 0,
 				priorTotalCount: 0,
 			},
+			materialConsumption: { materials: [] },
 		};
 	}
 
 	const rangeDays = Number(input.range);
 
-	const [stageBottleneck, topProducts, customerMix, couponUsage] =
-		await Promise.all([
-			getStageBottleneck(store.id, rangeDays),
-			getTopProducts(store.id, rangeDays),
-			getCustomerMix(store.id, rangeDays),
-			getCouponUsage(store.id, rangeDays),
-		]);
+	const [
+		stageBottleneck,
+		topProducts,
+		customerMix,
+		couponUsage,
+		materialConsumption,
+	] = await Promise.all([
+		getStageBottleneck(store.id, rangeDays),
+		getTopProducts(store.id, rangeDays),
+		getCustomerMix(store.id, rangeDays),
+		getCouponUsage(store.id, rangeDays),
+		getMaterialConsumption(store.id, rangeDays),
+	]);
 
-	return { stageBottleneck, topProducts, customerMix, couponUsage };
+	return {
+		stageBottleneck,
+		topProducts,
+		customerMix,
+		couponUsage,
+		materialConsumption,
+	};
 }
