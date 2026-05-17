@@ -8,7 +8,7 @@ export type DemoBatch = {
 
 export const DEMO_BATCHES: DemoBatch[] = [
 	{
-		name: 'January Restock',
+		name: 'July Restock',
 		status: 'Active',
 		completedDayOffset: null,
 		assignByDayRange: { minDays: 1, maxDays: 30, fulfilled: false },

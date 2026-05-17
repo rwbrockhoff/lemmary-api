@@ -12,6 +12,7 @@ import {
 import { DEMO_MATERIAL_TYPES } from './data/demo/demo-material-types.js';
 import { DEMO_ORDERS } from './data/demo/demo-orders.js';
 import { DEMO_BATCHES } from './data/demo/demo-batches.js';
+import { buildOrderStageHistory } from './data/demo/demo-stage-history.js';
 import { populateBatchData } from '../../utils/batch-aggregation.js';
 
 const daysAgo = (n: number) => {
@@ -269,8 +270,15 @@ async function seedDemo() {
 		dayOffset: number;
 		fulfilled: boolean;
 	}> = [];
+	const stageHistoryRows: Array<{
+		order_id: string;
+		from_stage_id: string | null;
+		to_stage_id: string;
+		transitioned_at: Date;
+	}> = [];
 	const finishedItemStageId = itemStageByName.get('Finished') ?? null;
 	const notStartedItemStageId = itemStageByName.get('Not Started') ?? null;
+	const seedNow = new Date();
 
 	for (let i = 0; i < DEMO_ORDERS.length; i++) {
 		const spec = DEMO_ORDERS[i];
@@ -289,6 +297,8 @@ async function seedDemo() {
 			const variant = variantBySku.get(item.platformSku);
 			return sum + (variant ? variant.price * item.quantity : 0);
 		}, 0);
+		const discountTotal = spec.discountTotal ?? 0;
+		const grandTotal = orderTotal + 12 - discountTotal;
 
 		const order = await db
 			.insertInto('orders')
@@ -304,9 +314,11 @@ async function seedDemo() {
 				workflow_stage_id: stageId,
 				subtotal: orderTotal.toString(),
 				shipping_total: '12.00',
-				grand_total: (orderTotal + 12).toString(),
+				grand_total: grandTotal.toString(),
 				currency: 'USD',
 				fulfilled_on: fulfilledOn,
+				promo_code: spec.promoCode ?? null,
+				discount_total: discountTotal.toString(),
 			})
 			.returning('id')
 			.executeTakeFirstOrThrow();
@@ -316,6 +328,25 @@ async function seedDemo() {
 			dayOffset: spec.dayOffset,
 			fulfilled: spec.fulfilled,
 		});
+
+		const transitions = buildOrderStageHistory({
+			orderIdx: i,
+			orderDate,
+			currentStageName: spec.stageName,
+			fulfilled: spec.fulfilled,
+			fulfilledOn,
+			now: seedNow,
+		});
+		for (const t of transitions) {
+			const toId = stageByName.get(t.toStage);
+			if (!toId) continue;
+			stageHistoryRows.push({
+				order_id: order.id,
+				from_stage_id: stageByName.get(t.fromStage) ?? null,
+				to_stage_id: toId,
+				transitioned_at: t.at,
+			});
+		}
 
 		for (let j = 0; j < spec.items.length; j++) {
 			const item = spec.items[j];
@@ -342,6 +373,14 @@ async function seedDemo() {
 		}
 	}
 	console.log(`  Orders: ${insertedOrders.length}`);
+
+	if (stageHistoryRows.length > 0) {
+		await db
+			.insertInto('order_stage_history')
+			.values(stageHistoryRows)
+			.execute();
+	}
+	console.log(`  Stage history: ${stageHistoryRows.length} transitions`);
 
 	for (const batch of DEMO_BATCHES) {
 		const insertedBatch = await db
