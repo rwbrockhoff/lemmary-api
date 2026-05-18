@@ -32,6 +32,10 @@ erDiagram
     production_batches }o--o{ orders : groups
 ```
 
+## SQL
+
+A few of the more interesting analytics queries are written up in [`docs/sql-showcase.md`](docs/sql-showcase.md) — window functions, CTEs, conditional aggregation, and period-over-period comparisons.
+
 ## Related
 
 - [lemmary-app](https://github.com/rwbrockhoff/lemmary-app) — React application
