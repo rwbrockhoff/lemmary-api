@@ -14,8 +14,10 @@ import { workflowStagesRoutes } from './routes/workflow-stages/workflow-stages-r
 import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
 
-export const buildApp = () => {
-	const app = Fastify({ logger: true });
+type BuildAppOptions = { logger?: boolean };
+
+export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
+	const app = Fastify({ logger });
 
 	app.register(cors, {
 		origin: env.FRONTEND_URL,

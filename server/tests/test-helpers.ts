@@ -3,7 +3,7 @@ import { buildApp } from '../app.js';
 import { TEST_AUTH_HEADER } from '../config/constants.js';
 import { TEST_USER_ID } from './test-constants.js';
 
-export const buildTestApp = (): FastifyInstance => buildApp();
+export const buildTestApp = (): FastifyInstance => buildApp({ logger: false });
 
 type RequestOptions = {
 	userId?: string;
