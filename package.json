@@ -28,6 +28,7 @@
 		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed",
 		"test": "NODE_ENV=test npm run test:setup && NODE_ENV=test vitest run",
 		"test:watch": "NODE_ENV=test vitest",
+		"test:coverage": "NODE_ENV=test npm run test:setup && NODE_ENV=test vitest run --coverage",
 		"test:setup": "NODE_ENV=test npm run test:reset && NODE_ENV=test npm run test:migrate && NODE_ENV=test npm run test:seed",
 		"test:migrate": "NODE_ENV=test tsx server/db/migrate.ts",
 		"test:reset": "NODE_ENV=test tsx server/db/migrate.ts down:all",
