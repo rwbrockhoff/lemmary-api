@@ -3,8 +3,9 @@ import {
 	REFRESH_TOKEN_COOKIE,
 	DEMO_SESSION_TOKEN,
 	DEMO_USER_ID,
+	TEST_AUTH_HEADER,
 } from '../config/constants.js';
-// import { env } from '../config/environment.js';
+import { env } from '../config/environment.js';
 import { authenticateRefreshToken } from '../routes/auth/auth-service.js';
 import {
 	refreshCookieOptions,
@@ -29,6 +30,15 @@ export async function authMiddleware(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
+	// Handle auth in testing environment
+	if (env.NODE_ENV === 'test') {
+		const testUserId = request.headers[TEST_AUTH_HEADER];
+		if (typeof testUserId === 'string') {
+			request.userId = testUserId;
+			return;
+		}
+	}
+
 	const signedCookie = request.cookies[REFRESH_TOKEN_COOKIE];
 	if (signedCookie) {
 		const unsigned = request.unsignCookie(signedCookie);

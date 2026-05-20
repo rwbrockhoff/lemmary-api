@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import { env } from '../config/environment.js';
 import * as path from 'path';
 import pg from 'pg';
 import { promises as fs } from 'fs';
@@ -15,7 +15,7 @@ function createMigrator() {
 	const db = new Kysely<any>({
 		dialect: new PostgresDialect({
 			pool: new pg.Pool({
-				connectionString: process.env.DATABASE_URL,
+				connectionString: env.DATABASE_URL,
 			}),
 		}),
 	});

@@ -1,5 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: envFile });
 
 const envSchema = z.object({
 	PORT: z.coerce.number().default(3001),
@@ -17,6 +20,8 @@ const envSchema = z.object({
 	DEV_STORE_ID: z.uuid(),
 	DEMO_USER_ID: z.uuid(),
 	DEMO_STORE_ID: z.uuid(),
+	TEST_USER_ID: z.uuid().optional(),
+	TEST_STORE_ID: z.uuid().optional(),
 });
 
 type Environment = z.infer<typeof envSchema>;

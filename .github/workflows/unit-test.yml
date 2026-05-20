@@ -1,0 +1,53 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: assemblr_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/assemblr_test
+          STORE_ENCRYPTION_KEY: test-encryption-key-must-be-at-least-32-chars
+          COOKIE_SECRET: test-cookie-secret-must-be-at-least-32-chars-long
+          SUPABASE_CLIENT: https://test.supabase.co
+          SUPABASE_KEY: test-supabase-key
+          SUPABASE_PRIVATE_KEY: test-supabase-private-key
+          SQUARESPACE_API_KEY: test-key
+          DEV_USER_ID: 49a76726-8e35-4010-ba72-e797919dadfa
+          DEV_STORE_ID: 1b296fa9-373e-4d5a-82bf-2086d8ddd536
+          DEMO_USER_ID: 95664341-758c-4d5e-95ea-b8e3a923fece
+          DEMO_STORE_ID: 18c8c108-b69b-440c-b665-034290d6b13c
