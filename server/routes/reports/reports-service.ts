@@ -144,9 +144,13 @@ export async function getMaterialsReport(userId: string) {
 				});
 			} else if (bom.measurement === 'linear') {
 				const length = bom.length ? Number(bom.length) : 0;
+				const parsedWidth = bom.size ? Number(bom.size) : null;
 				linearRaw.push({
 					material_type: bom.material_type,
-					width: bom.size ? Number(bom.size) : null,
+					width:
+						parsedWidth !== null && Number.isFinite(parsedWidth)
+							? parsedWidth
+							: null,
 					total_inches: length * totalQty,
 				});
 			} else {
