@@ -4,6 +4,7 @@ import cookie from '@fastify/cookie';
 import { env } from './config/environment.js';
 import { authMiddleware } from './middleware/auth-middleware.js';
 import { registerOpenApi } from './openapi/openapi.js';
+import { errorHandler } from './middleware/error-handler.js';
 import { ordersRoutes } from './routes/orders/orders-routes.js';
 import { reportsRoutes } from './routes/reports/reports-routes.js';
 import { batchesRoutes } from './routes/batches/batches-routes.js';
@@ -31,6 +32,8 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	});
 
 	registerOpenApi(app);
+
+	app.setErrorHandler(errorHandler);
 
 	app.addHook('onRequest', authMiddleware);
 
