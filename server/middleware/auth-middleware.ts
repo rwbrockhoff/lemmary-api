@@ -24,6 +24,8 @@ const PUBLIC_ROUTES = [
 	'/health',
 ];
 
+const PUBLIC_ROUTE_PREFIXES = ['/api-docs'];
+
 const DEMO_WRITE_ALLOWLIST = ['/auth/logout'];
 
 export async function authMiddleware(
@@ -69,6 +71,10 @@ export async function authMiddleware(
 	// }
 
 	if (PUBLIC_ROUTES.includes(request.url)) return;
+
+	if (PUBLIC_ROUTE_PREFIXES.some((prefix) => request.url.startsWith(prefix))) {
+		return;
+	}
 
 	if (!request.userId) {
 		return reply.status(401).send({ error: 'Unauthorized' });
