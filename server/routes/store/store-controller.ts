@@ -5,20 +5,15 @@ import {
 	notFound,
 	internalError,
 } from '../../utils/api-responses.js';
-import { UpdateStoreRequestSchema } from './contract/schemas.js';
+import type { UpdateStoreRequest } from './contract/types.js';
 import { updateStore } from './store-service.js';
 
 export async function handleUpdateStore(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: UpdateStoreRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = UpdateStoreRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
 	try {
-		const result = await updateStore(request.userId, parseResult.data);
+		const result = await updateStore(request.userId, request.body);
 
 		if (!result.ok) {
 			if (result.error === 'no_store') {
