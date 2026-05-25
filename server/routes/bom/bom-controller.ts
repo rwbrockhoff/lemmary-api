@@ -1,10 +1,21 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
 	successResponse,
+	createdSuccess,
 	notFound,
 	badRequest,
 	internalError,
 } from '../../utils/api-responses.js';
+import type {
+	CreateBomItemRequest,
+	UpdateBomItemRequest,
+	GetOrCreateMaterialRequest,
+	CopyBomRequest,
+	BomVariantQuery,
+	MaterialTypeSearchQuery,
+	MaterialSearchQuery,
+	SuggestionsQuery,
+} from './contract/types.js';
 import {
 	getMaterialTypes,
 	searchMaterialTypes,
@@ -33,16 +44,11 @@ export async function handleGetMaterialTypes(
 }
 
 export async function handleGetBomForVariant(
-	request: FastifyRequest<{ Querystring: { variantId?: string } }>,
+	request: FastifyRequest<{ Querystring: BomVariantQuery }>,
 	reply: FastifyReply,
 ) {
 	try {
-		const { variantId } = request.query;
-		if (!variantId) {
-			return badRequest(reply, 'variantId query parameter is required');
-		}
-
-		const bom = await getBomForVariant(request.userId, variantId);
+		const bom = await getBomForVariant(request.userId, request.query.variantId);
 		return successResponse(reply, bom);
 	} catch (error) {
 		request.log.error(error, 'Failed to fetch BOM for variant');
@@ -51,24 +57,13 @@ export async function handleGetBomForVariant(
 }
 
 export async function handleCreateBomItem(
-	request: FastifyRequest<{
-		Body: {
-			measurement: 'area' | 'linear' | 'count';
-			platform_sku: string;
-			product_name: string;
-			variant: string | null;
-			piece: string;
-			length: string | null;
-			quantity: number;
-			material_id: string | null;
-		};
-	}>,
+	request: FastifyRequest<{ Body: CreateBomItemRequest }>,
 	reply: FastifyReply,
 ) {
 	try {
 		const item = await createBomItem(request.userId, request.body);
 		if (!item) return badRequest(reply, 'Connect a store first');
-		return successResponse(reply, item, 'BOM item created');
+		return createdSuccess(reply, item, 'BOM item created');
 	} catch (error) {
 		request.log.error(error, 'Failed to create BOM item');
 		return internalError(reply, 'Failed to create BOM item');
@@ -78,17 +73,7 @@ export async function handleCreateBomItem(
 export async function handleUpdateBomItem(
 	request: FastifyRequest<{
 		Params: { bomItemId: string };
-		Body: {
-			piece: string;
-			length: string | null;
-			quantity: number;
-			measurement: string;
-			material_type_id: string | null;
-			material_type_name: string | null;
-			color: string | null;
-			size: string | null;
-			purchase_url: string | null;
-		};
+		Body: UpdateBomItemRequest;
 	}>,
 	reply: FastifyReply,
 ) {
@@ -132,9 +117,7 @@ export async function handleDeleteBomItem(
 }
 
 export async function handleSearchMaterialTypes(
-	request: FastifyRequest<{
-		Querystring: { q?: string; measurement?: string };
-	}>,
+	request: FastifyRequest<{ Querystring: MaterialTypeSearchQuery }>,
 	reply: FastifyReply,
 ) {
 	try {
@@ -156,9 +139,7 @@ export async function handleSearchMaterialTypes(
 }
 
 export async function handleSearchMaterialCatalog(
-	request: FastifyRequest<{
-		Querystring: { q?: string; measurement?: string };
-	}>,
+	request: FastifyRequest<{ Querystring: MaterialTypeSearchQuery }>,
 	reply: FastifyReply,
 ) {
 	try {
@@ -180,16 +161,11 @@ export async function handleSearchMaterialCatalog(
 }
 
 export async function handleSearchMaterials(
-	request: FastifyRequest<{
-		Querystring: { materialTypeId?: string; q?: string };
-	}>,
+	request: FastifyRequest<{ Querystring: MaterialSearchQuery }>,
 	reply: FastifyReply,
 ) {
 	try {
 		const { materialTypeId, q } = request.query;
-		if (!materialTypeId) {
-			return badRequest(reply, 'materialTypeId is required');
-		}
 
 		const results = await searchMaterials(
 			request.userId,
@@ -204,14 +180,7 @@ export async function handleSearchMaterials(
 }
 
 export async function handleGetOrCreateMaterial(
-	request: FastifyRequest<{
-		Body: {
-			material_type_id: string;
-			color: string | null;
-			size: string | null;
-			purchase_url: string | null;
-		};
-	}>,
+	request: FastifyRequest<{ Body: GetOrCreateMaterialRequest }>,
 	reply: FastifyReply,
 ) {
 	try {
@@ -234,20 +203,11 @@ export async function handleGetOrCreateMaterial(
 }
 
 export async function handleCopyBomFromVariant(
-	request: FastifyRequest<{
-		Body: {
-			targetVariantId: string;
-			sourceVariantId: string;
-		};
-	}>,
+	request: FastifyRequest<{ Body: CopyBomRequest }>,
 	reply: FastifyReply,
 ) {
 	try {
 		const { targetVariantId, sourceVariantId } = request.body;
-
-		if (!targetVariantId || !sourceVariantId) {
-			return badRequest(reply, 'targetVariantId and sourceVariantId are required');
-		}
 
 		const items = await copyBomFromVariant(
 			request.userId,
@@ -263,7 +223,7 @@ export async function handleCopyBomFromVariant(
 }
 
 export async function handleGetBomSuggestions(
-	request: FastifyRequest<{ Querystring: { q?: string } }>,
+	request: FastifyRequest<{ Querystring: SuggestionsQuery }>,
 	reply: FastifyReply,
 ) {
 	try {
