@@ -3,14 +3,15 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import {
 	validatorCompiler,
-	serializerCompiler,
 	jsonSchemaTransform,
 } from 'fastify-type-provider-zod';
 import { openApiMetadata } from './metadata.js';
+import { createResponseSerializer } from './response-serializer.js';
 
 export const registerOpenApi = (app: FastifyInstance) => {
 	app.setValidatorCompiler(validatorCompiler);
-	app.setSerializerCompiler(serializerCompiler);
+	// Swap in our serializer so schema'd responses get soft-validated against their contract
+	app.setSerializerCompiler(createResponseSerializer(app.log));
 
 	app.register(swagger, {
 		openapi: openApiMetadata,
