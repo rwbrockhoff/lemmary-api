@@ -6,6 +6,12 @@ import {
 	notFound,
 	internalError,
 } from '../../utils/api-responses.js';
+import type {
+	CreateBatchRequest,
+	UpdateBatchRequest,
+	ToggleCompleteBody,
+	UpdateCompletedQtyBody,
+} from './contract/types.js';
 import {
 	getBatches,
 	getBatch,
@@ -37,10 +43,7 @@ export async function handleGetBatch(
 	reply: FastifyReply,
 ) {
 	try {
-		const batch = await getBatch(
-			request.userId,
-			request.params.batchId,
-		);
+		const batch = await getBatch(request.userId, request.params.batchId);
 
 		if (!batch) return notFound(reply, 'Batch not found');
 		return successResponse(reply, batch);
@@ -51,27 +54,13 @@ export async function handleGetBatch(
 }
 
 export async function handleCreateBatch(
-	request: FastifyRequest<{
-		Body: { name: string; orderIds: string[] };
-	}>,
+	request: FastifyRequest<{ Body: CreateBatchRequest }>,
 	reply: FastifyReply,
 ) {
 	try {
 		const { name, orderIds } = request.body;
 
-		if (!name?.trim()) {
-			return badRequest(reply, 'Batch name is required');
-		}
-
-		if (!orderIds?.length) {
-			return badRequest(reply, 'At least one order is required');
-		}
-
-		const batch = await createBatch(
-			request.userId,
-			name.trim(),
-			orderIds,
-		);
+		const batch = await createBatch(request.userId, name, orderIds);
 		if (!batch) return badRequest(reply, 'Connect a store first');
 		return createdSuccess(reply, batch);
 	} catch (error) {
@@ -89,34 +78,15 @@ export async function handleCreateBatch(
 export async function handleUpdateBatch(
 	request: FastifyRequest<{
 		Params: { batchId: string };
-		Body: { status?: string; name?: string; orderIds?: string[] };
+		Body: UpdateBatchRequest;
 	}>,
 	reply: FastifyReply,
 ) {
 	try {
-		const { status, name, orderIds } = request.body;
-
-		const validStatuses = ['Active', 'Up Next', 'Paused', 'Completed'];
-		if (status && !validStatuses.includes(status)) {
-			return badRequest(reply, `Status must be one of: ${validStatuses.join(', ')}`);
-		}
-
-		if (name !== undefined && !name.trim()) {
-			return badRequest(reply, 'Batch name cannot be empty');
-		}
-
-		if (orderIds !== undefined && orderIds.length === 0) {
-			return badRequest(reply, 'Batch must have at least one order');
-		}
-
-		if (!status && !name && !orderIds) {
-			return badRequest(reply, 'No updates provided');
-		}
-
 		const batch = await updateBatch(
 			request.userId,
 			request.params.batchId,
-			{ status, name, orderIds },
+			request.body,
 		);
 
 		if (!batch) return notFound(reply, 'Batch not found');
@@ -138,10 +108,7 @@ export async function handleDeleteBatch(
 	reply: FastifyReply,
 ) {
 	try {
-		const deleted = await deleteBatch(
-			request.userId,
-			request.params.batchId,
-		);
+		const deleted = await deleteBatch(request.userId, request.params.batchId);
 
 		if (!deleted) return notFound(reply, 'Batch not found');
 		return successResponse(reply, deleted);
@@ -154,7 +121,7 @@ export async function handleDeleteBatch(
 export async function handleToggleOrderComplete(
 	request: FastifyRequest<{
 		Params: { batchId: string; id: string };
-		Body: { completed: boolean };
+		Body: ToggleCompleteBody;
 	}>,
 	reply: FastifyReply,
 ) {
@@ -177,7 +144,7 @@ export async function handleToggleOrderComplete(
 export async function handleToggleItemComplete(
 	request: FastifyRequest<{
 		Params: { batchId: string; id: string };
-		Body: { completed: boolean };
+		Body: ToggleCompleteBody;
 	}>,
 	reply: FastifyReply,
 ) {
@@ -200,7 +167,7 @@ export async function handleToggleItemComplete(
 export async function handleToggleMaterialComplete(
 	request: FastifyRequest<{
 		Params: { batchId: string; id: string };
-		Body: { completed: boolean };
+		Body: ToggleCompleteBody;
 	}>,
 	reply: FastifyReply,
 ) {
@@ -223,22 +190,16 @@ export async function handleToggleMaterialComplete(
 export async function handleUpdateOrderItemCompletedQty(
 	request: FastifyRequest<{
 		Params: { batchId: string; id: string };
-		Body: { completedQty: number };
+		Body: UpdateCompletedQtyBody;
 	}>,
 	reply: FastifyReply,
 ) {
 	try {
-		const { completedQty } = request.body;
-
-		if (completedQty < 0) {
-			return badRequest(reply, 'Completed quantity cannot be negative');
-		}
-
 		const result = await updateOrderItemCompletedQty(
 			request.userId,
 			request.params.batchId,
 			request.params.id,
-			completedQty,
+			request.body.completedQty,
 		);
 
 		if (!result) return notFound(reply);
@@ -252,22 +213,16 @@ export async function handleUpdateOrderItemCompletedQty(
 export async function handleUpdateMaterialCompletedQty(
 	request: FastifyRequest<{
 		Params: { batchId: string; id: string };
-		Body: { completedQty: number };
+		Body: UpdateCompletedQtyBody;
 	}>,
 	reply: FastifyReply,
 ) {
 	try {
-		const { completedQty } = request.body;
-
-		if (completedQty < 0) {
-			return badRequest(reply, 'Completed quantity cannot be negative');
-		}
-
 		const result = await updateMaterialCompletedQty(
 			request.userId,
 			request.params.batchId,
 			request.params.id,
-			completedQty,
+			request.body.completedQty,
 		);
 
 		if (!result) return notFound(reply);
