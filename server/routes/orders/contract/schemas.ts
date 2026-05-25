@@ -72,3 +72,59 @@ export const GetOrdersResponseSchema = z.object({
 	hasMore: z.boolean(),
 	lastSyncedAt: z.date().nullable(),
 });
+
+export const OrderSchema = OrderColumnsSchema;
+
+export const OrderDetailSchema = OrderColumnsSchema.extend({
+	workflow_stage_name: z.string().nullable(),
+	order_url: z.string().nullable(),
+	items: z.array(
+		OrderItemSchema.extend({ workflow_stage_name: z.string().nullable() }),
+	),
+});
+
+export const WorkflowStageSchema = z.object({
+	id: z.string(),
+	store_id: z.string(),
+	name: z.string(),
+	position: z.number(),
+	color: z.string().nullable(),
+	is_default: z.boolean(),
+	is_complete: z.boolean(),
+	archived_at: z.date().nullable(),
+	created_at: z.date(),
+	updated_at: z.date(),
+});
+
+export const WorkflowBoardResponseSchema = z.object({
+	orders: z.array(OrderSummarySchema),
+	stages: z.array(WorkflowStageSchema),
+	activeBatches: z.array(z.object({ id: z.string(), name: z.string() })),
+});
+
+export const SyncOrdersResponseSchema = z.object({
+	synced: z.number(),
+	storeId: z.string(),
+});
+
+export const CompleteItemsResponseSchema = z.object({
+	orderId: z.string(),
+	stageId: z.string(),
+});
+
+export const OrderIdParamSchema = z.object({
+	orderId: z.uuid(),
+});
+
+export const OrderItemParamsSchema = z.object({
+	orderId: z.uuid(),
+	itemId: z.uuid(),
+});
+
+export const UpdateOrderStageBodySchema = z.object({
+	stageId: z.uuid(),
+});
+
+export const UpdateOrderNotesBodySchema = z.object({
+	notes: z.string(),
+});
