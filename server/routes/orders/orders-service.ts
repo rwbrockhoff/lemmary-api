@@ -10,6 +10,7 @@ import {
 	fetchSquarespaceOrders,
 	type NormalizedOrder,
 } from './platforms/squarespace.js';
+import type { GetOrdersQuery } from './contract/types.js';
 
 function getStoreUrl(platformConfig: unknown): string | null {
 	return (
@@ -176,67 +177,16 @@ export async function syncOrders(userId: string) {
 	return { synced, storeId: store.id };
 }
 
-export async function getOrders(userId: string) {
+export async function getOrders(
+	userId: string,
+	{ status, limit, offset }: GetOrdersQuery,
+) {
 	const store = await getStoreForUser(userId);
-	if (!store) return { orders: [], lastSyncedAt: null };
+	if (!store) return { orders: [], hasMore: false, lastSyncedAt: null };
 
-	const orders = await db
-		.selectFrom('orders')
-		.selectAll('orders')
-		.leftJoin(
-			'order_workflow_stages',
-			'order_workflow_stages.id',
-			'orders.workflow_stage_id',
-		)
-		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(select count(*) from order_items join order_item_workflow_stages on order_item_workflow_stages.id = order_items.workflow_stage_id where order_items.order_id = orders.id and order_item_workflow_stages.is_complete = true)`.as(
-				'items_completed',
-			),
-			'order_workflow_stages.name as workflow_stage_name',
-			'order_workflow_stages.color as workflow_stage_color',
-			sql<string | null>`(
-				select pb.name
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_name'),
-			sql<string | null>`(
-				select pb.id
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_id'),
-		])
-		.where('orders.store_id', '=', store.id)
-		.where('orders.fulfillment_status', '=', 'pending')
-		.orderBy('order_date', 'desc')
-		.execute();
+	const isPending = status === 'pending';
 
-	const storeUrl = getStoreUrl(store.platform_config);
-
-	return {
-		orders: orders.map((row) => ({
-			...row,
-			item_count: Number(row.item_count),
-			items_completed: Number(row.items_completed),
-			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
-		})),
-		lastSyncedAt: store.last_synced_at,
-	};
-}
-
-export async function getOrdersWithItems(userId: string) {
-	const store = await getStoreForUser(userId);
-	if (!store) return { orders: [], lastSyncedAt: null };
-
-	const orders = await db
+	const baseQuery = db
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
@@ -272,12 +222,24 @@ export async function getOrdersWithItems(userId: string) {
 				limit 1
 			)`.as('batch_id'),
 		])
-		.where('orders.store_id', '=', store.id)
-		.where('orders.fulfillment_status', '=', 'pending')
-		.orderBy('order_date', 'asc')
-		.execute();
+		.where('orders.store_id', '=', store.id);
 
-	const orderIds = orders.map((o) => o.id);
+	const filteredQuery = isPending
+		? baseQuery
+				.where('orders.fulfillment_status', '=', 'pending')
+				.orderBy('order_date', 'asc')
+		: baseQuery
+				.where('orders.fulfillment_status', '!=', 'pending')
+				.orderBy('order_date', 'desc')
+				.limit(limit + 1)
+				.offset(offset);
+
+	const rows = await filteredQuery.execute();
+
+	const hasMore = !isPending && rows.length > limit;
+	const visibleRows = hasMore ? rows.slice(0, limit) : rows;
+
+	const orderIds = visibleRows.map((row) => row.id);
 
 	const items =
 		orderIds.length > 0
@@ -299,61 +261,15 @@ export async function getOrdersWithItems(userId: string) {
 	const storeUrl = getStoreUrl(store.platform_config);
 
 	return {
-		orders: orders.map((row) => ({
+		orders: visibleRows.map((row) => ({
 			...row,
 			item_count: Number(row.item_count),
 			items_completed: Number(row.items_completed),
 			items: itemsByOrder.get(row.id) ?? [],
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 		})),
-		lastSyncedAt: store.last_synced_at,
-	};
-}
-
-export async function getCompletedOrders(
-	userId: string,
-	limit: number,
-	offset: number,
-) {
-	const store = await getStoreForUser(userId);
-	if (!store) return { orders: [], hasMore: false };
-
-	const orders = await db
-		.selectFrom('orders')
-		.selectAll('orders')
-		.leftJoin(
-			'order_workflow_stages',
-			'order_workflow_stages.id',
-			'orders.workflow_stage_id',
-		)
-		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			'order_workflow_stages.name as workflow_stage_name',
-			'order_workflow_stages.color as workflow_stage_color',
-		])
-		.where('orders.store_id', '=', store.id)
-		.where('orders.fulfillment_status', '!=', 'pending')
-		.orderBy('order_date', 'desc')
-		.limit(limit + 1)
-		.offset(offset)
-		.execute();
-
-	const hasMore = orders.length > limit;
-	const trimmed = hasMore ? orders.slice(0, limit) : orders;
-	const storeUrl = getStoreUrl(store.platform_config);
-
-	return {
-		orders: trimmed.map((row) => ({
-			...row,
-			item_count: Number(row.item_count),
-			items_completed: 0,
-			batch_name: null,
-			batch_id: null,
-			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
-		})),
 		hasMore,
+		lastSyncedAt: store.last_synced_at,
 	};
 }
 

@@ -16,7 +16,7 @@ describe('Orders API', () => {
 		await app.close();
 	});
 
-	it('GET /orders returns the store orders', async () => {
+	it('GET /orders returns pending orders with their items', async () => {
 		const response = await app.inject(withAuth('GET', '/orders'));
 
 		expect(response.statusCode).toBe(200);
@@ -24,6 +24,9 @@ describe('Orders API', () => {
 		expect(body.success).toBe(true);
 		expect(Array.isArray(body.data.orders)).toBe(true);
 		expect(body.data.orders.length).toBeGreaterThan(0);
+		expect(Array.isArray(body.data.orders[0].items)).toBe(true);
+		expect(body.data).toHaveProperty('hasMore');
+		expect(body.data).toHaveProperty('lastSyncedAt');
 	});
 
 	it('GET /orders/:orderId returns a single order with items', async () => {
@@ -80,15 +83,10 @@ describe('Orders API', () => {
 		expect(Number(historyAfter.count)).toBe(Number(historyBefore.count) + 1);
 	});
 
-	it('GET /orders/with-items returns orders with their line items', async () => {
-		const response = await app.inject(withAuth('GET', '/orders/with-items'));
-
-		expect(response.statusCode).toBe(200);
-		expect(response.json().success).toBe(true);
-	});
-
-	it('GET /orders/completed returns fulfilled orders', async () => {
-		const response = await app.inject(withAuth('GET', '/orders/completed'));
+	it('GET /orders?status=completed returns fulfilled orders', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/orders?status=completed'),
+		);
 
 		expect(response.statusCode).toBe(200);
 		expect(response.json().success).toBe(true);

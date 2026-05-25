@@ -1,4 +1,11 @@
 import type { FastifyInstance } from 'fastify';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { ApiTags } from '../../openapi/tags.js';
+import { successSchema } from '../../openapi/schemas.js';
+import {
+	GetOrdersQuerySchema,
+	GetOrdersResponseSchema,
+} from './contract/schemas.js';
 import {
 	handleSyncOrders,
 	handleGetOrders,
@@ -6,17 +13,30 @@ import {
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
 	handleUpdateOrderItemStage,
-	handleGetOrdersWithItems,
-	handleGetCompletedOrders,
 	handleGetWorkflowBoard,
 	handleCompleteAllOrderItems,
 } from './orders-controller.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
+	const r = app.withTypeProvider<ZodTypeProvider>();
+
 	app.post('/orders/sync', handleSyncOrders);
-	app.get('/orders', handleGetOrders);
-	app.get('/orders/with-items', handleGetOrdersWithItems);
-	app.get('/orders/completed', handleGetCompletedOrders);
+
+	r.get(
+		'/orders',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'List orders by status',
+				querystring: GetOrdersQuerySchema,
+				response: {
+					200: successSchema(GetOrdersResponseSchema),
+				},
+			},
+		},
+		handleGetOrders,
+	);
+
 	app.get('/orders/workflow-board', handleGetWorkflowBoard);
 	app.get('/orders/:orderId', handleGetOrder);
 	app.put('/orders/:orderId/stage', handleUpdateOrderStage);
