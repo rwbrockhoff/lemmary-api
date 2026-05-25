@@ -6,6 +6,7 @@ export const UpdateStoreRequestSchema = z
 		leadTimeDays: z.number().int().min(0).nullable().optional(),
 		accessToken: z.string().min(1).optional(),
 		storeUrl: z.url().nullable().optional(),
+		applyLeadTimeToOpenOrders: z.boolean().optional(),
 	})
 	.strict();
 
