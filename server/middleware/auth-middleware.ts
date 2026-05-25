@@ -24,7 +24,7 @@ const PUBLIC_ROUTES = [
 	'/health',
 ];
 
-const PUBLIC_ROUTE_PREFIXES = ['/api-docs'];
+const PUBLIC_ROUTE_PREFIXES = ['/api-docs', '/docs'];
 
 const DEMO_WRITE_ALLOWLIST = ['/auth/logout'];
 

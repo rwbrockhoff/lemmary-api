@@ -17,6 +17,16 @@ Fastify · Kysely · PostgreSQL (Supabase) · Zod · TypeScript
 - Platform adapter pattern for storefronts. Currently integrated with Squarespace (Shopify and Etsy pending)
 - Read-only demo mode so anyone can explore the full app with sample data — no signup required
 
+## SQL
+
+A few of the more interesting analytics queries are written up in [`docs/sql-showcase.md`](docs/sql-showcase.md) — window functions, CTEs, conditional aggregation, and period-over-period comparisons.
+
+## API
+
+Every endpoint is documented with OpenAPI, generated from the Zod schemas that validate each request and response — so the docs always match the live API.
+
+**[API Docs →](https://api.lemmary.com/docs)** · [Interactive Docs →](https://api.lemmary.com/api-docs)
+
 ## Schema
 
 ```mermaid
@@ -32,14 +42,10 @@ erDiagram
     production_batches }o--o{ orders : groups
 ```
 
-## SQL
-
-A few of the more interesting analytics queries are written up in [`docs/sql-showcase.md`](docs/sql-showcase.md) — window functions, CTEs, conditional aggregation, and period-over-period comparisons.
-
 ## Related
 
 - [lemmary-app](https://github.com/rwbrockhoff/lemmary-app) — React application
 
 ---
 
-Built by [Artifact Studios](https://artifactstudios.dev).
+Built by [Artifact Studio](https://artifactstudio.dev).
