@@ -2,23 +2,22 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
 	successResponse,
 	createdSuccess,
-	badRequest,
 	conflict,
 	notFound,
 	internalError,
 } from '../../utils/api-responses.js';
-import {
-	CreateWorkflowStageRequestSchema,
-	UpdateWorkflowStageRequestSchema,
-	ReorderWorkflowStagesRequestSchema,
-} from './contract/schemas.js';
+import type {
+	CreateWorkflowStageRequest,
+	UpdateWorkflowStageRequest,
+	ReorderWorkflowStagesRequest,
+} from './contract/types.js';
 import {
 	getWorkflowStages,
 	createWorkflowStage,
 	updateWorkflowStage,
 	deleteWorkflowStage,
 	reorderWorkflowStages,
-} from './workflow-stages-service.js';
+} from './workflow-service.js';
 
 export async function handleGetWorkflowStages(
 	request: FastifyRequest,
@@ -34,16 +33,11 @@ export async function handleGetWorkflowStages(
 }
 
 export async function handleCreateWorkflowStage(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: CreateWorkflowStageRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = CreateWorkflowStageRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
 	try {
-		const result = await createWorkflowStage(request.userId, parseResult.data);
+		const result = await createWorkflowStage(request.userId, request.body);
 		if (!result.ok) {
 			return notFound(reply, 'Store not found');
 		}
@@ -55,19 +49,17 @@ export async function handleCreateWorkflowStage(
 }
 
 export async function handleUpdateWorkflowStage(
-	request: FastifyRequest<{ Params: { id: string } }>,
+	request: FastifyRequest<{
+		Params: { id: string };
+		Body: UpdateWorkflowStageRequest;
+	}>,
 	reply: FastifyReply,
 ) {
-	const parseResult = UpdateWorkflowStageRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
 	try {
 		const result = await updateWorkflowStage(
 			request.userId,
 			request.params.id,
-			parseResult.data,
+			request.body,
 		);
 
 		if (!result.ok) {
@@ -115,21 +107,11 @@ export async function handleDeleteWorkflowStage(
 }
 
 export async function handleReorderWorkflowStages(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: ReorderWorkflowStagesRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = ReorderWorkflowStagesRequestSchema.safeParse(
-		request.body,
-	);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
 	try {
-		const result = await reorderWorkflowStages(
-			request.userId,
-			parseResult.data,
-		);
+		const result = await reorderWorkflowStages(request.userId, request.body);
 		if (!result.ok) {
 			return notFound(reply, 'Store not found');
 		}
