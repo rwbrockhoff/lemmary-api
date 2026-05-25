@@ -41,6 +41,6 @@ export async function ordersRoutes(app: FastifyInstance) {
 	app.get('/orders/:orderId', handleGetOrder);
 	app.put('/orders/:orderId/stage', handleUpdateOrderStage);
 	app.put('/orders/:orderId/notes', handleUpdateOrderNotes);
-	app.put('/orders/:orderId/items/complete-all', handleCompleteAllOrderItems);
+	app.put('/orders/:orderId/items/completion', handleCompleteAllOrderItems);
 	app.put('/orders/:orderId/items/:itemId/stage', handleUpdateOrderItemStage);
 }
