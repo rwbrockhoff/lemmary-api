@@ -14,8 +14,8 @@ describe('Workflow Stages API', () => {
 		await app.close();
 	});
 
-	it('GET /workflow-stages returns the order and item stages', async () => {
-		const response = await app.inject(withAuth('GET', '/workflow-stages'));
+	it('GET /workflow/stages returns the order and item stages', async () => {
+		const response = await app.inject(withAuth('GET', '/workflow/stages'));
 
 		expect(response.statusCode).toBe(200);
 		const body = response.json();
@@ -26,9 +26,9 @@ describe('Workflow Stages API', () => {
 		expect(body.data.orderStages[0]).toHaveProperty('position');
 	});
 
-	it('POST /workflow-stages creates a new stage', async () => {
+	it('POST /workflow/stages creates a new stage', async () => {
 		const response = await app.inject(
-			withAuth('POST', '/workflow-stages', {
+			withAuth('POST', '/workflow/stages', {
 				payload: { name: 'Packaging', color: 'lavender' },
 			}),
 		);
@@ -39,16 +39,16 @@ describe('Workflow Stages API', () => {
 		expect(body.data.color).toBe('lavender');
 	});
 
-	it('PUT /workflow-stages/:id updates a stage', async () => {
+	it('PUT /workflow/stages/:id updates a stage', async () => {
 		const createResponse = await app.inject(
-			withAuth('POST', '/workflow-stages', {
+			withAuth('POST', '/workflow/stages', {
 				payload: { name: 'Inspection', color: 'sage' },
 			}),
 		);
 		const stageId = createResponse.json().data.id;
 
 		const updateResponse = await app.inject(
-			withAuth('PUT', `/workflow-stages/${stageId}`, {
+			withAuth('PUT', `/workflow/stages/${stageId}`, {
 				payload: { name: 'Final Inspection' },
 			}),
 		);
@@ -57,13 +57,13 @@ describe('Workflow Stages API', () => {
 		expect(updateResponse.json().data.name).toBe('Final Inspection');
 	});
 
-	it('PUT /workflow-stages/reorder updates stage positions', async () => {
-		const listResponse = await app.inject(withAuth('GET', '/workflow-stages'));
+	it('PUT /workflow/stages/order updates stage positions', async () => {
+		const listResponse = await app.inject(withAuth('GET', '/workflow/stages'));
 		const stages = listResponse.json().data.orderStages;
 		const reversedIds = stages.map((s: { id: string }) => s.id).reverse();
 
 		const response = await app.inject(
-			withAuth('PUT', '/workflow-stages/reorder', {
+			withAuth('PUT', '/workflow/stages/order', {
 				payload: { orderedIds: reversedIds },
 			}),
 		);
@@ -71,16 +71,16 @@ describe('Workflow Stages API', () => {
 		expect(response.statusCode).toBe(200);
 	});
 
-	it('DELETE /workflow-stages/:id removes a stage', async () => {
+	it('DELETE /workflow/stages/:id removes a stage', async () => {
 		const createResponse = await app.inject(
-			withAuth('POST', '/workflow-stages', {
+			withAuth('POST', '/workflow/stages', {
 				payload: { name: 'Temporary', color: 'coral' },
 			}),
 		);
 		const stageId = createResponse.json().data.id;
 
 		const deleteResponse = await app.inject(
-			withAuth('DELETE', `/workflow-stages/${stageId}`),
+			withAuth('DELETE', `/workflow/stages/${stageId}`),
 		);
 
 		expect(deleteResponse.statusCode).toBe(200);

@@ -16,7 +16,7 @@ describe('Orders API', () => {
 		await app.close();
 	});
 
-	it('GET /orders returns the store orders', async () => {
+	it('GET /orders returns pending orders with their items', async () => {
 		const response = await app.inject(withAuth('GET', '/orders'));
 
 		expect(response.statusCode).toBe(200);
@@ -24,6 +24,9 @@ describe('Orders API', () => {
 		expect(body.success).toBe(true);
 		expect(Array.isArray(body.data.orders)).toBe(true);
 		expect(body.data.orders.length).toBeGreaterThan(0);
+		expect(Array.isArray(body.data.orders[0].items)).toBe(true);
+		expect(body.data).toHaveProperty('hasMore');
+		expect(body.data).toHaveProperty('lastSyncedAt');
 	});
 
 	it('GET /orders/:orderId returns a single order with items', async () => {
@@ -80,15 +83,10 @@ describe('Orders API', () => {
 		expect(Number(historyAfter.count)).toBe(Number(historyBefore.count) + 1);
 	});
 
-	it('GET /orders/with-items returns orders with their line items', async () => {
-		const response = await app.inject(withAuth('GET', '/orders/with-items'));
-
-		expect(response.statusCode).toBe(200);
-		expect(response.json().success).toBe(true);
-	});
-
-	it('GET /orders/completed returns fulfilled orders', async () => {
-		const response = await app.inject(withAuth('GET', '/orders/completed'));
+	it('GET /orders?status=completed returns fulfilled orders', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/orders?status=completed'),
+		);
 
 		expect(response.statusCode).toBe(200);
 		expect(response.json().success).toBe(true);
@@ -120,5 +118,51 @@ describe('Orders API', () => {
 		expect(response.json().data.order_notes).toBe(
 			'Customer requested rush shipping.',
 		);
+	});
+
+	it('PUT /orders/:orderId/items/completion marks all items complete', async () => {
+		const order = await db
+			.selectFrom('orders')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('fulfillment_status', '=', 'pending')
+			.executeTakeFirstOrThrow();
+
+		const response = await app.inject(
+			withAuth('PUT', `/orders/${order.id}/items/completion`),
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.orderId).toBe(order.id);
+	});
+
+	it('PUT /orders/:orderId/items/:itemId/stage updates an order item stage', async () => {
+		const order = await db
+			.selectFrom('orders')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('fulfillment_status', '=', 'pending')
+			.executeTakeFirstOrThrow();
+
+		const item = await db
+			.selectFrom('order_items')
+			.select('id')
+			.where('order_id', '=', order.id)
+			.executeTakeFirstOrThrow();
+
+		const stage = await db
+			.selectFrom('order_item_workflow_stages')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.executeTakeFirstOrThrow();
+
+		const response = await app.inject(
+			withAuth('PUT', `/orders/${order.id}/items/${item.id}/stage`, {
+				payload: { stageId: stage.id },
+			}),
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.workflow_stage_id).toBe(stage.id);
 	});
 });

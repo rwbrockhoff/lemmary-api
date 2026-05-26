@@ -75,3 +75,11 @@ export const OauthSessionResponseSchema = z
 		email: z.email(),
 	})
 	.strict();
+
+export const DemoLoginResponseSchema = z
+	.object({
+		userId: z.uuid(),
+		email: z.email(),
+		isDemo: z.boolean(),
+	})
+	.strict();

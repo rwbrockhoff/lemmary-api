@@ -1,4 +1,21 @@
 import type { FastifyInstance } from 'fastify';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { ApiTags } from '../../openapi/tags.js';
+import { successSchema } from '../../openapi/schemas.js';
+import {
+	GetOrdersQuerySchema,
+	GetOrdersResponseSchema,
+	OrderSchema,
+	OrderItemSchema,
+	OrderDetailSchema,
+	WorkflowBoardResponseSchema,
+	SyncOrdersResponseSchema,
+	CompleteItemsResponseSchema,
+	OrderIdParamSchema,
+	OrderItemParamsSchema,
+	UpdateOrderStageBodySchema,
+	UpdateOrderNotesBodySchema,
+} from './contract/schemas.js';
 import {
 	handleSyncOrders,
 	handleGetOrders,
@@ -6,21 +23,131 @@ import {
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
 	handleUpdateOrderItemStage,
-	handleGetOrdersWithItems,
-	handleGetCompletedOrders,
 	handleGetWorkflowBoard,
 	handleCompleteAllOrderItems,
 } from './orders-controller.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
-	app.post('/orders/sync', handleSyncOrders);
-	app.get('/orders', handleGetOrders);
-	app.get('/orders/with-items', handleGetOrdersWithItems);
-	app.get('/orders/completed', handleGetCompletedOrders);
-	app.get('/orders/workflow-board', handleGetWorkflowBoard);
-	app.get('/orders/:orderId', handleGetOrder);
-	app.put('/orders/:orderId/stage', handleUpdateOrderStage);
-	app.put('/orders/:orderId/notes', handleUpdateOrderNotes);
-	app.put('/orders/:orderId/items/complete-all', handleCompleteAllOrderItems);
-	app.put('/orders/:orderId/items/:itemId/stage', handleUpdateOrderItemStage);
+	const r = app.withTypeProvider<ZodTypeProvider>();
+
+	r.post(
+		'/orders/sync',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Sync orders from the connected platform',
+				response: {
+					200: successSchema(SyncOrdersResponseSchema),
+				},
+			},
+		},
+		handleSyncOrders,
+	);
+
+	r.get(
+		'/orders',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'List orders by status',
+				querystring: GetOrdersQuerySchema,
+				response: {
+					200: successSchema(GetOrdersResponseSchema),
+				},
+			},
+		},
+		handleGetOrders,
+	);
+
+	r.get(
+		'/orders/workflow-board',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Get the workflow board view',
+				response: {
+					200: successSchema(WorkflowBoardResponseSchema),
+				},
+			},
+		},
+		handleGetWorkflowBoard,
+	);
+
+	r.get(
+		'/orders/:orderId',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Get an order with its items',
+				params: OrderIdParamSchema,
+				response: {
+					200: successSchema(OrderDetailSchema),
+				},
+			},
+		},
+		handleGetOrder,
+	);
+
+	r.put(
+		'/orders/:orderId/stage',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Update order workflow stage',
+				params: OrderIdParamSchema,
+				body: UpdateOrderStageBodySchema,
+				response: {
+					200: successSchema(OrderSchema),
+				},
+			},
+		},
+		handleUpdateOrderStage,
+	);
+
+	r.put(
+		'/orders/:orderId/notes',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Update order notes',
+				params: OrderIdParamSchema,
+				body: UpdateOrderNotesBodySchema,
+				response: {
+					200: successSchema(OrderSchema),
+				},
+			},
+		},
+		handleUpdateOrderNotes,
+	);
+
+	r.put(
+		'/orders/:orderId/items/completion',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Mark all order items complete',
+				params: OrderIdParamSchema,
+				response: {
+					200: successSchema(CompleteItemsResponseSchema),
+				},
+			},
+		},
+		handleCompleteAllOrderItems,
+	);
+
+	r.put(
+		'/orders/:orderId/items/:itemId/stage',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Update order item workflow stage',
+				params: OrderItemParamsSchema,
+				body: UpdateOrderStageBodySchema,
+				response: {
+					200: successSchema(OrderItemSchema),
+				},
+			},
+		},
+		handleUpdateOrderItemStage,
+	);
 }

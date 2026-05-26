@@ -16,8 +16,54 @@ export const StageBottleneckSchema = z.object({
 	),
 });
 
+export const TopProductsSchema = z.object({
+	products: z.array(
+		z.object({
+			productName: z.string(),
+			totalUnits: z.number(),
+			totalRevenue: z.number(),
+			orderCount: z.number(),
+		}),
+	),
+});
+
+export const CustomerMixSchema = z.object({
+	newCount: z.number(),
+	returningCount: z.number(),
+	totalCount: z.number(),
+	priorNewCount: z.number(),
+	priorReturningCount: z.number(),
+	priorTotalCount: z.number(),
+});
+
+export const CouponUsageSchema = z.object({
+	withPromoCount: z.number(),
+	noPromoCount: z.number(),
+	totalCount: z.number(),
+	avgDiscount: z.number(),
+	priorWithPromoCount: z.number(),
+	priorNoPromoCount: z.number(),
+	priorTotalCount: z.number(),
+});
+
+export const MaterialConsumptionSchema = z.object({
+	materials: z.array(
+		z.object({
+			materialType: z.string(),
+			color: z.string().nullable(),
+			measurement: z.enum(['linear', 'area', 'count']),
+			currentQty: z.number(),
+			priorQty: z.number(),
+		}),
+	),
+});
+
 export const PerformanceResponseSchema = z
 	.object({
 		stageBottleneck: StageBottleneckSchema,
+		topProducts: TopProductsSchema,
+		customerMix: CustomerMixSchema,
+		couponUsage: CouponUsageSchema,
+		materialConsumption: MaterialConsumptionSchema,
 	})
 	.strict();

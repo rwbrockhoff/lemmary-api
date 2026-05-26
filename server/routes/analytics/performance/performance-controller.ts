@@ -1,23 +1,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import {
-	successResponse,
-	badRequest,
-	internalError,
-} from '../../../utils/api-responses.js';
-import { PerformanceQuerySchema } from './contract/schemas.js';
+import { successResponse, internalError } from '../../../utils/api-responses.js';
 import { getPerformance } from './performance-service.js';
 
 export async function handleGetPerformance(
-	request: FastifyRequest<{ Querystring: { range?: string } }>,
+	request: FastifyRequest<{ Querystring: { range: '30' | '90' | '365' } }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = PerformanceQuerySchema.safeParse(request.query);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
 	try {
-		const data = await getPerformance(request.userId, parseResult.data);
+		const data = await getPerformance(request.userId, request.query);
 		return successResponse(reply, data);
 	} catch (error) {
 		request.log.error(error, 'Failed to fetch performance analytics');

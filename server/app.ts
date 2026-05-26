@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import { env } from './config/environment.js';
 import { authMiddleware } from './middleware/auth-middleware.js';
+import { registerOpenApi } from './openapi/openapi.js';
+import { errorHandler } from './middleware/error-handler.js';
 import { ordersRoutes } from './routes/orders/orders-routes.js';
 import { reportsRoutes } from './routes/reports/reports-routes.js';
 import { batchesRoutes } from './routes/batches/batches-routes.js';
@@ -10,7 +12,7 @@ import { authRoutes } from './routes/auth/auth-routes.js';
 import { analyticsRoutes } from './routes/analytics/analytics-routes.js';
 import { settingsRoutes } from './routes/settings/settings-routes.js';
 import { storeRoutes } from './routes/store/store-routes.js';
-import { workflowStagesRoutes } from './routes/workflow-stages/workflow-stages-routes.js';
+import { workflowRoutes } from './routes/workflow/workflow-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
 
@@ -29,6 +31,10 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 		secret: env.COOKIE_SECRET,
 	});
 
+	registerOpenApi(app);
+
+	app.setErrorHandler(errorHandler);
+
 	app.addHook('onRequest', authMiddleware);
 
 	app.get('/health', async () => {
@@ -42,7 +48,7 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(batchesRoutes);
 	app.register(settingsRoutes);
 	app.register(storeRoutes);
-	app.register(workflowStagesRoutes);
+	app.register(workflowRoutes);
 	app.register(productsRoutes);
 	app.register(bomRoutes);
 

@@ -57,7 +57,31 @@ export async function updateStore(
 		set.platform_config = { ...existingConfig, store_url: updates.storeUrl };
 	}
 
-	await db.updateTable('stores').set(set).where('id', '=', store.id).execute();
+	await db.transaction().execute(async (trx) => {
+		await trx
+			.updateTable('stores')
+			.set(set)
+			.where('id', '=', store.id)
+			.execute();
+
+		// apply bulk flag: Update pending orders to match updated lead time
+		if (
+			updates.applyLeadTimeToOpenOrders &&
+			updates.leadTimeDays !== undefined
+		) {
+			const newDueDate =
+				updates.leadTimeDays === null
+					? sql<Date | null>`NULL`
+					: sql<Date>`order_date + (${updates.leadTimeDays} || ' days')::interval`;
+
+			await trx
+				.updateTable('orders')
+				.set({ due_date: newDueDate, updated_at: new Date() })
+				.where('store_id', '=', store.id)
+				.where('fulfillment_status', '=', 'pending')
+				.execute();
+		}
+	});
 
 	const updated = await getStoreForUser(userId);
 	if (!updated) return { ok: false, error: 'no_store' };

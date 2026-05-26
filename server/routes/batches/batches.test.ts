@@ -109,4 +109,123 @@ describe('Batches API', () => {
 
 		expect(deleteResponse.statusCode).toBe(200);
 	});
+
+	const createBatch = async () => {
+		const orders = await db
+			.selectFrom('orders')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('fulfillment_status', '=', 'pending')
+			.limit(2)
+			.execute();
+
+		const res = await app.inject(
+			withAuth('POST', '/batches', {
+				payload: {
+					name: 'Completion Test Batch',
+					orderIds: orders.map((o) => o.id),
+				},
+			}),
+		);
+		return res.json().data.id as string;
+	};
+
+	it('PUT /batches/:batchId/orders/:id completes an order and cascades to its items', async () => {
+		const batchId = await createBatch();
+		const batchOrder = await db
+			.selectFrom('production_batch_orders')
+			.select('id')
+			.where('batch_id', '=', batchId)
+			.executeTakeFirstOrThrow();
+
+		const res = await app.inject(
+			withAuth('PUT', `/batches/${batchId}/orders/${batchOrder.id}`, {
+				payload: { completed: true },
+			}),
+		);
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().data.completed).toBe(true);
+
+		const items = await db
+			.selectFrom('production_batch_order_items')
+			.select('completed')
+			.where('batch_order_id', '=', batchOrder.id)
+			.execute();
+		expect(items.length).toBeGreaterThan(0);
+		expect(items.every((i) => i.completed)).toBe(true);
+	});
+
+	it('PUT /batches/:batchId/items/:id toggles a batch item complete', async () => {
+		const batchId = await createBatch();
+		const item = await db
+			.selectFrom('production_batch_items')
+			.select('id')
+			.where('batch_id', '=', batchId)
+			.executeTakeFirstOrThrow();
+
+		const res = await app.inject(
+			withAuth('PUT', `/batches/${batchId}/items/${item.id}`, {
+				payload: { completed: true },
+			}),
+		);
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().data.completed).toBe(true);
+	});
+
+	it('PUT /batches/:batchId/materials/:id toggles a batch material complete', async () => {
+		const batchId = await createBatch();
+		const material = await db
+			.selectFrom('production_batch_materials')
+			.select('id')
+			.where('batch_id', '=', batchId)
+			.executeTakeFirstOrThrow();
+
+		const res = await app.inject(
+			withAuth('PUT', `/batches/${batchId}/materials/${material.id}`, {
+				payload: { completed: true },
+			}),
+		);
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().data.completed).toBe(true);
+	});
+
+	it('PUT /batches/:batchId/order-items/:id/qty sets qty and recomputes order completion', async () => {
+		const batchId = await createBatch();
+		const orderItem = await db
+			.selectFrom('production_batch_order_items')
+			.select(['id', 'quantity'])
+			.where('batch_id', '=', batchId)
+			.executeTakeFirstOrThrow();
+
+		const res = await app.inject(
+			withAuth('PUT', `/batches/${batchId}/order-items/${orderItem.id}/qty`, {
+				payload: { completedQty: orderItem.quantity },
+			}),
+		);
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().data.completed_qty).toBe(orderItem.quantity);
+		expect(res.json().data.completed).toBe(true);
+	});
+
+	it('PUT /batches/:batchId/materials/:id/qty updates the completed quantity', async () => {
+		const batchId = await createBatch();
+		const material = await db
+			.selectFrom('production_batch_materials')
+			.select('id')
+			.where('batch_id', '=', batchId)
+			.executeTakeFirstOrThrow();
+
+		const res = await app.inject(
+			withAuth('PUT', `/batches/${batchId}/materials/${material.id}/qty`, {
+				payload: { completedQty: 5 },
+			}),
+		);
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().data.completed_qty).toBe(5);
+	});
 });

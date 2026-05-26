@@ -22,6 +22,10 @@ describe('Settings API', () => {
 	});
 
 	it('PUT /settings/lead-time updates the lead time', async () => {
+		const original = (
+			await app.inject(withAuth('GET', '/settings'))
+		).json().data.leadTimeDays;
+
 		const response = await app.inject(
 			withAuth('PUT', '/settings/lead-time', {
 				payload: { leadTimeDays: 21 },
@@ -30,5 +34,12 @@ describe('Settings API', () => {
 
 		expect(response.statusCode).toBe(200);
 		expect(response.json().success).toBe(true);
+
+		// Restore the seeded lead time so it doesn't leak into other test files
+		await app.inject(
+			withAuth('PUT', '/settings/lead-time', {
+				payload: { leadTimeDays: original },
+			}),
+		);
 	});
 });

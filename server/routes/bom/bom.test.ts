@@ -31,4 +31,83 @@ describe('BOM API', () => {
 		expect(response.statusCode).toBe(200);
 		expect(response.json().success).toBe(true);
 	});
+
+	it('POST /bom creates a BOM item', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/bom', {
+				payload: {
+					measurement: 'count',
+					platform_sku: 'TEST-SKU-NEW',
+					product_name: 'Test Product',
+					variant: null,
+					piece: 'Test Piece',
+					length: null,
+					quantity: 2,
+					material_id: null,
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(201);
+		expect(response.json().data.piece).toBe('Test Piece');
+	});
+
+	it('PUT /bom/:bomItemId updates a BOM item', async () => {
+		const created = await app.inject(
+			withAuth('POST', '/bom', {
+				payload: {
+					measurement: 'count',
+					platform_sku: 'TEST-SKU-UPDATE',
+					product_name: 'Test Product',
+					variant: null,
+					piece: 'Original Piece',
+					length: null,
+					quantity: 1,
+					material_id: null,
+				},
+			}),
+		);
+		const bomItemId = created.json().data.id;
+
+		const response = await app.inject(
+			withAuth('PUT', `/bom/${bomItemId}`, {
+				payload: {
+					piece: 'Updated Piece',
+					length: null,
+					quantity: 3,
+					measurement: 'count',
+					material_type_id: null,
+					material_type_name: null,
+					color: null,
+					size: null,
+					purchase_url: null,
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.piece).toBe('Updated Piece');
+		expect(response.json().data.quantity).toBe(3);
+	});
+
+	it('DELETE /bom/:bomItemId deletes a BOM item', async () => {
+		const created = await app.inject(
+			withAuth('POST', '/bom', {
+				payload: {
+					measurement: 'count',
+					platform_sku: 'TEST-SKU-DELETE',
+					product_name: 'Test Product',
+					variant: null,
+					piece: 'Deletable Piece',
+					length: null,
+					quantity: 1,
+					material_id: null,
+				},
+			}),
+		);
+		const bomItemId = created.json().data.id;
+
+		const response = await app.inject(withAuth('DELETE', `/bom/${bomItemId}`));
+		expect(response.statusCode).toBe(200);
+	});
 });

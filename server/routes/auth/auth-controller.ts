@@ -16,13 +16,13 @@ import {
 	refreshCookieOptions,
 	clearRefreshCookieOptions,
 } from '../../utils/cookies.js';
-import {
-	RegisterRequestSchema,
-	LoginRequestSchema,
-	ForgotPasswordRequestSchema,
-	ResetPasswordRequestSchema,
-	OauthSessionRequestSchema,
-} from './contract/schemas.js';
+import type {
+	RegisterRequest,
+	LoginRequest,
+	ForgotPasswordRequest,
+	ResetPasswordRequest,
+	OauthSessionRequest,
+} from './contract/types.js';
 import {
 	registerUser,
 	loginUser,
@@ -33,15 +33,10 @@ import {
 } from './auth-service.js';
 
 export async function handleRegister(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: RegisterRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = RegisterRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
-	const { email, password, firstName, lastName } = parseResult.data;
+	const { email, password, firstName, lastName } = request.body;
 
 	try {
 		const result = await registerUser({ email, password, firstName, lastName });
@@ -69,15 +64,10 @@ export async function handleRegister(
 }
 
 export async function handleLogin(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: LoginRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = LoginRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
-	const { email, password } = parseResult.data;
+	const { email, password } = request.body;
 
 	try {
 		const result = await loginUser({ email, password });
@@ -146,15 +136,10 @@ export async function handleStatus(
 }
 
 export async function handleForgotPassword(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: ForgotPasswordRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = ForgotPasswordRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
-	const { email } = parseResult.data;
+	const { email } = request.body;
 
 	try {
 		await requestPasswordReset(email);
@@ -170,15 +155,10 @@ export async function handleForgotPassword(
 }
 
 export async function handleOauthSession(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: OauthSessionRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = OauthSessionRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
-	const { accessToken, refreshToken } = parseResult.data;
+	const { accessToken, refreshToken } = request.body;
 
 	try {
 		const result = await exchangeOauthSession({ accessToken, refreshToken });
@@ -200,15 +180,10 @@ export async function handleOauthSession(
 }
 
 export async function handleResetPassword(
-	request: FastifyRequest,
+	request: FastifyRequest<{ Body: ResetPasswordRequest }>,
 	reply: FastifyReply,
 ) {
-	const parseResult = ResetPasswordRequestSchema.safeParse(request.body);
-	if (!parseResult.success) {
-		return badRequest(reply, 'Invalid request', parseResult.error.format());
-	}
-
-	const { accessToken, newPassword } = parseResult.data;
+	const { accessToken, newPassword } = request.body;
 
 	try {
 		const result = await resetPassword({ accessToken, newPassword });
