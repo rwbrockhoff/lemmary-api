@@ -4,7 +4,7 @@
 
 Pulls orders from commerce platforms, normalizes them against a bill of materials, and generates production schedules, materials demand, and time-series analytics.
 
-**[Live demo →](https://lemmary.com)**
+**[Live demo →](https://lemmary.com)** — sample data reseeds nightly via a scheduled job so order and due dates always stay current.
 
 ## Stack
 

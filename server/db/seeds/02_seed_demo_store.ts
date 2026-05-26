@@ -450,4 +450,8 @@ async function seedDemo() {
 	console.log('Demo seed complete');
 }
 
-seedDemo();
+seedDemo().catch((err) => {
+	// Exit non-zero so Railway marks the cron run as failed
+	console.error(err);
+	process.exit(1);
+});
