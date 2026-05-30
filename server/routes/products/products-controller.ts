@@ -1,56 +1,30 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import {
-	successResponse,
-	notFound,
-	badRequest,
-	internalError,
-} from '../../utils/api-responses.js';
+import { successResponse } from '../../utils/api-responses.js';
+import { AppError } from '../../utils/app-error.js';
 import { syncProducts, getProducts, getProduct } from './products-service.js';
 
 export async function handleSyncProducts(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	try {
-		const result = await syncProducts(request.userId);
-		if (!result) return badRequest(reply, 'Connect a store before syncing');
-		return successResponse(reply, result, `Synced ${result.synced} products`);
-	} catch (error) {
-		request.log.error(error, 'Failed to sync products');
-		return internalError(reply, 'Failed to sync products from platform');
-	}
+	const result = await syncProducts(request.userId);
+	if (!result) throw AppError.badRequest('Connect a store before syncing');
+	return successResponse(reply, result, `Synced ${result.synced} products`);
 }
 
 export async function handleGetProducts(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	try {
-		const products = await getProducts(request.userId);
-		return successResponse(reply, products);
-	} catch (error) {
-		request.log.error(error, 'Failed to fetch products');
-		return internalError(reply);
-	}
+	const products = await getProducts(request.userId);
+	return successResponse(reply, products);
 }
 
 export async function handleGetProduct(
 	request: FastifyRequest<{ Params: { productId: string } }>,
 	reply: FastifyReply,
 ) {
-	try {
-		const product = await getProduct(
-			request.userId,
-			request.params.productId,
-		);
-
-		if (!product) {
-			return notFound(reply, 'Product not found');
-		}
-
-		return successResponse(reply, product);
-	} catch (error) {
-		request.log.error(error, 'Failed to fetch product');
-		return internalError(reply);
-	}
+	const product = await getProduct(request.userId, request.params.productId);
+	if (!product) throw AppError.notFound('Product not found');
+	return successResponse(reply, product);
 }

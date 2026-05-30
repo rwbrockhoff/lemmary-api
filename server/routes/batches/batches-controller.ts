@@ -2,10 +2,8 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
 	successResponse,
 	createdSuccess,
-	badRequest,
-	notFound,
-	internalError,
 } from '../../utils/api-responses.js';
+import { AppError } from '../../utils/app-error.js';
 import type {
 	CreateBatchRequest,
 	UpdateBatchRequest,
@@ -29,50 +27,27 @@ export async function handleGetBatches(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	try {
-		const batches = await getBatches(request.userId);
-		return successResponse(reply, batches);
-	} catch (error) {
-		request.log.error(error, 'Failed to fetch batches');
-		return internalError(reply);
-	}
+	const batches = await getBatches(request.userId);
+	return successResponse(reply, batches);
 }
 
 export async function handleGetBatch(
 	request: FastifyRequest<{ Params: { batchId: string } }>,
 	reply: FastifyReply,
 ) {
-	try {
-		const batch = await getBatch(request.userId, request.params.batchId);
-
-		if (!batch) return notFound(reply, 'Batch not found');
-		return successResponse(reply, batch);
-	} catch (error) {
-		request.log.error(error, 'Failed to fetch batch');
-		return internalError(reply);
-	}
+	const batch = await getBatch(request.userId, request.params.batchId);
+	if (!batch) throw AppError.notFound('Batch not found');
+	return successResponse(reply, batch);
 }
 
 export async function handleCreateBatch(
 	request: FastifyRequest<{ Body: CreateBatchRequest }>,
 	reply: FastifyReply,
 ) {
-	try {
-		const { name, orderIds } = request.body;
-
-		const batch = await createBatch(request.userId, name, orderIds);
-		if (!batch) return badRequest(reply, 'Connect a store first');
-		return createdSuccess(reply, batch);
-	} catch (error) {
-		if (
-			error instanceof Error &&
-			error.message === 'One or more orders not found'
-		) {
-			return badRequest(reply, error.message);
-		}
-		request.log.error(error, 'Failed to create batch');
-		return internalError(reply);
-	}
+	const { name, orderIds } = request.body;
+	const batch = await createBatch(request.userId, name, orderIds);
+	if (!batch) throw AppError.badRequest('Connect a store first');
+	return createdSuccess(reply, batch);
 }
 
 export async function handleUpdateBatch(
@@ -82,40 +57,23 @@ export async function handleUpdateBatch(
 	}>,
 	reply: FastifyReply,
 ) {
-	try {
-		const batch = await updateBatch(
-			request.userId,
-			request.params.batchId,
-			request.body,
-		);
+	const batch = await updateBatch(
+		request.userId,
+		request.params.batchId,
+		request.body,
+	);
 
-		if (!batch) return notFound(reply, 'Batch not found');
-		return successResponse(reply, batch);
-	} catch (error) {
-		if (
-			error instanceof Error &&
-			error.message === 'One or more orders not found'
-		) {
-			return badRequest(reply, error.message);
-		}
-		request.log.error(error, 'Failed to update batch');
-		return internalError(reply);
-	}
+	if (!batch) throw AppError.notFound('Batch not found');
+	return successResponse(reply, batch);
 }
 
 export async function handleDeleteBatch(
 	request: FastifyRequest<{ Params: { batchId: string } }>,
 	reply: FastifyReply,
 ) {
-	try {
-		const deleted = await deleteBatch(request.userId, request.params.batchId);
-
-		if (!deleted) return notFound(reply, 'Batch not found');
-		return successResponse(reply, deleted);
-	} catch (error) {
-		request.log.error(error, 'Failed to delete batch');
-		return internalError(reply);
-	}
+	const deleted = await deleteBatch(request.userId, request.params.batchId);
+	if (!deleted) throw AppError.notFound('Batch not found');
+	return successResponse(reply, deleted);
 }
 
 export async function handleToggleOrderComplete(
@@ -125,20 +83,15 @@ export async function handleToggleOrderComplete(
 	}>,
 	reply: FastifyReply,
 ) {
-	try {
-		const result = await toggleOrderComplete(
-			request.userId,
-			request.params.batchId,
-			request.params.id,
-			request.body.completed,
-		);
+	const result = await toggleOrderComplete(
+		request.userId,
+		request.params.batchId,
+		request.params.id,
+		request.body.completed,
+	);
 
-		if (!result) return notFound(reply);
-		return successResponse(reply, result);
-	} catch (error) {
-		request.log.error(error, 'Failed to update batch order');
-		return internalError(reply);
-	}
+	if (!result) throw AppError.notFound();
+	return successResponse(reply, result);
 }
 
 export async function handleToggleItemComplete(
@@ -148,20 +101,15 @@ export async function handleToggleItemComplete(
 	}>,
 	reply: FastifyReply,
 ) {
-	try {
-		const result = await toggleItemComplete(
-			request.userId,
-			request.params.batchId,
-			request.params.id,
-			request.body.completed,
-		);
+	const result = await toggleItemComplete(
+		request.userId,
+		request.params.batchId,
+		request.params.id,
+		request.body.completed,
+	);
 
-		if (!result) return notFound(reply);
-		return successResponse(reply, result);
-	} catch (error) {
-		request.log.error(error, 'Failed to update batch item');
-		return internalError(reply);
-	}
+	if (!result) throw AppError.notFound();
+	return successResponse(reply, result);
 }
 
 export async function handleToggleMaterialComplete(
@@ -171,20 +119,15 @@ export async function handleToggleMaterialComplete(
 	}>,
 	reply: FastifyReply,
 ) {
-	try {
-		const result = await toggleMaterialComplete(
-			request.userId,
-			request.params.batchId,
-			request.params.id,
-			request.body.completed,
-		);
+	const result = await toggleMaterialComplete(
+		request.userId,
+		request.params.batchId,
+		request.params.id,
+		request.body.completed,
+	);
 
-		if (!result) return notFound(reply);
-		return successResponse(reply, result);
-	} catch (error) {
-		request.log.error(error, 'Failed to update batch material');
-		return internalError(reply);
-	}
+	if (!result) throw AppError.notFound();
+	return successResponse(reply, result);
 }
 
 export async function handleUpdateOrderItemCompletedQty(
@@ -194,20 +137,15 @@ export async function handleUpdateOrderItemCompletedQty(
 	}>,
 	reply: FastifyReply,
 ) {
-	try {
-		const result = await updateOrderItemCompletedQty(
-			request.userId,
-			request.params.batchId,
-			request.params.id,
-			request.body.completedQty,
-		);
+	const result = await updateOrderItemCompletedQty(
+		request.userId,
+		request.params.batchId,
+		request.params.id,
+		request.body.completedQty,
+	);
 
-		if (!result) return notFound(reply);
-		return successResponse(reply, result);
-	} catch (error) {
-		request.log.error(error, 'Failed to update order item quantity');
-		return internalError(reply);
-	}
+	if (!result) throw AppError.notFound();
+	return successResponse(reply, result);
 }
 
 export async function handleUpdateMaterialCompletedQty(
@@ -217,18 +155,13 @@ export async function handleUpdateMaterialCompletedQty(
 	}>,
 	reply: FastifyReply,
 ) {
-	try {
-		const result = await updateMaterialCompletedQty(
-			request.userId,
-			request.params.batchId,
-			request.params.id,
-			request.body.completedQty,
-		);
+	const result = await updateMaterialCompletedQty(
+		request.userId,
+		request.params.batchId,
+		request.params.id,
+		request.body.completedQty,
+	);
 
-		if (!result) return notFound(reply);
-		return successResponse(reply, result);
-	} catch (error) {
-		request.log.error(error, 'Failed to update material quantity');
-		return internalError(reply);
-	}
+	if (!result) throw AppError.notFound();
+	return successResponse(reply, result);
 }
