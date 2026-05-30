@@ -44,23 +44,25 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 				.returning('id')
 				.executeTakeFirstOrThrow();
 
-			for (const variant of variants) {
+			if (variants.length > 0) {
 				await trx
 					.insertInto('product_variants')
-					.values({
-						...variant,
-						product_id: result.id,
-					})
+					.values(
+						variants.map((variant) => ({
+							...variant,
+							product_id: result.id,
+						})),
+					)
 					.onConflict((oc) =>
 						oc.columns(['product_id', 'platform_variant_id']).doUpdateSet({
-							platform_sku: variant.platform_sku,
-							name: variant.name,
-							price: variant.price,
-							sale_price: variant.sale_price,
-							on_sale: variant.on_sale,
-							stock_quantity: variant.stock_quantity,
-							stock_unlimited: variant.stock_unlimited,
-							image_url: variant.image_url,
+							platform_sku: (eb) => eb.ref('excluded.platform_sku'),
+							name: (eb) => eb.ref('excluded.name'),
+							price: (eb) => eb.ref('excluded.price'),
+							sale_price: (eb) => eb.ref('excluded.sale_price'),
+							on_sale: (eb) => eb.ref('excluded.on_sale'),
+							stock_quantity: (eb) => eb.ref('excluded.stock_quantity'),
+							stock_unlimited: (eb) => eb.ref('excluded.stock_unlimited'),
+							image_url: (eb) => eb.ref('excluded.image_url'),
 							updated_at: new Date(),
 						}),
 					)

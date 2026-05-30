@@ -128,12 +128,33 @@ export async function getOperations(
 			: null;
 
 	const dueSoonRaw = await db
+		// Per-order item totals and completed-item counts
+		.with('item_counts', (qb) =>
+			qb
+				.selectFrom('order_items as oi')
+				.innerJoin('orders as o', 'o.id', 'oi.order_id')
+				.leftJoin(
+					'order_item_workflow_stages as s',
+					's.id',
+					'oi.workflow_stage_id',
+				)
+				.select([
+					'oi.order_id',
+					sql<string>`count(*)::text`.as('total'),
+					sql<string>`count(*) filter (where s.is_complete = true)::text`.as(
+						'completed',
+					),
+				])
+				.where('o.store_id', '=', store.id)
+				.groupBy('oi.order_id'),
+		)
 		.selectFrom('orders')
 		.leftJoin(
 			'order_workflow_stages',
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
+		.leftJoin('item_counts', 'item_counts.order_id', 'orders.id')
 		.select([
 			'orders.id',
 			'orders.order_number',
@@ -143,14 +164,8 @@ export async function getOperations(
 			'orders.grand_total',
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(
-				select count(*) from order_items oi
-				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
-				where oi.order_id = orders.id and s.is_complete = true
-			)`.as('items_completed'),
+			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
+			sql<string>`coalesce(item_counts.completed, '0')`.as('items_completed'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')

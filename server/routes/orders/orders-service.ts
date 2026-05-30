@@ -184,30 +184,29 @@ async function upsertOrders(
 				.executeTakeFirstOrThrow();
 
 			if (items.length > 0) {
-				for (const item of items) {
-					const variantJson = toJsonb(item.variant_label);
-
-					await trx
-						.insertInto('order_items')
-						.values({
+				// EXCLUDED.column refers to each row's proposed values on conflict
+				await trx
+					.insertInto('order_items')
+					.values(
+						items.map((item) => ({
 							...item,
-							variant_label: variantJson,
+							variant_label: toJsonb(item.variant_label),
 							order_id: result.id,
 							workflow_stage_id: itemStageId,
-						})
-						.onConflict((oc) =>
-							oc.columns(['order_id', 'platform_line_item_id']).doUpdateSet({
-								product_name: item.product_name,
-								variant_label: variantJson,
-								quantity: item.quantity,
-								unit_price: item.unit_price,
-								image_url: item.image_url,
-								workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-								updated_at: new Date(),
-							}),
-						)
-						.execute();
-				}
+						})),
+					)
+					.onConflict((oc) =>
+						oc.columns(['order_id', 'platform_line_item_id']).doUpdateSet({
+							product_name: (eb) => eb.ref('excluded.product_name'),
+							variant_label: (eb) => eb.ref('excluded.variant_label'),
+							quantity: (eb) => eb.ref('excluded.quantity'),
+							unit_price: (eb) => eb.ref('excluded.unit_price'),
+							image_url: (eb) => eb.ref('excluded.image_url'),
+							workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
+							updated_at: new Date(),
+						}),
+					)
+					.execute();
 			}
 
 			synced++;
@@ -244,6 +243,7 @@ export async function getOrders(
 	const isPending = status === 'pending';
 
 	const baseQuery = db
+		// Per-customer lifetime order counts, scoped to this store
 		.with('customer_counts', (qb) =>
 			qb
 				.selectFrom('orders')
@@ -251,6 +251,41 @@ export async function getOrders(
 				.where('store_id', '=', store.id)
 				.where('customer_email', 'is not', null)
 				.groupBy('customer_email'),
+		)
+		// Per-order item totals and completed-item counts
+		.with('item_counts', (qb) =>
+			qb
+				.selectFrom('order_items as oi')
+				.innerJoin('orders as o', 'o.id', 'oi.order_id')
+				.leftJoin(
+					'order_item_workflow_stages as s',
+					's.id',
+					'oi.workflow_stage_id',
+				)
+				.select([
+					'oi.order_id',
+					sql<string>`count(*)::text`.as('total'),
+					sql<string>`count(*) filter (where s.is_complete = true)::text`.as(
+						'completed',
+					),
+				])
+				.where('o.store_id', '=', store.id)
+				.groupBy('oi.order_id'),
+		)
+		// Most recent batch per order via ROW_NUMBER; we keep rn = 1 in the join
+		.with('latest_batches', (qb) =>
+			qb
+				.selectFrom('production_batch_orders as pbo')
+				.innerJoin('production_batches as pb', 'pb.id', 'pbo.batch_id')
+				.select([
+					'pbo.order_id',
+					'pb.id as batch_id',
+					'pb.name as batch_name',
+					sql<string>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
+						'rn',
+					),
+				])
+				.where('pb.store_id', '=', store.id),
 		)
 		.selectFrom('orders')
 		.selectAll('orders')
@@ -264,33 +299,19 @@ export async function getOrders(
 			'customer_counts.customer_email',
 			'orders.customer_email',
 		)
+		.leftJoin('item_counts', 'item_counts.order_id', 'orders.id')
+		.leftJoin('latest_batches', (join) =>
+			join
+				.onRef('latest_batches.order_id', '=', 'orders.id')
+				.on(sql<SqlBool>`latest_batches.rn = 1`),
+		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(
-				select count(*) from order_items oi
-				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
-				where oi.order_id = orders.id and s.is_complete = true
-			)`.as('items_completed'),
+			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
+			sql<string>`coalesce(item_counts.completed, '0')`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string | null>`(
-				select pb.name
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_name'),
-			sql<string | null>`(
-				select pb.id
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_id'),
+			'latest_batches.batch_name',
+			'latest_batches.batch_id',
 			'customer_counts.total as customer_order_count',
 		])
 		.where('orders.store_id', '=', store.id);
@@ -447,6 +468,39 @@ function workflowOrdersBase(storeId: string) {
 				.where('customer_email', 'is not', null)
 				.groupBy('customer_email'),
 		)
+		.with('item_counts', (qb) =>
+			qb
+				.selectFrom('order_items as oi')
+				.innerJoin('orders as o', 'o.id', 'oi.order_id')
+				.leftJoin(
+					'order_item_workflow_stages as s',
+					's.id',
+					'oi.workflow_stage_id',
+				)
+				.select([
+					'oi.order_id',
+					sql<string>`count(*)::text`.as('total'),
+					sql<string>`count(*) filter (where s.is_complete = true)::text`.as(
+						'completed',
+					),
+				])
+				.where('o.store_id', '=', storeId)
+				.groupBy('oi.order_id'),
+		)
+		.with('latest_batches', (qb) =>
+			qb
+				.selectFrom('production_batch_orders as pbo')
+				.innerJoin('production_batches as pb', 'pb.id', 'pbo.batch_id')
+				.select([
+					'pbo.order_id',
+					'pb.id as batch_id',
+					'pb.name as batch_name',
+					sql<string>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
+						'rn',
+					),
+				])
+				.where('pb.store_id', '=', storeId),
+		)
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
@@ -459,33 +513,19 @@ function workflowOrdersBase(storeId: string) {
 			'customer_counts.customer_email',
 			'orders.customer_email',
 		)
+		.leftJoin('item_counts', 'item_counts.order_id', 'orders.id')
+		.leftJoin('latest_batches', (join) =>
+			join
+				.onRef('latest_batches.order_id', '=', 'orders.id')
+				.on(sql<SqlBool>`latest_batches.rn = 1`),
+		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(
-				select count(*) from order_items oi
-				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
-				where oi.order_id = orders.id and s.is_complete = true
-			)`.as('items_completed'),
+			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
+			sql<string>`coalesce(item_counts.completed, '0')`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string | null>`(
-				select pb.name
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_name'),
-			sql<string | null>`(
-				select pb.id
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_id'),
+			'latest_batches.batch_name',
+			'latest_batches.batch_id',
 			'customer_counts.total as customer_order_count',
 		])
 		.where('orders.store_id', '=', storeId)
