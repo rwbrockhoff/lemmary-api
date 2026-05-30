@@ -29,6 +29,19 @@ describe('Orders API', () => {
 		expect(body.data).toHaveProperty('lastSyncedAt');
 	});
 
+	it('GET /orders includes customer_tier on each row', async () => {
+		const response = await app.inject(withAuth('GET', '/orders'));
+
+		expect(response.statusCode).toBe(200);
+		const orders = response.json().data.orders;
+		for (const order of orders) {
+			expect(order).toHaveProperty('customer_tier');
+			if (order.customer_tier !== null) {
+				expect(['new', 'loyal', 'super_fan']).toContain(order.customer_tier);
+			}
+		}
+	});
+
 	it('GET /orders/:orderId returns a single order with items', async () => {
 		const order = await db
 			.selectFrom('orders')
@@ -99,6 +112,21 @@ describe('Orders API', () => {
 
 		expect(response.statusCode).toBe(200);
 		expect(response.json().success).toBe(true);
+	});
+
+	it('GET /orders/workflow-board includes customer_tier on each row', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/orders/workflow-board'),
+		);
+
+		expect(response.statusCode).toBe(200);
+		const orders = response.json().data.orders;
+		for (const order of orders) {
+			expect(order).toHaveProperty('customer_tier');
+			if (order.customer_tier !== null) {
+				expect(['new', 'loyal', 'super_fan']).toContain(order.customer_tier);
+			}
+		}
 	});
 
 	it('PUT /orders/:orderId/notes updates the notes', async () => {

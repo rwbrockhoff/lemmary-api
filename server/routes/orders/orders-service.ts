@@ -6,6 +6,7 @@ import {
 	type StoreWithAccessToken,
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
+import { computeCustomerTier } from '../../utils/customer-tier.js';
 import {
 	fetchSquarespaceOrders,
 	type NormalizedOrder,
@@ -187,12 +188,28 @@ export async function getOrders(
 	const isPending = status === 'pending';
 
 	const baseQuery = db
+		.with('customer_counts', (qb) =>
+			qb
+				.selectFrom('orders')
+				.select([
+					'customer_email',
+					sql<string>`count(*)::text`.as('total'),
+				])
+				.where('store_id', '=', store.id)
+				.where('customer_email', 'is not', null)
+				.groupBy('customer_email'),
+		)
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
 			'order_workflow_stages',
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
+		)
+		.leftJoin(
+			'customer_counts',
+			'customer_counts.customer_email',
+			'orders.customer_email',
 		)
 		.select([
 			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
@@ -221,6 +238,7 @@ export async function getOrders(
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_id'),
+			'customer_counts.total as customer_order_count',
 		])
 		.where('orders.store_id', '=', store.id);
 
@@ -267,6 +285,10 @@ export async function getOrders(
 			items_completed: Number(row.items_completed),
 			items: itemsByOrder.get(row.id) ?? [],
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
+			customer_tier:
+				row.customer_order_count !== null
+					? computeCustomerTier(Number(row.customer_order_count))
+					: null,
 		})),
 		hasMore,
 		lastSyncedAt: store.last_synced_at,
@@ -364,12 +386,28 @@ export async function updateOrderNotes(
 
 function workflowOrdersBase(storeId: string) {
 	return db
+		.with('customer_counts', (qb) =>
+			qb
+				.selectFrom('orders')
+				.select([
+					'customer_email',
+					sql<string>`count(*)::text`.as('total'),
+				])
+				.where('store_id', '=', storeId)
+				.where('customer_email', 'is not', null)
+				.groupBy('customer_email'),
+		)
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
 			'order_workflow_stages',
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
+		)
+		.leftJoin(
+			'customer_counts',
+			'customer_counts.customer_email',
+			'orders.customer_email',
 		)
 		.select([
 			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
@@ -398,6 +436,7 @@ function workflowOrdersBase(storeId: string) {
 				order by pb.created_at desc
 				limit 1
 			)`.as('batch_id'),
+			'customer_counts.total as customer_order_count',
 		])
 		.where('orders.store_id', '=', storeId)
 		.where('orders.fulfillment_status', '=', 'pending');
@@ -443,6 +482,10 @@ export async function getWorkflowBoard(userId: string) {
 			item_count: Number(row.item_count),
 			items_completed: Number(row.items_completed),
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
+			customer_tier:
+				row.customer_order_count !== null
+					? computeCustomerTier(Number(row.customer_order_count))
+					: null,
 		})),
 		stages,
 		activeBatches,
