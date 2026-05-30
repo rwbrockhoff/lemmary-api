@@ -2,11 +2,8 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
 	successResponse,
 	createdSuccess,
-	badRequest,
-	conflict,
-	unauthorized,
-	internalError,
 } from '../../utils/api-responses.js';
+import { AppError } from '../../utils/app-error.js';
 import {
 	REFRESH_TOKEN_COOKIE,
 	DEMO_SESSION_TOKEN,
@@ -37,30 +34,22 @@ export async function handleRegister(
 	reply: FastifyReply,
 ) {
 	const { email, password, firstName, lastName } = request.body;
+	const result = await registerUser({ email, password, firstName, lastName });
 
-	try {
-		const result = await registerUser({ email, password, firstName, lastName });
-
-		if (!result.success) {
-			if (result.statusCode === 409) {
-				return conflict(reply, result.error);
-			}
-			return badRequest(reply, result.error);
-		}
-
-		return createdSuccess(
-			reply,
-			{
-				userId: result.userId,
-				email,
-				needsEmailConfirmation: result.needsEmailConfirmation,
-			},
-			'Registration successful. Please check your email to confirm your account.',
-		);
-	} catch (error) {
-		request.log.error(error, 'Registration failed');
-		return internalError(reply, 'Registration failed');
+	if (!result.success) {
+		if (result.statusCode === 409) throw AppError.conflict(result.error);
+		throw AppError.badRequest(result.error);
 	}
+
+	return createdSuccess(
+		reply,
+		{
+			userId: result.userId,
+			email,
+			needsEmailConfirmation: result.needsEmailConfirmation,
+		},
+		'Registration successful. Please check your email to confirm your account.',
+	);
 }
 
 export async function handleLogin(
@@ -68,31 +57,23 @@ export async function handleLogin(
 	reply: FastifyReply,
 ) {
 	const { email, password } = request.body;
+	const result = await loginUser({ email, password });
 
-	try {
-		const result = await loginUser({ email, password });
-
-		if (!result.success) {
-			if (result.statusCode === 401) {
-				return unauthorized(reply, result.error);
-			}
-			return internalError(reply, result.error);
-		}
-
-		reply.setCookie(
-			REFRESH_TOKEN_COOKIE,
-			result.refreshToken,
-			refreshCookieOptions,
-		);
-
-		return successResponse(reply, {
-			userId: result.userId,
-			email: result.email,
-		});
-	} catch (error) {
-		request.log.error(error, 'Login failed');
-		return internalError(reply, 'Login failed');
+	if (!result.success) {
+		if (result.statusCode === 401) throw AppError.unauthorized(result.error);
+		throw new AppError(result.error);
 	}
+
+	reply.setCookie(
+		REFRESH_TOKEN_COOKIE,
+		result.refreshToken,
+		refreshCookieOptions,
+	);
+
+	return successResponse(reply, {
+		userId: result.userId,
+		email: result.email,
+	});
 }
 
 export async function handleDemoLogin(
@@ -135,6 +116,8 @@ export async function handleStatus(
 	return successResponse(reply, { isAuthenticated: true, user });
 }
 
+// Intentionally swallows errors and always returns the same message so we don't
+// leak whether an account exists for the given email.
 export async function handleForgotPassword(
 	request: FastifyRequest<{ Body: ForgotPasswordRequest }>,
 	reply: FastifyReply,
@@ -159,24 +142,16 @@ export async function handleOauthSession(
 	reply: FastifyReply,
 ) {
 	const { accessToken, refreshToken } = request.body;
+	const result = await exchangeOauthSession({ accessToken, refreshToken });
 
-	try {
-		const result = await exchangeOauthSession({ accessToken, refreshToken });
+	if (!result.success) throw AppError.unauthorized(result.error);
 
-		if (!result.success) {
-			return unauthorized(reply, result.error);
-		}
+	reply.setCookie(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions);
 
-		reply.setCookie(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions);
-
-		return successResponse(reply, {
-			userId: result.userId,
-			email: result.email,
-		});
-	} catch (error) {
-		request.log.error(error, 'OAuth session exchange failed');
-		return internalError(reply, 'OAuth session exchange failed');
-	}
+	return successResponse(reply, {
+		userId: result.userId,
+		email: result.email,
+	});
 }
 
 export async function handleResetPassword(
@@ -184,20 +159,12 @@ export async function handleResetPassword(
 	reply: FastifyReply,
 ) {
 	const { accessToken, newPassword } = request.body;
+	const result = await resetPassword({ accessToken, newPassword });
 
-	try {
-		const result = await resetPassword({ accessToken, newPassword });
-
-		if (!result.success) {
-			if (result.statusCode === 401) {
-				return unauthorized(reply, result.error);
-			}
-			return badRequest(reply, result.error);
-		}
-
-		return successResponse(reply, null, 'Password updated successfully');
-	} catch (error) {
-		request.log.error(error, 'Password update failed');
-		return internalError(reply, 'Password update failed');
+	if (!result.success) {
+		if (result.statusCode === 401) throw AppError.unauthorized(result.error);
+		throw AppError.badRequest(result.error);
 	}
+
+	return successResponse(reply, null, 'Password updated successfully');
 }

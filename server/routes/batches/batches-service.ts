@@ -2,6 +2,7 @@ import { sql, type Transaction } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { populateBatchData } from '../../utils/batch-aggregation.js';
+import { AppError } from '../../utils/app-error.js';
 import type { Database } from '../../db/database-types.js';
 
 export async function getBatches(userId: string) {
@@ -151,7 +152,7 @@ export async function createBatch(
 		.execute();
 
 	if (orders.length !== orderIds.length) {
-		throw new Error('One or more orders not found');
+		throw AppError.badRequest('One or more orders not found');
 	}
 
 	return db.transaction().execute(async (trx) => {
@@ -207,7 +208,7 @@ export async function updateBatch(
 				.execute();
 
 			if (orders.length !== updates.orderIds.length) {
-				throw new Error('One or more orders not found');
+				throw AppError.badRequest('One or more orders not found');
 			}
 
 			await clearBatchData(trx, batchId);
