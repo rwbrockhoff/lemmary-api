@@ -1,5 +1,6 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { badRequest, internalError } from '../utils/api-responses.js';
+import { Sentry } from '../config/sentry.js';
 
 // Normalizes thrown/validation errors into our standard response shape.
 // Fastify sets error.validation when a route's schema validation fails.
@@ -13,5 +14,10 @@ export function errorHandler(
 	}
 
 	request.log.error(error, 'Unhandled request error');
+
+	Sentry.captureException(error, {
+		tags: { method: request.method, url: request.url },
+	});
+
 	return internalError(reply);
 }

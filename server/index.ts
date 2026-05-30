@@ -1,3 +1,6 @@
+import { initSentry } from './config/sentry.js';
+initSentry();
+
 import { env } from './config/environment.js';
 import { buildApp } from './app.js';
 

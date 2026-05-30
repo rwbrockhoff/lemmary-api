@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger, FastifySerializerCompiler } from 'fastify';
 import type { ZodType } from 'zod';
 import { env } from '../config/environment.js';
+import { Sentry } from '../config/sentry.js';
 
 // Fastify runs a serializer to turn each route's response into the JSON it sends back.
 // We slot ours in here to first check the response against its Zod schema, so we catch
@@ -18,6 +19,12 @@ const isDevOrTest = () =>
 // Log util to use Fastify Pino logger for schema issues
 const reportResponseDrift = (log: FastifyBaseLogger, context: DriftContext) => {
 	log.error(context, 'Response schema drift detected');
+
+	Sentry.captureMessage('Response schema drift detected', {
+		level: 'warning',
+		tags: { method: context.method, url: context.url },
+		extra: { issues: context.issues },
+	});
 };
 
 export const createResponseSerializer =

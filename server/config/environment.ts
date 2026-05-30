@@ -22,6 +22,7 @@ const envSchema = z.object({
 	DEMO_STORE_ID: z.uuid(),
 	TEST_USER_ID: z.uuid().optional(),
 	TEST_STORE_ID: z.uuid().optional(),
+	SENTRY_DSN: z.url().optional(),
 });
 
 type Environment = z.infer<typeof envSchema>;
