@@ -18,8 +18,23 @@ import { bomRoutes } from './routes/bom/bom-routes.js';
 
 type BuildAppOptions = { logger?: boolean };
 
+// Use pino-pretty for logs in dev / use raw JSON in prod
+const devLoggerConfig = {
+	transport: {
+		target: 'pino-pretty',
+		options: {
+			colorize: true,
+			translateTime: 'HH:MM:ss',
+			ignore: 'pid,hostname',
+		},
+	},
+};
+
 export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
-	const app = Fastify({ logger });
+	const loggerConfig =
+		logger && env.NODE_ENV === 'development' ? devLoggerConfig : logger;
+
+	const app = Fastify({ logger: loggerConfig });
 
 	app.register(cors, {
 		origin: env.FRONTEND_URL,
