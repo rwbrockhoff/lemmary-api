@@ -25,7 +25,7 @@ const devLoggerConfig = {
 		options: {
 			colorize: true,
 			translateTime: 'HH:MM:ss',
-			ignore: 'pid,hostname',
+			ignore: 'pid,hostname,req.host,req.remoteAddress,req.remotePort',
 		},
 	},
 };
