@@ -247,7 +247,7 @@ export async function getOrders(
 		.with('customer_counts', (qb) =>
 			qb
 				.selectFrom('orders')
-				.select(['customer_email', sql<string>`count(*)::text`.as('total')])
+				.select(['customer_email', sql<number>`count(*)`.as('total')])
 				.where('store_id', '=', store.id)
 				.where('customer_email', 'is not', null)
 				.groupBy('customer_email'),
@@ -264,8 +264,8 @@ export async function getOrders(
 				)
 				.select([
 					'oi.order_id',
-					sql<string>`count(*)::text`.as('total'),
-					sql<string>`count(*) filter (where s.is_complete = true)::text`.as(
+					sql<number>`count(*)`.as('total'),
+					sql<number>`count(*) filter (where s.is_complete = true)`.as(
 						'completed',
 					),
 				])
@@ -281,7 +281,7 @@ export async function getOrders(
 					'pbo.order_id',
 					'pb.id as batch_id',
 					'pb.name as batch_name',
-					sql<string>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
+					sql<number>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
 						'rn',
 					),
 				])
@@ -306,8 +306,8 @@ export async function getOrders(
 				.on(sql<SqlBool>`latest_batches.rn = 1`),
 		)
 		.select([
-			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
-			sql<string>`coalesce(item_counts.completed, '0')`.as('items_completed'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
+			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 			'latest_batches.batch_name',
@@ -355,13 +355,11 @@ export async function getOrders(
 	return {
 		orders: visibleRows.map((row) => ({
 			...row,
-			item_count: Number(row.item_count),
-			items_completed: Number(row.items_completed),
 			items: itemsByOrder.get(row.id) ?? [],
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 			customer_tier:
 				row.customer_order_count !== null
-					? computeCustomerTier(Number(row.customer_order_count))
+					? computeCustomerTier(row.customer_order_count)
 					: null,
 		})),
 		hasMore,
@@ -463,7 +461,7 @@ function workflowOrdersBase(storeId: string) {
 		.with('customer_counts', (qb) =>
 			qb
 				.selectFrom('orders')
-				.select(['customer_email', sql<string>`count(*)::text`.as('total')])
+				.select(['customer_email', sql<number>`count(*)`.as('total')])
 				.where('store_id', '=', storeId)
 				.where('customer_email', 'is not', null)
 				.groupBy('customer_email'),
@@ -479,8 +477,8 @@ function workflowOrdersBase(storeId: string) {
 				)
 				.select([
 					'oi.order_id',
-					sql<string>`count(*)::text`.as('total'),
-					sql<string>`count(*) filter (where s.is_complete = true)::text`.as(
+					sql<number>`count(*)`.as('total'),
+					sql<number>`count(*) filter (where s.is_complete = true)`.as(
 						'completed',
 					),
 				])
@@ -495,7 +493,7 @@ function workflowOrdersBase(storeId: string) {
 					'pbo.order_id',
 					'pb.id as batch_id',
 					'pb.name as batch_name',
-					sql<string>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
+					sql<number>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
 						'rn',
 					),
 				])
@@ -520,8 +518,8 @@ function workflowOrdersBase(storeId: string) {
 				.on(sql<SqlBool>`latest_batches.rn = 1`),
 		)
 		.select([
-			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
-			sql<string>`coalesce(item_counts.completed, '0')`.as('items_completed'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
+			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
 			'latest_batches.batch_name',
@@ -569,12 +567,10 @@ export async function getWorkflowBoard(userId: string) {
 	return {
 		orders: orders.map((row) => ({
 			...row,
-			item_count: Number(row.item_count),
-			items_completed: Number(row.items_completed),
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
 			customer_tier:
 				row.customer_order_count !== null
-					? computeCustomerTier(Number(row.customer_order_count))
+					? computeCustomerTier(row.customer_order_count)
 					: null,
 		})),
 		stages,

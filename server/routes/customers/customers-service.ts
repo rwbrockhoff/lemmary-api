@@ -16,10 +16,7 @@ export async function getCustomerByEmail(
 			qb
 				.selectFrom('order_items')
 				.innerJoin('orders', 'orders.id', 'order_items.order_id')
-				.select([
-					'order_items.order_id',
-					sql<string>`count(*)::text`.as('total'),
-				])
+				.select(['order_items.order_id', sql<number>`count(*)`.as('total')])
 				.where('orders.store_id', '=', store.id)
 				.where('orders.customer_email', '=', email)
 				.groupBy('order_items.order_id'),
@@ -35,7 +32,7 @@ export async function getCustomerByEmail(
 			'orders.subtotal',
 			'orders.grand_total',
 			'orders.customer_name',
-			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.customer_email', '=', email)
@@ -66,7 +63,7 @@ export async function getCustomerByEmail(
 			due_date: order.due_date,
 			subtotal: order.subtotal,
 			grand_total: order.grand_total,
-			item_count: Number(order.item_count),
+			item_count: order.item_count,
 		})),
 	};
 }

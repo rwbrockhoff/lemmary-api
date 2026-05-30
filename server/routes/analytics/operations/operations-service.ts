@@ -140,8 +140,8 @@ export async function getOperations(
 				)
 				.select([
 					'oi.order_id',
-					sql<string>`count(*)::text`.as('total'),
-					sql<string>`count(*) filter (where s.is_complete = true)::text`.as(
+					sql<number>`count(*)`.as('total'),
+					sql<number>`count(*) filter (where s.is_complete = true)`.as(
 						'completed',
 					),
 				])
@@ -164,8 +164,8 @@ export async function getOperations(
 			'orders.grand_total',
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string>`coalesce(item_counts.total, '0')`.as('item_count'),
-			sql<string>`coalesce(item_counts.completed, '0')`.as('items_completed'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
+			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
@@ -187,8 +187,8 @@ export async function getOperations(
 			dueDate,
 			daysUntilDue,
 			grandTotal: row.grand_total,
-			itemCount: Number(row.item_count),
-			itemsCompleted: Number(row.items_completed),
+			itemCount: row.item_count,
+			itemsCompleted: row.items_completed,
 			workflowStageName: row.workflow_stage_name,
 			workflowStageColor: row.workflow_stage_color,
 		};
@@ -201,7 +201,8 @@ export async function getOperations(
 			sql<string>`to_char(date_trunc(${bucketLit}, order_date), 'YYYY-MM-DD')`.as(
 				'date',
 			),
-			sql<string>`count(*)::text`.as('count'),
+			sql<number>`count(*)`.as('count'),
+			// sum on numeric stays as a string to preserve currency precision
 			sql<string>`coalesce(sum(subtotal), 0)::text`.as('revenue'),
 		])
 		.where('store_id', '=', store.id)
@@ -211,12 +212,11 @@ export async function getOperations(
 		.execute();
 
 	const ordersTrend = ordersTrendRaw.map((row) => {
-		const count = Number(row.count);
 		const revenue = Number(row.revenue);
-		const aov = count > 0 ? revenue / count : 0;
+		const aov = row.count > 0 ? revenue / row.count : 0;
 		return {
 			date: row.date,
-			count,
+			count: row.count,
 			revenue: row.revenue,
 			avgOrderValue: aov.toFixed(2),
 		};
@@ -230,8 +230,8 @@ export async function getOperations(
 			previous: revenue.previous_period,
 			changePercent,
 		},
-		ordersInProgress: Number(inProgress.count),
-		ordersCompletedInPeriod: Number(completed.count),
+		ordersInProgress: inProgress.count,
+		ordersCompletedInPeriod: completed.count,
 		avgLeadTime: {
 			days: avgLeadTimeDays,
 			target: store.lead_time_days,

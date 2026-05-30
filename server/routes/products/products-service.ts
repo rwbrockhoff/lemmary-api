@@ -170,9 +170,7 @@ export async function getProduct(userId: string, productId: string) {
 					.execute()
 			: [];
 
-	const countMap = new Map(
-		bomCounts.map((r) => [r.platform_sku, Number(r.count)]),
-	);
+	const countMap = new Map(bomCounts.map((r) => [r.platform_sku, r.count]));
 
 	const variantsWithCounts = variants.map((v) => ({
 		...v,
