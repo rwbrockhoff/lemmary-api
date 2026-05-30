@@ -1,5 +1,6 @@
-import { sql } from 'kysely';
+import { sql, type Transaction, type SqlBool } from 'kysely';
 import { db } from '../../db/connection.js';
+import type { Database } from '../../db/database-types.js';
 import {
 	getStoreForUser,
 	getStoreWithAccessToken,
@@ -86,6 +87,59 @@ function calculateDueDate(
 	return due;
 }
 
+// Reconciles customer's order workflow stage to be completed when
+// order is synced to platform and flag changes from pending -> complete
+
+export async function reconcileCompletedOrderStages(
+	trx: Transaction<Database>,
+	storeId: string,
+) {
+	const finalStage = await trx
+		.selectFrom('order_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('is_complete', '=', true)
+		.executeTakeFirst();
+
+	// store has no complete stage configured - return early
+	if (!finalStage) return 0;
+
+	const outOfSyncOrders = await trx
+		.selectFrom('orders')
+		.select(['id', 'workflow_stage_id'])
+		.where('store_id', '=', storeId)
+		.where('fulfillment_status', '!=', 'pending')
+		.where(sql<SqlBool>`workflow_stage_id is distinct from ${finalStage.id}`)
+		.execute();
+
+	// no orders out of sync - return early
+	if (outOfSyncOrders.length === 0) return 0;
+
+	await trx
+		.updateTable('orders')
+		.set({ workflow_stage_id: finalStage.id, updated_at: new Date() })
+		.where(
+			'id',
+			'in',
+			outOfSyncOrders.map((o) => o.id),
+		)
+		.execute();
+
+	await trx
+		.insertInto('order_stage_history')
+		.values(
+			outOfSyncOrders.map((o) => ({
+				order_id: o.id,
+				from_stage_id: o.workflow_stage_id,
+				to_stage_id: finalStage.id,
+			})),
+		)
+		.execute();
+
+	// return total # of orders updated to is_complete workflow stage
+	return outOfSyncOrders.length;
+}
+
 async function upsertOrders(
 	storeId: string,
 	orders: NormalizedOrder[],
@@ -159,6 +213,8 @@ async function upsertOrders(
 			synced++;
 		}
 
+		await reconcileCompletedOrderStages(trx, storeId);
+
 		return synced;
 	});
 }
@@ -191,10 +247,7 @@ export async function getOrders(
 		.with('customer_counts', (qb) =>
 			qb
 				.selectFrom('orders')
-				.select([
-					'customer_email',
-					sql<string>`count(*)::text`.as('total'),
-				])
+				.select(['customer_email', sql<string>`count(*)::text`.as('total')])
 				.where('store_id', '=', store.id)
 				.where('customer_email', 'is not', null)
 				.groupBy('customer_email'),
@@ -389,10 +442,7 @@ function workflowOrdersBase(storeId: string) {
 		.with('customer_counts', (qb) =>
 			qb
 				.selectFrom('orders')
-				.select([
-					'customer_email',
-					sql<string>`count(*)::text`.as('total'),
-				])
+				.select(['customer_email', sql<string>`count(*)::text`.as('total')])
 				.where('store_id', '=', storeId)
 				.where('customer_email', 'is not', null)
 				.groupBy('customer_email'),
