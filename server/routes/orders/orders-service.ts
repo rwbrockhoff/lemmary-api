@@ -379,7 +379,17 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
-		.select('order_workflow_stages.name as workflow_stage_name')
+		.select([
+			'order_workflow_stages.name as workflow_stage_name',
+			sql<number | null>`case
+				when orders.customer_email is null then null
+				else (
+					select count(*) from orders o2
+					where o2.customer_email = orders.customer_email
+					and o2.store_id = orders.store_id
+				)
+			end`.as('customer_order_count'),
+		])
 		.where('orders.id', '=', orderId)
 		.where('orders.store_id', '=', store.id)
 		.executeTakeFirst();
@@ -406,6 +416,10 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		...order,
 		items,
 		order_url: buildOrderUrl(storeUrl, order.platform_order_id),
+		customer_tier:
+			order.customer_order_count !== null
+				? computeCustomerTier(order.customer_order_count)
+				: null,
 	};
 }
 

@@ -80,6 +80,7 @@ export const OrderSchema = OrderColumnsSchema;
 export const OrderDetailSchema = OrderColumnsSchema.extend({
 	workflow_stage_name: z.string().nullable(),
 	order_url: z.string().nullable(),
+	customer_tier: z.enum(CUSTOMER_TIERS).nullable(),
 	items: z.array(
 		OrderItemSchema.extend({ workflow_stage_name: z.string().nullable() }),
 	),
