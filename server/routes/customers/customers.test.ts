@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
-import { TEST_STORE_ID } from '../../tests/test-constants.js';
+import { TEST_STORE_ID, NON_APP_USER_ID } from '../../tests/test-constants.js';
 import { db } from '../../db/connection.js';
 
 describe('Customers API', () => {
@@ -25,7 +25,10 @@ describe('Customers API', () => {
 			.executeTakeFirstOrThrow();
 
 		const response = await app.inject(
-			withAuth('GET', `/customers/${encodeURIComponent(order.customer_email!)}`),
+			withAuth(
+				'GET',
+				`/customers/${encodeURIComponent(order.customer_email!)}`,
+			),
 		);
 
 		expect(response.statusCode).toBe(200);
@@ -46,7 +49,10 @@ describe('Customers API', () => {
 			.executeTakeFirstOrThrow();
 
 		const response = await app.inject(
-			withAuth('GET', `/customers/${encodeURIComponent(order.customer_email!)}`),
+			withAuth(
+				'GET',
+				`/customers/${encodeURIComponent(order.customer_email!)}`,
+			),
 		);
 
 		expect(response.statusCode).toBe(200);
@@ -69,7 +75,10 @@ describe('Customers API', () => {
 			.executeTakeFirstOrThrow();
 
 		const response = await app.inject(
-			withAuth('GET', `/customers/${encodeURIComponent(order.customer_email!)}`),
+			withAuth(
+				'GET',
+				`/customers/${encodeURIComponent(order.customer_email!)}`,
+			),
 		);
 
 		expect(response.statusCode).toBe(200);
@@ -82,6 +91,16 @@ describe('Customers API', () => {
 	it('GET /customers/:email returns 404 for an unknown customer', async () => {
 		const response = await app.inject(
 			withAuth('GET', '/customers/unknown@example.com'),
+		);
+
+		expect(response.statusCode).toBe(404);
+	});
+
+	it('GET /customers/:email returns 404 when the user has no connected store', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/customers/anyone@example.com', {
+				userId: NON_APP_USER_ID,
+			}),
 		);
 
 		expect(response.statusCode).toBe(404);

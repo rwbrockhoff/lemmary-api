@@ -275,7 +275,7 @@ export async function copyBomFromVariant(
 
 	const sourceItems = await db
 		.selectFrom('bom_items')
-		.selectAll()
+		.select(['material_id', 'measurement', 'piece', 'length', 'quantity'])
 		.where('store_id', '=', store.id)
 		.where('platform_sku', '=', sourceVariant.platform_sku)
 		.orderBy('position', 'asc')
