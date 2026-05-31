@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import { netRevenueSum } from '../../../utils/revenue.js';
 
 export const VALID_RANGES = [30, 90, 365] as const;
 export type OperationsRange = (typeof VALID_RANGES)[number];
@@ -16,6 +17,11 @@ export type OperationsData = {
 	range: OperationsRange;
 	bucket: OperationsBucket;
 	revenue: {
+		current: string;
+		previous: string;
+		changePercent: number;
+	};
+	avgOrderValue: {
 		current: string;
 		previous: string;
 		changePercent: number;
@@ -51,6 +57,7 @@ const emptyDashboard = (range: OperationsRange): OperationsData => ({
 	range,
 	bucket: bucketForRange(range),
 	revenue: { current: '0', previous: '0', changePercent: 0 },
+	avgOrderValue: { current: '0', previous: '0', changePercent: 0 },
 	ordersInProgress: 0,
 	ordersCompletedInPeriod: 0,
 	avgLeadTime: { days: null, target: null },
@@ -71,14 +78,19 @@ export async function getOperations(
 	const periodStart = new Date(now.getTime() - range * dayMs);
 	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
 
+	const currentPeriodFilter = sql`order_date >= ${periodStart}`;
+	const previousPeriodFilter = sql`order_date >= ${previousPeriodStart} and order_date < ${periodStart}`;
+
 	const revenue = await db
 		.selectFrom('orders')
 		.select([
-			sql<string>`coalesce(sum(subtotal) filter (where order_date >= ${periodStart}), 0)::text`.as(
-				'current_period',
+			netRevenueSum(currentPeriodFilter).as('current_period'),
+			netRevenueSum(previousPeriodFilter).as('previous_period'),
+			sql<number>`count(*) filter (where ${currentPeriodFilter})`.as(
+				'current_period_count',
 			),
-			sql<string>`coalesce(sum(subtotal) filter (where order_date >= ${previousPeriodStart} and order_date < ${periodStart}), 0)::text`.as(
-				'previous_period',
+			sql<number>`count(*) filter (where ${previousPeriodFilter})`.as(
+				'previous_period_count',
 			),
 		])
 		.where('store_id', '=', store.id)
@@ -87,6 +99,21 @@ export async function getOperations(
 
 	const currentRevenue = Number(revenue.current_period);
 	const previousRevenue = Number(revenue.previous_period);
+	const currentPeriodOrderCount = revenue.current_period_count;
+	const previousPeriodOrderCount = revenue.previous_period_count;
+	const avgOrderValue =
+		currentPeriodOrderCount > 0 ? currentRevenue / currentPeriodOrderCount : 0;
+	const previousAvgOrderValue =
+		previousPeriodOrderCount > 0
+			? previousRevenue / previousPeriodOrderCount
+			: 0;
+	const avgOrderValueChangePercent =
+		previousAvgOrderValue > 0
+			? Math.round(
+					((avgOrderValue - previousAvgOrderValue) / previousAvgOrderValue) *
+						1000,
+				) / 10
+			: 0;
 	const changePercent =
 		previousRevenue > 0
 			? Math.round(
@@ -203,7 +230,7 @@ export async function getOperations(
 			),
 			sql<number>`count(*)`.as('count'),
 			// sum on numeric stays as a string to preserve currency precision
-			sql<string>`coalesce(sum(subtotal), 0)::text`.as('revenue'),
+			netRevenueSum().as('revenue'),
 		])
 		.where('store_id', '=', store.id)
 		.where('order_date', '>=', periodStart)
@@ -229,6 +256,11 @@ export async function getOperations(
 			current: revenue.current_period,
 			previous: revenue.previous_period,
 			changePercent,
+		},
+		avgOrderValue: {
+			current: avgOrderValue.toFixed(2),
+			previous: previousAvgOrderValue.toFixed(2),
+			changePercent: avgOrderValueChangePercent,
 		},
 		ordersInProgress: inProgress.count,
 		ordersCompletedInPeriod: completed.count,
