@@ -16,6 +16,7 @@ Fastify · Kysely · PostgreSQL (Supabase) · Zod · TypeScript
 - Joins orders against a bill of materials to roll up total materials demand and cut lists per production batch — shared logic in [`batch-aggregation.ts`](server/utils/batch-aggregation.ts)
 - Platform adapter pattern for storefronts. Currently integrated with Squarespace (Shopify and Etsy pending)
 - Read-only demo mode so anyone can explore the full app with sample data — no signup required
+- Unhandled errors are captured to Sentry in production for observability
 
 ## SQL
 
