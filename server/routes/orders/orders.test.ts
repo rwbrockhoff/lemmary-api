@@ -138,12 +138,13 @@ describe('Orders API', () => {
 		expect(response.statusCode).toBe(200);
 		const { orders, stages } = response.json().data;
 		const completedStageIds = new Set(
-			stages.filter((s: { is_complete: boolean }) => s.is_complete).map(
-				(s: { id: string }) => s.id,
-			),
+			stages
+				.filter((s: { is_complete: boolean }) => s.is_complete)
+				.map((s: { id: string }) => s.id),
 		);
-		const completedInResponse = orders.filter((o: { workflow_stage_id: string }) =>
-			completedStageIds.has(o.workflow_stage_id),
+		const completedInResponse = orders.filter(
+			(o: { workflow_stage_id: string }) =>
+				completedStageIds.has(o.workflow_stage_id),
 		);
 		expect(completedInResponse.length).toBeGreaterThan(0);
 	});
@@ -257,6 +258,73 @@ describe('Orders API', () => {
 				);
 
 				// Rollback after assertions
+				throw ROLLBACK;
+			})
+			.catch((err) => {
+				if (err !== ROLLBACK) throw err;
+			});
+	});
+
+	it('reconcileCompletedOrderStages backdates history transitions to fulfilled_on', async () => {
+		const ROLLBACK = new Error('__rollback_test_tx__');
+
+		await db
+			.transaction()
+			.execute(async (trx) => {
+				// grab the first non-final stage so we can put the order into it
+				const firstStage = await trx
+					.selectFrom('order_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', false)
+					.orderBy('position', 'asc')
+					.executeTakeFirstOrThrow();
+
+				// grab a test order to modify
+				const order = await trx
+					.selectFrom('orders')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.executeTakeFirstOrThrow();
+
+				// grab the final (is_complete) stage for the to_stage lookup later
+				const finalStage = await trx
+					.selectFrom('order_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', true)
+					.executeTakeFirstOrThrow();
+
+				const fulfilledOn = new Date('2026-01-15T10:30:00Z');
+
+				// simulate the limbo state - fulfilled on the platform but at a non-final stage
+				await trx
+					.updateTable('orders')
+					.set({
+						fulfillment_status: 'fulfilled',
+						workflow_stage_id: firstStage.id,
+						fulfilled_on: fulfilledOn,
+					})
+					.where('id', '=', order.id)
+					.execute();
+
+				// run our reconcile - this should move the order to the final stage
+				await reconcileCompletedOrderStages(trx, TEST_STORE_ID);
+
+				// find the history row reconcile inserted
+				const history = await trx
+					.selectFrom('order_stage_history')
+					.select('transitioned_at')
+					.where('order_id', '=', order.id)
+					.where('from_stage_id', '=', firstStage.id)
+					.where('to_stage_id', '=', finalStage.id)
+					.executeTakeFirstOrThrow();
+
+				expect(history.transitioned_at.toISOString()).toBe(
+					fulfilledOn.toISOString(),
+				);
+
+				// Rollback to remove our changes for this test
 				throw ROLLBACK;
 			})
 			.catch((err) => {

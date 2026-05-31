@@ -106,7 +106,7 @@ export async function reconcileCompletedOrderStages(
 
 	const outOfSyncOrders = await trx
 		.selectFrom('orders')
-		.select(['id', 'workflow_stage_id'])
+		.select(['id', 'workflow_stage_id', 'fulfilled_on'])
 		.where('store_id', '=', storeId)
 		.where('fulfillment_status', '!=', 'pending')
 		.where(sql<SqlBool>`workflow_stage_id is distinct from ${finalStage.id}`)
@@ -132,6 +132,7 @@ export async function reconcileCompletedOrderStages(
 				order_id: o.id,
 				from_stage_id: o.workflow_stage_id,
 				to_stage_id: finalStage.id,
+				transitioned_at: o.fulfilled_on ?? new Date(),
 			})),
 		)
 		.execute();
