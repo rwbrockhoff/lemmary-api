@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CUSTOMER_TIERS } from '../../../utils/customer-tier.js';
 
 export const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -55,6 +56,7 @@ export const OrderSummarySchema = OrderColumnsSchema.extend({
 	batch_name: z.string().nullable(),
 	batch_id: z.string().nullable(),
 	order_url: z.string().nullable(),
+	customer_tier: z.enum(CUSTOMER_TIERS).nullable(),
 });
 
 export const OrderWithItemsSchema = OrderSummarySchema.extend({
@@ -78,6 +80,7 @@ export const OrderSchema = OrderColumnsSchema;
 export const OrderDetailSchema = OrderColumnsSchema.extend({
 	workflow_stage_name: z.string().nullable(),
 	order_url: z.string().nullable(),
+	customer_tier: z.enum(CUSTOMER_TIERS).nullable(),
 	items: z.array(
 		OrderItemSchema.extend({ workflow_stage_name: z.string().nullable() }),
 	),

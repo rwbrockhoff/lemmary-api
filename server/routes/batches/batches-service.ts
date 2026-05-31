@@ -13,16 +13,16 @@ export async function getBatches(userId: string) {
 		.selectFrom('production_batches')
 		.selectAll()
 		.select([
-			sql<string>`(select count(*) from production_batch_orders where batch_id = production_batches.id)`.as(
+			sql<number>`(select count(*) from production_batch_orders where batch_id = production_batches.id)`.as(
 				'order_count',
 			),
-			sql<string>`(
+			sql<number>`(
 				select coalesce(sum(oi.quantity), 0)
 				from production_batch_orders pbo
 				inner join order_items oi on oi.order_id = pbo.order_id
 				where pbo.batch_id = production_batches.id
 			)`.as('item_count'),
-			sql<string>`(
+			sql<number>`(
 				select coalesce(sum(oi.quantity), 0)
 				from production_batch_orders pbo
 				inner join order_items oi on oi.order_id = pbo.order_id
@@ -35,12 +35,7 @@ export async function getBatches(userId: string) {
 		.orderBy('created_at', 'desc')
 		.execute();
 
-	return batches.map((row) => ({
-		...row,
-		order_count: Number(row.order_count),
-		item_count: Number(row.item_count),
-		items_completed: Number(row.items_completed),
-	}));
+	return batches;
 }
 
 export async function getBatch(userId: string, batchId: string) {
@@ -70,6 +65,7 @@ export async function getBatch(userId: string, batchId: string) {
 			'production_batch_orders.completed',
 			'orders.order_number',
 			'orders.customer_name',
+			'orders.order_notes',
 			'orders.order_date',
 			'orders.due_date',
 			'orders.grand_total',

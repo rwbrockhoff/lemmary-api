@@ -12,6 +12,11 @@ export const OperationsResponseSchema = z.object({
 		previous: z.string(),
 		changePercent: z.number(),
 	}),
+	avgOrderValue: z.object({
+		current: z.string(),
+		previous: z.string(),
+		changePercent: z.number(),
+	}),
 	ordersInProgress: z.number(),
 	ordersCompletedInPeriod: z.number(),
 	avgLeadTime: z.object({

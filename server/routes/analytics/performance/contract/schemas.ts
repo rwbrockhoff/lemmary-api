@@ -46,6 +46,13 @@ export const CouponUsageSchema = z.object({
 	priorTotalCount: z.number(),
 });
 
+export const OnTimeDeliverySchema = z.object({
+	onTimeCount: z.number(),
+	totalCount: z.number(),
+	priorOnTimeCount: z.number(),
+	priorTotalCount: z.number(),
+});
+
 export const MaterialConsumptionSchema = z.object({
 	materials: z.array(
 		z.object({
@@ -64,6 +71,7 @@ export const PerformanceResponseSchema = z
 		topProducts: TopProductsSchema,
 		customerMix: CustomerMixSchema,
 		couponUsage: CouponUsageSchema,
+		onTimeDelivery: OnTimeDeliverySchema,
 		materialConsumption: MaterialConsumptionSchema,
 	})
 	.strict();

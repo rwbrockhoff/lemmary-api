@@ -14,7 +14,7 @@ export async function getProductionSummary(userId: string) {
 			'order_items.product_name',
 			'order_items.variant_label',
 		])
-		.select(sql<string>`sum(order_items.quantity)`.as('total_quantity'))
+		.select(sql<number>`sum(order_items.quantity)`.as('total_quantity'))
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
 		.groupBy([
@@ -26,10 +26,7 @@ export async function getProductionSummary(userId: string) {
 		.orderBy('order_items.variant_label', 'asc')
 		.execute();
 
-	return summary.map((row) => ({
-		...row,
-		total_quantity: Number(row.total_quantity),
-	}));
+	return summary;
 }
 
 export async function getMaterialsReport(userId: string) {
@@ -196,9 +193,10 @@ export async function getMaterialsReport(userId: string) {
 		}
 	}
 
-	const fabric = [...fabricMap.values()].sort((a, b) =>
-		a.material_type.localeCompare(b.material_type) ||
-		a.piece.localeCompare(b.piece),
+	const fabric = [...fabricMap.values()].sort(
+		(a, b) =>
+			a.material_type.localeCompare(b.material_type) ||
+			a.piece.localeCompare(b.piece),
 	);
 
 	const linear = [...linearMap.values()]
@@ -207,14 +205,16 @@ export async function getMaterialsReport(userId: string) {
 			total_feet: Math.round((entry.total_inches / 12) * 100) / 100,
 			feet_to_order: Math.ceil(entry.total_inches / 12),
 		}))
-		.sort((a, b) =>
-			(a.material_type ?? '').localeCompare(b.material_type ?? '') ||
-			(a.width ?? 0) - (b.width ?? 0),
+		.sort(
+			(a, b) =>
+				(a.material_type ?? '').localeCompare(b.material_type ?? '') ||
+				(a.width ?? 0) - (b.width ?? 0),
 		);
 
-	const hardware = [...hardwareMap.values()].sort((a, b) =>
-		a.material_type.localeCompare(b.material_type) ||
-		a.piece.localeCompare(b.piece),
+	const hardware = [...hardwareMap.values()].sort(
+		(a, b) =>
+			a.material_type.localeCompare(b.material_type) ||
+			a.piece.localeCompare(b.piece),
 	);
 
 	return { fabric, linear, hardware, mismatches };

@@ -9,4 +9,5 @@ export const ApiTags = {
 	SETTINGS: 'Settings',
 	STORE: 'Store',
 	WORKFLOW_STAGES: 'Workflow Stages',
+	CUSTOMERS: 'Customers',
 } as const;

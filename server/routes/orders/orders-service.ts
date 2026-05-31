@@ -1,11 +1,13 @@
-import { sql } from 'kysely';
+import { sql, type Transaction, type SqlBool } from 'kysely';
 import { db } from '../../db/connection.js';
+import type { Database } from '../../db/database-types.js';
 import {
 	getStoreForUser,
 	getStoreWithAccessToken,
 	type StoreWithAccessToken,
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
+import { computeCustomerTier } from '../../utils/customer-tier.js';
 import {
 	fetchSquarespaceOrders,
 	type NormalizedOrder,
@@ -85,6 +87,59 @@ function calculateDueDate(
 	return due;
 }
 
+// Reconciles customer's order workflow stage to be completed when
+// order is synced to platform and flag changes from pending -> complete
+
+export async function reconcileCompletedOrderStages(
+	trx: Transaction<Database>,
+	storeId: string,
+) {
+	const finalStage = await trx
+		.selectFrom('order_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('is_complete', '=', true)
+		.executeTakeFirst();
+
+	// store has no complete stage configured - return early
+	if (!finalStage) return 0;
+
+	const outOfSyncOrders = await trx
+		.selectFrom('orders')
+		.select(['id', 'workflow_stage_id'])
+		.where('store_id', '=', storeId)
+		.where('fulfillment_status', '!=', 'pending')
+		.where(sql<SqlBool>`workflow_stage_id is distinct from ${finalStage.id}`)
+		.execute();
+
+	// no orders out of sync - return early
+	if (outOfSyncOrders.length === 0) return 0;
+
+	await trx
+		.updateTable('orders')
+		.set({ workflow_stage_id: finalStage.id, updated_at: sql`NOW()` })
+		.where(
+			'id',
+			'in',
+			outOfSyncOrders.map((o) => o.id),
+		)
+		.execute();
+
+	await trx
+		.insertInto('order_stage_history')
+		.values(
+			outOfSyncOrders.map((o) => ({
+				order_id: o.id,
+				from_stage_id: o.workflow_stage_id,
+				to_stage_id: finalStage.id,
+			})),
+		)
+		.execute();
+
+	// return total # of orders updated to is_complete workflow stage
+	return outOfSyncOrders.length;
+}
+
 async function upsertOrders(
 	storeId: string,
 	orders: NormalizedOrder[],
@@ -122,41 +177,42 @@ async function upsertOrders(
 						promo_code: order.promo_code,
 						discount_total: order.discount_total,
 						workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-						updated_at: new Date(),
+						updated_at: sql`NOW()`,
 					}),
 				)
 				.returning('id')
 				.executeTakeFirstOrThrow();
 
 			if (items.length > 0) {
-				for (const item of items) {
-					const variantJson = toJsonb(item.variant_label);
-
-					await trx
-						.insertInto('order_items')
-						.values({
+				// EXCLUDED.column refers to each row's proposed values on conflict
+				await trx
+					.insertInto('order_items')
+					.values(
+						items.map((item) => ({
 							...item,
-							variant_label: variantJson,
+							variant_label: toJsonb(item.variant_label),
 							order_id: result.id,
 							workflow_stage_id: itemStageId,
-						})
-						.onConflict((oc) =>
-							oc.columns(['order_id', 'platform_line_item_id']).doUpdateSet({
-								product_name: item.product_name,
-								variant_label: variantJson,
-								quantity: item.quantity,
-								unit_price: item.unit_price,
-								image_url: item.image_url,
-								workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-								updated_at: new Date(),
-							}),
-						)
-						.execute();
-				}
+						})),
+					)
+					.onConflict((oc) =>
+						oc.columns(['order_id', 'platform_line_item_id']).doUpdateSet({
+							product_name: (eb) => eb.ref('excluded.product_name'),
+							variant_label: (eb) => eb.ref('excluded.variant_label'),
+							quantity: (eb) => eb.ref('excluded.quantity'),
+							unit_price: (eb) => eb.ref('excluded.unit_price'),
+							image_url: (eb) => eb.ref('excluded.image_url'),
+							workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
+							updated_at: sql`NOW()`,
+						}),
+					)
+					.execute();
 			}
 
 			synced++;
 		}
+
+		await reconcileCompletedOrderStages(trx, storeId);
 
 		return synced;
 	});
@@ -187,6 +243,50 @@ export async function getOrders(
 	const isPending = status === 'pending';
 
 	const baseQuery = db
+		// Per-customer lifetime order counts, scoped to this store
+		.with('customer_counts', (qb) =>
+			qb
+				.selectFrom('orders')
+				.select(['customer_email', sql<number>`count(*)`.as('total')])
+				.where('store_id', '=', store.id)
+				.where('customer_email', 'is not', null)
+				.groupBy('customer_email'),
+		)
+		// Per-order item totals and completed-item counts
+		.with('item_counts', (qb) =>
+			qb
+				.selectFrom('order_items as oi')
+				.innerJoin('orders as o', 'o.id', 'oi.order_id')
+				.leftJoin(
+					'order_item_workflow_stages as s',
+					's.id',
+					'oi.workflow_stage_id',
+				)
+				.select([
+					'oi.order_id',
+					sql<number>`count(*)`.as('total'),
+					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+						'completed',
+					),
+				])
+				.where('o.store_id', '=', store.id)
+				.groupBy('oi.order_id'),
+		)
+		// Most recent batch per order via ROW_NUMBER; we keep rn = 1 in the join
+		.with('latest_batches', (qb) =>
+			qb
+				.selectFrom('production_batch_orders as pbo')
+				.innerJoin('production_batches as pb', 'pb.id', 'pbo.batch_id')
+				.select([
+					'pbo.order_id',
+					'pb.id as batch_id',
+					'pb.name as batch_name',
+					sql<number>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
+						'rn',
+					),
+				])
+				.where('pb.store_id', '=', store.id),
+		)
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
@@ -194,33 +294,25 @@ export async function getOrders(
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
+		.leftJoin(
+			'customer_counts',
+			'customer_counts.customer_email',
+			'orders.customer_email',
+		)
+		.leftJoin('item_counts', 'item_counts.order_id', 'orders.id')
+		.leftJoin('latest_batches', (join) =>
+			join
+				.onRef('latest_batches.order_id', '=', 'orders.id')
+				.on(sql<SqlBool>`latest_batches.rn = 1`),
+		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(
-				select count(*) from order_items oi
-				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
-				where oi.order_id = orders.id and s.is_complete = true
-			)`.as('items_completed'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
+			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string | null>`(
-				select pb.name
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_name'),
-			sql<string | null>`(
-				select pb.id
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_id'),
+			'latest_batches.batch_name',
+			'latest_batches.batch_id',
+			'customer_counts.total as customer_order_count',
 		])
 		.where('orders.store_id', '=', store.id);
 
@@ -263,10 +355,12 @@ export async function getOrders(
 	return {
 		orders: visibleRows.map((row) => ({
 			...row,
-			item_count: Number(row.item_count),
-			items_completed: Number(row.items_completed),
 			items: itemsByOrder.get(row.id) ?? [],
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
+			customer_tier:
+				row.customer_order_count !== null
+					? computeCustomerTier(row.customer_order_count)
+					: null,
 		})),
 		hasMore,
 		lastSyncedAt: store.last_synced_at,
@@ -285,7 +379,17 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
-		.select('order_workflow_stages.name as workflow_stage_name')
+		.select([
+			'order_workflow_stages.name as workflow_stage_name',
+			sql<number | null>`case
+				when orders.customer_email is null then null
+				else (
+					select count(*) from orders o2
+					where o2.customer_email = orders.customer_email
+					and o2.store_id = orders.store_id
+				)
+			end`.as('customer_order_count'),
+		])
 		.where('orders.id', '=', orderId)
 		.where('orders.store_id', '=', store.id)
 		.executeTakeFirst();
@@ -312,6 +416,10 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		...order,
 		items,
 		order_url: buildOrderUrl(storeUrl, order.platform_order_id),
+		customer_tier:
+			order.customer_order_count !== null
+				? computeCustomerTier(order.customer_order_count)
+				: null,
 	};
 }
 
@@ -332,7 +440,7 @@ export async function updateOrderStage(
 
 	const updated = await db
 		.updateTable('orders')
-		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.set({ workflow_stage_id: stageId, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
@@ -355,7 +463,7 @@ export async function updateOrderNotes(
 
 	return db
 		.updateTable('orders')
-		.set({ order_notes: notes, updated_at: new Date() })
+		.set({ order_notes: notes, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
@@ -364,6 +472,47 @@ export async function updateOrderNotes(
 
 function workflowOrdersBase(storeId: string) {
 	return db
+		.with('customer_counts', (qb) =>
+			qb
+				.selectFrom('orders')
+				.select(['customer_email', sql<number>`count(*)`.as('total')])
+				.where('store_id', '=', storeId)
+				.where('customer_email', 'is not', null)
+				.groupBy('customer_email'),
+		)
+		.with('item_counts', (qb) =>
+			qb
+				.selectFrom('order_items as oi')
+				.innerJoin('orders as o', 'o.id', 'oi.order_id')
+				.leftJoin(
+					'order_item_workflow_stages as s',
+					's.id',
+					'oi.workflow_stage_id',
+				)
+				.select([
+					'oi.order_id',
+					sql<number>`count(*)`.as('total'),
+					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+						'completed',
+					),
+				])
+				.where('o.store_id', '=', storeId)
+				.groupBy('oi.order_id'),
+		)
+		.with('latest_batches', (qb) =>
+			qb
+				.selectFrom('production_batch_orders as pbo')
+				.innerJoin('production_batches as pb', 'pb.id', 'pbo.batch_id')
+				.select([
+					'pbo.order_id',
+					'pb.id as batch_id',
+					'pb.name as batch_name',
+					sql<number>`row_number() over (partition by pbo.order_id order by pb.created_at desc)`.as(
+						'rn',
+					),
+				])
+				.where('pb.store_id', '=', storeId),
+		)
 		.selectFrom('orders')
 		.selectAll('orders')
 		.leftJoin(
@@ -371,33 +520,25 @@ function workflowOrdersBase(storeId: string) {
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
+		.leftJoin(
+			'customer_counts',
+			'customer_counts.customer_email',
+			'orders.customer_email',
+		)
+		.leftJoin('item_counts', 'item_counts.order_id', 'orders.id')
+		.leftJoin('latest_batches', (join) =>
+			join
+				.onRef('latest_batches.order_id', '=', 'orders.id')
+				.on(sql<SqlBool>`latest_batches.rn = 1`),
+		)
 		.select([
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(
-				select count(*) from order_items oi
-				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
-				where oi.order_id = orders.id and s.is_complete = true
-			)`.as('items_completed'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
+			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string | null>`(
-				select pb.name
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_name'),
-			sql<string | null>`(
-				select pb.id
-				from production_batch_orders pbo
-				inner join production_batches pb on pb.id = pbo.batch_id
-				where pbo.order_id = orders.id
-				order by pb.created_at desc
-				limit 1
-			)`.as('batch_id'),
+			'latest_batches.batch_name',
+			'latest_batches.batch_id',
+			'customer_counts.total as customer_order_count',
 		])
 		.where('orders.store_id', '=', storeId)
 		.where('orders.fulfillment_status', '=', 'pending');
@@ -440,9 +581,11 @@ export async function getWorkflowBoard(userId: string) {
 	return {
 		orders: orders.map((row) => ({
 			...row,
-			item_count: Number(row.item_count),
-			items_completed: Number(row.items_completed),
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
+			customer_tier:
+				row.customer_order_count !== null
+					? computeCustomerTier(row.customer_order_count)
+					: null,
 		})),
 		stages,
 		activeBatches,
@@ -469,7 +612,7 @@ export async function updateOrderItemStage(
 
 	return db
 		.updateTable('order_items')
-		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.set({ workflow_stage_id: stageId, updated_at: sql`NOW()` })
 		.where('id', '=', itemId)
 		.where('order_id', '=', orderId)
 		.returningAll()
@@ -500,7 +643,7 @@ export async function completeAllOrderItems(userId: string, orderId: string) {
 
 	await db
 		.updateTable('order_items')
-		.set({ workflow_stage_id: completeStage.id, updated_at: new Date() })
+		.set({ workflow_stage_id: completeStage.id, updated_at: sql`NOW()` })
 		.where('order_id', '=', orderId)
 		.execute();
 

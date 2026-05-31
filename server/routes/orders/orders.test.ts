@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
 import { TEST_STORE_ID } from '../../tests/test-constants.js';
 import { db } from '../../db/connection.js';
+import { reconcileCompletedOrderStages } from './orders-service.js';
 
 describe('Orders API', () => {
 	let app: FastifyInstance;
@@ -27,6 +28,19 @@ describe('Orders API', () => {
 		expect(Array.isArray(body.data.orders[0].items)).toBe(true);
 		expect(body.data).toHaveProperty('hasMore');
 		expect(body.data).toHaveProperty('lastSyncedAt');
+	});
+
+	it('GET /orders includes customer_tier on each row', async () => {
+		const response = await app.inject(withAuth('GET', '/orders'));
+
+		expect(response.statusCode).toBe(200);
+		const orders = response.json().data.orders;
+		for (const order of orders) {
+			expect(order).toHaveProperty('customer_tier');
+			if (order.customer_tier !== null) {
+				expect(['new', 'loyal', 'super_fan']).toContain(order.customer_tier);
+			}
+		}
 	});
 
 	it('GET /orders/:orderId returns a single order with items', async () => {
@@ -101,6 +115,21 @@ describe('Orders API', () => {
 		expect(response.json().success).toBe(true);
 	});
 
+	it('GET /orders/workflow-board includes customer_tier on each row', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/orders/workflow-board'),
+		);
+
+		expect(response.statusCode).toBe(200);
+		const orders = response.json().data.orders;
+		for (const order of orders) {
+			expect(order).toHaveProperty('customer_tier');
+			if (order.customer_tier !== null) {
+				expect(['new', 'loyal', 'super_fan']).toContain(order.customer_tier);
+			}
+		}
+	});
+
 	it('PUT /orders/:orderId/notes updates the notes', async () => {
 		const order = await db
 			.selectFrom('orders')
@@ -134,6 +163,105 @@ describe('Orders API', () => {
 
 		expect(response.statusCode).toBe(200);
 		expect(response.json().data.orderId).toBe(order.id);
+	});
+
+	it('reconcileCompletedOrderStages advances completed orders to the final stage and logs history', async () => {
+		// Run the whole test inside a transaction we deliberately roll back at the end
+		// so our setup mutations don't leak into other tests
+
+		const ROLLBACK = new Error('__rollback_test_tx__');
+
+		await db
+			.transaction()
+			.execute(async (trx) => {
+				const finalStage = await trx
+					.selectFrom('order_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', true)
+					.executeTakeFirstOrThrow();
+
+				const nonFinalStage = await trx
+					.selectFrom('order_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', false)
+					.executeTakeFirstOrThrow();
+
+				const order = await trx
+					.selectFrom('orders')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.executeTakeFirstOrThrow();
+
+				// Simulate the limbo state: completed on the platform but stuck
+				// at a mid-pipeline workflow stage
+				await trx
+					.updateTable('orders')
+					.set({
+						fulfillment_status: 'fulfilled',
+						workflow_stage_id: nonFinalStage.id,
+					})
+					.where('id', '=', order.id)
+					.execute();
+
+				const historyBefore = await trx
+					.selectFrom('order_stage_history')
+					.select(trx.fn.count<number>('id').as('count'))
+					.where('order_id', '=', order.id)
+					.executeTakeFirstOrThrow();
+
+				const updatedCount = await reconcileCompletedOrderStages(
+					trx,
+					TEST_STORE_ID,
+				);
+
+				expect(updatedCount).toBeGreaterThan(0);
+
+				// Order should now be at the store's final stage
+				const after = await trx
+					.selectFrom('orders')
+					.select('workflow_stage_id')
+					.where('id', '=', order.id)
+					.executeTakeFirstOrThrow();
+
+				expect(after.workflow_stage_id).toBe(finalStage.id);
+
+				// The transition should be in order stage history table
+				const historyAfter = await trx
+					.selectFrom('order_stage_history')
+					.select(trx.fn.count<number>('id').as('count'))
+					.where('order_id', '=', order.id)
+					.executeTakeFirstOrThrow();
+
+				expect(Number(historyAfter.count)).toBe(
+					Number(historyBefore.count) + 1,
+				);
+
+				// Rollback after assertions
+				throw ROLLBACK;
+			})
+			.catch((err) => {
+				if (err !== ROLLBACK) throw err;
+			});
+	});
+
+	it('reconcileCompletedOrderStages is a no-op when nothing is out of sync', async () => {
+		const ROLLBACK = new Error('__rollback_test_tx__');
+
+		await db
+			.transaction()
+			.execute(async (trx) => {
+				const updatedCount = await reconcileCompletedOrderStages(
+					trx,
+					TEST_STORE_ID,
+				);
+				expect(updatedCount).toBe(0);
+				throw ROLLBACK;
+			})
+			.catch((err) => {
+				if (err !== ROLLBACK) throw err;
+			});
 	});
 
 	it('PUT /orders/:orderId/items/:itemId/stage updates an order item stage', async () => {

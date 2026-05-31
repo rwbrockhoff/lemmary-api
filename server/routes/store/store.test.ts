@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
-import { TEST_STORE_ID } from '../../tests/test-constants.js';
+import { TEST_STORE_ID, NON_APP_USER_ID } from '../../tests/test-constants.js';
 import { db } from '../../db/connection.js';
 
 describe('Store API', () => {
@@ -59,5 +59,16 @@ describe('Store API', () => {
 				payload: { leadTimeDays: 14, applyLeadTimeToOpenOrders: true },
 			}),
 		);
+	});
+
+	it('PATCH /store returns 404 when the user has no connected store', async () => {
+		const response = await app.inject(
+			withAuth('PATCH', '/store', {
+				userId: NON_APP_USER_ID,
+				payload: { storeName: 'Twelve Stitch' },
+			}),
+		);
+
+		expect(response.statusCode).toBe(404);
 	});
 });

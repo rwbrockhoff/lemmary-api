@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 
@@ -33,7 +34,7 @@ export async function updateLeadTime(
 
 	await db
 		.updateTable('stores')
-		.set({ lead_time_days: leadTimeDays, updated_at: new Date() })
+		.set({ lead_time_days: leadTimeDays, updated_at: sql`NOW()` })
 		.where('id', '=', store.id)
 		.execute();
 

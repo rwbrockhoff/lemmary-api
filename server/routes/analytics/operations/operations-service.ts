@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import { netRevenueSum } from '../../../utils/revenue.js';
 
 export const VALID_RANGES = [30, 90, 365] as const;
 export type OperationsRange = (typeof VALID_RANGES)[number];
@@ -16,6 +17,11 @@ export type OperationsData = {
 	range: OperationsRange;
 	bucket: OperationsBucket;
 	revenue: {
+		current: string;
+		previous: string;
+		changePercent: number;
+	};
+	avgOrderValue: {
 		current: string;
 		previous: string;
 		changePercent: number;
@@ -51,6 +57,7 @@ const emptyDashboard = (range: OperationsRange): OperationsData => ({
 	range,
 	bucket: bucketForRange(range),
 	revenue: { current: '0', previous: '0', changePercent: 0 },
+	avgOrderValue: { current: '0', previous: '0', changePercent: 0 },
 	ordersInProgress: 0,
 	ordersCompletedInPeriod: 0,
 	avgLeadTime: { days: null, target: null },
@@ -71,14 +78,19 @@ export async function getOperations(
 	const periodStart = new Date(now.getTime() - range * dayMs);
 	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
 
+	const currentPeriodFilter = sql`order_date >= ${periodStart}`;
+	const previousPeriodFilter = sql`order_date >= ${previousPeriodStart} and order_date < ${periodStart}`;
+
 	const revenue = await db
 		.selectFrom('orders')
 		.select([
-			sql<string>`coalesce(sum(subtotal) filter (where order_date >= ${periodStart}), 0)::text`.as(
-				'current_period',
+			netRevenueSum(currentPeriodFilter).as('current_period'),
+			netRevenueSum(previousPeriodFilter).as('previous_period'),
+			sql<number>`count(*) filter (where ${currentPeriodFilter})`.as(
+				'current_period_count',
 			),
-			sql<string>`coalesce(sum(subtotal) filter (where order_date >= ${previousPeriodStart} and order_date < ${periodStart}), 0)::text`.as(
-				'previous_period',
+			sql<number>`count(*) filter (where ${previousPeriodFilter})`.as(
+				'previous_period_count',
 			),
 		])
 		.where('store_id', '=', store.id)
@@ -87,6 +99,21 @@ export async function getOperations(
 
 	const currentRevenue = Number(revenue.current_period);
 	const previousRevenue = Number(revenue.previous_period);
+	const currentPeriodOrderCount = revenue.current_period_count;
+	const previousPeriodOrderCount = revenue.previous_period_count;
+	const avgOrderValue =
+		currentPeriodOrderCount > 0 ? currentRevenue / currentPeriodOrderCount : 0;
+	const previousAvgOrderValue =
+		previousPeriodOrderCount > 0
+			? previousRevenue / previousPeriodOrderCount
+			: 0;
+	const avgOrderValueChangePercent =
+		previousAvgOrderValue > 0
+			? Math.round(
+					((avgOrderValue - previousAvgOrderValue) / previousAvgOrderValue) *
+						1000,
+				) / 10
+			: 0;
 	const changePercent =
 		previousRevenue > 0
 			? Math.round(
@@ -128,12 +155,33 @@ export async function getOperations(
 			: null;
 
 	const dueSoonRaw = await db
+		// Per-order item totals and completed-item counts
+		.with('item_counts', (qb) =>
+			qb
+				.selectFrom('order_items as oi')
+				.innerJoin('orders as o', 'o.id', 'oi.order_id')
+				.leftJoin(
+					'order_item_workflow_stages as s',
+					's.id',
+					'oi.workflow_stage_id',
+				)
+				.select([
+					'oi.order_id',
+					sql<number>`count(*)`.as('total'),
+					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+						'completed',
+					),
+				])
+				.where('o.store_id', '=', store.id)
+				.groupBy('oi.order_id'),
+		)
 		.selectFrom('orders')
 		.leftJoin(
 			'order_workflow_stages',
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
+		.leftJoin('item_counts', 'item_counts.order_id', 'orders.id')
 		.select([
 			'orders.id',
 			'orders.order_number',
@@ -143,14 +191,8 @@ export async function getOperations(
 			'orders.grand_total',
 			'order_workflow_stages.name as workflow_stage_name',
 			'order_workflow_stages.color as workflow_stage_color',
-			sql<string>`(select count(*) from order_items where order_items.order_id = orders.id)`.as(
-				'item_count',
-			),
-			sql<string>`(
-				select count(*) from order_items oi
-				inner join order_item_workflow_stages s on s.id = oi.workflow_stage_id
-				where oi.order_id = orders.id and s.is_complete = true
-			)`.as('items_completed'),
+			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
+			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
@@ -172,8 +214,8 @@ export async function getOperations(
 			dueDate,
 			daysUntilDue,
 			grandTotal: row.grand_total,
-			itemCount: Number(row.item_count),
-			itemsCompleted: Number(row.items_completed),
+			itemCount: row.item_count,
+			itemsCompleted: row.items_completed,
 			workflowStageName: row.workflow_stage_name,
 			workflowStageColor: row.workflow_stage_color,
 		};
@@ -186,8 +228,9 @@ export async function getOperations(
 			sql<string>`to_char(date_trunc(${bucketLit}, order_date), 'YYYY-MM-DD')`.as(
 				'date',
 			),
-			sql<string>`count(*)::text`.as('count'),
-			sql<string>`coalesce(sum(subtotal), 0)::text`.as('revenue'),
+			sql<number>`count(*)`.as('count'),
+			// sum on numeric stays as a string to preserve currency precision
+			netRevenueSum().as('revenue'),
 		])
 		.where('store_id', '=', store.id)
 		.where('order_date', '>=', periodStart)
@@ -196,12 +239,11 @@ export async function getOperations(
 		.execute();
 
 	const ordersTrend = ordersTrendRaw.map((row) => {
-		const count = Number(row.count);
 		const revenue = Number(row.revenue);
-		const aov = count > 0 ? revenue / count : 0;
+		const aov = row.count > 0 ? revenue / row.count : 0;
 		return {
 			date: row.date,
-			count,
+			count: row.count,
 			revenue: row.revenue,
 			avgOrderValue: aov.toFixed(2),
 		};
@@ -215,8 +257,13 @@ export async function getOperations(
 			previous: revenue.previous_period,
 			changePercent,
 		},
-		ordersInProgress: Number(inProgress.count),
-		ordersCompletedInPeriod: Number(completed.count),
+		avgOrderValue: {
+			current: avgOrderValue.toFixed(2),
+			previous: previousAvgOrderValue.toFixed(2),
+			changePercent: avgOrderValueChangePercent,
+		},
+		ordersInProgress: inProgress.count,
+		ordersCompletedInPeriod: completed.count,
 		avgLeadTime: {
 			days: avgLeadTimeDays,
 			target: store.lead_time_days,

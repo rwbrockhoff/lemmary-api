@@ -213,7 +213,7 @@ export async function updateBomItem(
 			length: input.length,
 			quantity: input.quantity,
 			material_id: materialId,
-			updated_at: new Date(),
+			updated_at: sql`NOW()`,
 		})
 		.where('id', '=', bomItemId)
 		.where('store_id', '=', store.id)
@@ -275,7 +275,7 @@ export async function copyBomFromVariant(
 
 	const sourceItems = await db
 		.selectFrom('bom_items')
-		.selectAll()
+		.select(['material_id', 'measurement', 'piece', 'length', 'quantity'])
 		.where('store_id', '=', store.id)
 		.where('platform_sku', '=', sourceVariant.platform_sku)
 		.orderBy('position', 'asc')
@@ -422,7 +422,7 @@ export async function getOrCreateMaterial(
 		if (existing.purchase_url !== purchaseUrl) {
 			await db
 				.updateTable('materials')
-				.set({ purchase_url: purchaseUrl, updated_at: new Date() })
+				.set({ purchase_url: purchaseUrl, updated_at: sql`NOW()` })
 				.where('id', '=', existing.id)
 				.execute();
 		}
