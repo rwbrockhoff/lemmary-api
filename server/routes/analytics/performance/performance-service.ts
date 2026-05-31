@@ -175,6 +175,53 @@ async function getCouponUsage(storeId: string, rangeDays: number) {
 	};
 }
 
+type OnTimeDeliveryRow = {
+	current_on_time: number;
+	current_total: number;
+	prior_on_time: number;
+	prior_total: number;
+};
+
+async function getOnTimeDelivery(storeId: string, rangeDays: number) {
+	const rows = await sql<OnTimeDeliveryRow>`
+		SELECT
+			COUNT(*) FILTER (
+				WHERE fulfilled_on IS NOT NULL
+					AND due_date IS NOT NULL
+					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_on <= due_date
+			) AS current_on_time,
+			COUNT(*) FILTER (
+				WHERE fulfilled_on IS NOT NULL
+					AND due_date IS NOT NULL
+					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays}
+			) AS current_total,
+			COUNT(*) FILTER (
+				WHERE fulfilled_on IS NOT NULL
+					AND due_date IS NOT NULL
+					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+					AND fulfilled_on < NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_on <= due_date
+			) AS prior_on_time,
+			COUNT(*) FILTER (
+				WHERE fulfilled_on IS NOT NULL
+					AND due_date IS NOT NULL
+					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+					AND fulfilled_on < NOW() - INTERVAL '1 day' * ${rangeDays}
+			) AS prior_total
+		FROM orders
+		WHERE store_id = ${storeId}
+	`.execute(db);
+
+	const row = rows.rows[0];
+	return {
+		onTimeCount: row?.current_on_time ?? 0,
+		totalCount: row?.current_total ?? 0,
+		priorOnTimeCount: row?.prior_on_time ?? 0,
+		priorTotalCount: row?.prior_total ?? 0,
+	};
+}
+
 type MaterialConsumptionRow = {
 	material_type: string;
 	color: string | null;
@@ -307,6 +354,12 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 				priorNoPromoCount: 0,
 				priorTotalCount: 0,
 			},
+			onTimeDelivery: {
+				onTimeCount: 0,
+				totalCount: 0,
+				priorOnTimeCount: 0,
+				priorTotalCount: 0,
+			},
 			materialConsumption: { materials: [] },
 		};
 	}
@@ -318,12 +371,14 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		topProducts,
 		customerMix,
 		couponUsage,
+		onTimeDelivery,
 		materialConsumption,
 	] = await Promise.all([
 		getStageBottleneck(store.id, rangeDays),
 		getTopProducts(store.id, rangeDays),
 		getCustomerMix(store.id, rangeDays),
 		getCouponUsage(store.id, rangeDays),
+		getOnTimeDelivery(store.id, rangeDays),
 		getMaterialConsumption(store.id, rangeDays),
 	]);
 
@@ -332,6 +387,7 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		topProducts,
 		customerMix,
 		couponUsage,
+		onTimeDelivery,
 		materialConsumption,
 	};
 }
