@@ -313,6 +313,77 @@ describe('Orders API', () => {
 			});
 	});
 
+	it('reconcileCompletedOrderStages pushes order items into the complete item stage', async () => {
+		const ROLLBACK = new Error('__rollback_test_tx__');
+
+		await db
+			.transaction()
+			.execute(async (trx) => {
+				// grab non-final order + item stages so we can park the order/items there
+				const nonFinalOrderStage = await trx
+					.selectFrom('order_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', false)
+					.executeTakeFirstOrThrow();
+
+				const nonFinalItemStage = await trx
+					.selectFrom('order_item_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', false)
+					.executeTakeFirstOrThrow();
+
+				const finalItemStage = await trx
+					.selectFrom('order_item_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', true)
+					.executeTakeFirstOrThrow();
+
+				// grab a test order and force its items into a non-final item stage
+				const order = await trx
+					.selectFrom('orders')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.executeTakeFirstOrThrow();
+
+				await trx
+					.updateTable('orders')
+					.set({
+						fulfillment_status: 'fulfilled',
+						workflow_stage_id: nonFinalOrderStage.id,
+					})
+					.where('id', '=', order.id)
+					.execute();
+
+				await trx
+					.updateTable('order_items')
+					.set({ workflow_stage_id: nonFinalItemStage.id })
+					.where('order_id', '=', order.id)
+					.execute();
+
+				await reconcileCompletedOrderStages(trx, TEST_STORE_ID);
+
+				// every item on the order should now be at the final item stage
+				const items = await trx
+					.selectFrom('order_items')
+					.select('workflow_stage_id')
+					.where('order_id', '=', order.id)
+					.execute();
+
+				expect(items.length).toBeGreaterThan(0);
+				for (const item of items) {
+					expect(item.workflow_stage_id).toBe(finalItemStage.id);
+				}
+
+				throw ROLLBACK;
+			})
+			.catch((err) => {
+				if (err !== ROLLBACK) throw err;
+			});
+	});
+
 	it('reconcileCompletedOrderStages backdates history transitions to fulfilled_on', async () => {
 		const ROLLBACK = new Error('__rollback_test_tx__');
 

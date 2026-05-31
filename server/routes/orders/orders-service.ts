@@ -29,6 +29,19 @@ function buildOrderUrl(
 		: null;
 }
 
+function formatWorkflowOrder<
+	T extends { platform_order_id: string; customer_order_count: number | null },
+>(row: T, storeUrl: string | null) {
+	return {
+		...row,
+		order_url: buildOrderUrl(storeUrl, row.platform_order_id),
+		customer_tier:
+			row.customer_order_count !== null
+				? computeCustomerTier(row.customer_order_count)
+				: null,
+	};
+}
+
 function logStageTransition(
 	orderId: string,
 	fromStageId: string | null,
@@ -136,6 +149,30 @@ export async function reconcileCompletedOrderStages(
 			})),
 		)
 		.execute();
+
+	// reconcile order items to the complete stage too
+	const finalItemStage = await trx
+		.selectFrom('order_item_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('is_complete', '=', true)
+		.executeTakeFirst();
+
+	if (finalItemStage) {
+		await trx
+			.updateTable('order_items')
+			.set({ workflow_stage_id: finalItemStage.id, updated_at: sql`NOW()` })
+			.where(
+				sql<SqlBool>`order_id in (
+					select id from orders
+					where store_id = ${storeId} and workflow_stage_id = ${finalStage.id}
+				)`,
+			)
+			.where(
+				sql<SqlBool>`workflow_stage_id is distinct from ${finalItemStage.id}`,
+			)
+			.execute();
+	}
 
 	// return total # of orders updated to is_complete workflow stage
 	return outOfSyncOrders.length;
@@ -320,6 +357,8 @@ export async function getOrders(
 	const filteredQuery = isPending
 		? baseQuery
 				.where('orders.fulfillment_status', '=', 'pending')
+				// exclude orders the user has manually placed in a completed stage
+				.where(sql<SqlBool>`order_workflow_stages.is_complete is not true`)
 				.orderBy('order_date', 'asc')
 		: baseQuery
 				.where('orders.fulfillment_status', '!=', 'pending')
@@ -562,6 +601,7 @@ export async function getWorkflowBoard(userId: string) {
 			workflowOrdersBase(store.id)
 				.where('order_workflow_stages.is_complete', '=', true)
 				.orderBy('orders.fulfilled_on', 'desc')
+				.orderBy('orders.order_date', 'desc')
 				.limit(COMPLETED_PAGE_SIZE + 1)
 				.execute(),
 			db
@@ -586,20 +626,11 @@ export async function getWorkflowBoard(userId: string) {
 
 	const storeUrl = getStoreUrl(store.platform_config);
 
-	const enrich = (row: (typeof openOrders)[number]) => ({
-		...row,
-		order_url: buildOrderUrl(storeUrl, row.platform_order_id),
-		customer_tier:
-			row.customer_order_count !== null
-				? computeCustomerTier(row.customer_order_count)
-				: null,
-	});
-
 	const stagesWithOrders = stages.map((stage) => {
 		const sourceOrders = stage.is_complete ? completedSlice : openOrders;
 		const ordersInStage = sourceOrders
 			.filter((o) => o.workflow_stage_id === stage.id)
-			.map(enrich);
+			.map((row) => formatWorkflowOrder(row, storeUrl));
 		return {
 			...stage,
 			orders: ordersInStage,
@@ -633,29 +664,24 @@ export async function getStageOrders(
 	if (!stage) return null;
 
 	// fetch one extra row to detect hasMore without a count query
-	const rows = await workflowOrdersBase(store.id)
+	const baseQuery = workflowOrdersBase(store.id)
 		.where('orders.workflow_stage_id', '=', stageId)
-		.orderBy(
-			stage.is_complete ? 'orders.fulfilled_on' : 'order_date',
-			stage.is_complete ? 'desc' : 'asc',
-		)
 		.limit(limit + 1)
-		.offset(offset)
-		.execute();
+		.offset(offset);
+
+	const sortedQuery = stage.is_complete
+		? baseQuery
+				.orderBy('orders.fulfilled_on', 'desc')
+				.orderBy('orders.order_date', 'desc')
+		: baseQuery.orderBy('order_date', 'asc');
+
+	const rows = await sortedQuery.execute();
 
 	const hasMore = rows.length > limit;
 	const sliced = hasMore ? rows.slice(0, limit) : rows;
 
 	const storeUrl = getStoreUrl(store.platform_config);
-
-	const orders = sliced.map((row) => ({
-		...row,
-		order_url: buildOrderUrl(storeUrl, row.platform_order_id),
-		customer_tier:
-			row.customer_order_count !== null
-				? computeCustomerTier(row.customer_order_count)
-				: null,
-	}));
+	const orders = sliced.map((row) => formatWorkflowOrder(row, storeUrl));
 
 	return { orders, hasMore };
 }
