@@ -332,6 +332,57 @@ describe('Orders API', () => {
 			});
 	});
 
+	it('reconcileCompletedOrderStages does not affect cancelled orders', async () => {
+		const ROLLBACK = new Error('__rollback_test_tx__');
+
+		await db
+			.transaction()
+			.execute(async (trx) => {
+				// grab a non-final stage to park the canceled order in
+				const nonFinalStage = await trx
+					.selectFrom('order_workflow_stages')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.where('is_complete', '=', false)
+					.executeTakeFirstOrThrow();
+
+				// grab a test order
+				const order = await trx
+					.selectFrom('orders')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID)
+					.executeTakeFirstOrThrow();
+
+				// set the order as canceled in a non-final stage
+				await trx
+					.updateTable('orders')
+					.set({
+						fulfillment_status: 'canceled',
+						workflow_stage_id: nonFinalStage.id,
+					})
+					.where('id', '=', order.id)
+					.execute();
+
+				// reconcile should ignore canceled orders
+				await reconcileCompletedOrderStages(trx, TEST_STORE_ID);
+
+				// verify the order is still at the non-final stage
+				const after = await trx
+					.selectFrom('orders')
+					.select('workflow_stage_id')
+					.where('id', '=', order.id)
+					.executeTakeFirstOrThrow();
+
+				expect(after.workflow_stage_id).toBe(nonFinalStage.id);
+
+				// Rollback changes to DB after test
+				throw ROLLBACK;
+			})
+			.catch((err) => {
+				if (err !== ROLLBACK) throw err;
+			});
+	});
+
 	it('reconcileCompletedOrderStages is a no-op when nothing is out of sync', async () => {
 		const ROLLBACK = new Error('__rollback_test_tx__');
 

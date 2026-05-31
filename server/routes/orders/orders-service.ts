@@ -108,7 +108,7 @@ export async function reconcileCompletedOrderStages(
 		.selectFrom('orders')
 		.select(['id', 'workflow_stage_id', 'fulfilled_on'])
 		.where('store_id', '=', storeId)
-		.where('fulfillment_status', '!=', 'pending')
+		.where('fulfillment_status', '=', 'fulfilled')
 		.where(sql<SqlBool>`workflow_stage_id is distinct from ${finalStage.id}`)
 		.execute();
 
