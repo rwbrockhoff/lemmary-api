@@ -544,7 +544,7 @@ function workflowOrdersBase(storeId: string) {
 		.where('orders.store_id', '=', storeId);
 }
 
-const COMPLETED_PAGE_SIZE = 15;
+const COMPLETED_PAGE_SIZE = 10;
 
 export async function getWorkflowBoard(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -561,7 +561,7 @@ export async function getWorkflowBoard(userId: string) {
 			// fetch one extra row to detect hasMore without a count query
 			workflowOrdersBase(store.id)
 				.where('order_workflow_stages.is_complete', '=', true)
-				.orderBy('orders.updated_at', 'desc')
+				.orderBy('orders.fulfilled_on', 'desc')
 				.limit(COMPLETED_PAGE_SIZE + 1)
 				.execute(),
 			db
@@ -636,7 +636,7 @@ export async function getStageOrders(
 	const rows = await workflowOrdersBase(store.id)
 		.where('orders.workflow_stage_id', '=', stageId)
 		.orderBy(
-			stage.is_complete ? 'orders.updated_at' : 'order_date',
+			stage.is_complete ? 'orders.fulfilled_on' : 'order_date',
 			stage.is_complete ? 'desc' : 'asc',
 		)
 		.limit(limit + 1)

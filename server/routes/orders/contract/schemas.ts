@@ -114,7 +114,7 @@ export const StageOrdersParamSchema = z.object({
 });
 
 export const StageOrdersQuerySchema = z.object({
-	limit: z.coerce.number().int().min(1).max(50).default(15),
+	limit: z.coerce.number().int().min(1).max(50).default(10),
 	offset: z.coerce.number().int().min(0).default(0),
 });
 
