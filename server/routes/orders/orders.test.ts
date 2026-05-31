@@ -130,6 +130,24 @@ describe('Orders API', () => {
 		}
 	});
 
+	it('GET /orders/workflow-board includes orders in the completed stage', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/orders/workflow-board'),
+		);
+
+		expect(response.statusCode).toBe(200);
+		const { orders, stages } = response.json().data;
+		const completedStageIds = new Set(
+			stages.filter((s: { is_complete: boolean }) => s.is_complete).map(
+				(s: { id: string }) => s.id,
+			),
+		);
+		const completedInResponse = orders.filter((o: { workflow_stage_id: string }) =>
+			completedStageIds.has(o.workflow_stage_id),
+		);
+		expect(completedInResponse.length).toBeGreaterThan(0);
+	});
+
 	it('PUT /orders/:orderId/notes updates the notes', async () => {
 		const order = await db
 			.selectFrom('orders')

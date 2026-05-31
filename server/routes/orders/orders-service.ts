@@ -540,8 +540,7 @@ function workflowOrdersBase(storeId: string) {
 			'latest_batches.batch_id',
 			'customer_counts.total as customer_order_count',
 		])
-		.where('orders.store_id', '=', storeId)
-		.where('orders.fulfillment_status', '=', 'pending');
+		.where('orders.store_id', '=', storeId);
 }
 
 export async function getWorkflowBoard(userId: string) {
@@ -550,6 +549,7 @@ export async function getWorkflowBoard(userId: string) {
 
 	const openOrders = await workflowOrdersBase(store.id)
 		.where('order_workflow_stages.is_complete', '!=', true)
+		.where('orders.fulfillment_status', '=', 'pending')
 		.orderBy('order_date', 'asc')
 		.execute();
 
