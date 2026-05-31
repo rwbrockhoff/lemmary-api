@@ -121,11 +121,13 @@ describe('Orders API', () => {
 		);
 
 		expect(response.statusCode).toBe(200);
-		const orders = response.json().data.orders;
-		for (const order of orders) {
-			expect(order).toHaveProperty('customer_tier');
-			if (order.customer_tier !== null) {
-				expect(['new', 'loyal', 'super_fan']).toContain(order.customer_tier);
+		const stages = response.json().data.stages;
+		for (const stage of stages) {
+			for (const order of stage.orders) {
+				expect(order).toHaveProperty('customer_tier');
+				if (order.customer_tier !== null) {
+					expect(['new', 'loyal', 'super_fan']).toContain(order.customer_tier);
+				}
 			}
 		}
 	});
@@ -136,17 +138,25 @@ describe('Orders API', () => {
 		);
 
 		expect(response.statusCode).toBe(200);
-		const { orders, stages } = response.json().data;
-		const completedStageIds = new Set(
-			stages
-				.filter((s: { is_complete: boolean }) => s.is_complete)
-				.map((s: { id: string }) => s.id),
+		const stages = response.json().data.stages;
+		const completedStage = stages.find(
+			(s: { is_complete: boolean }) => s.is_complete,
 		);
-		const completedInResponse = orders.filter(
-			(o: { workflow_stage_id: string }) =>
-				completedStageIds.has(o.workflow_stage_id),
+		expect(completedStage).toBeDefined();
+		expect(completedStage.orders.length).toBeGreaterThan(0);
+	});
+
+	it('GET /orders/workflow-board returns hasMore on every stage', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/orders/workflow-board'),
 		);
-		expect(completedInResponse.length).toBeGreaterThan(0);
+
+		expect(response.statusCode).toBe(200);
+		const stages = response.json().data.stages;
+		for (const stage of stages) {
+			expect(stage).toHaveProperty('hasMore');
+			expect(typeof stage.hasMore).toBe('boolean');
+		}
 	});
 
 	it('PUT /orders/:orderId/notes updates the notes', async () => {

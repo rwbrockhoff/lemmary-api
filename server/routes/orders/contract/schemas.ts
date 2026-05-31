@@ -99,9 +99,13 @@ export const WorkflowStageSchema = z.object({
 	updated_at: z.date(),
 });
 
-export const WorkflowBoardResponseSchema = z.object({
+export const WorkflowStageWithOrdersSchema = WorkflowStageSchema.extend({
 	orders: z.array(OrderSummarySchema),
-	stages: z.array(WorkflowStageSchema),
+	hasMore: z.boolean(),
+});
+
+export const WorkflowBoardResponseSchema = z.object({
+	stages: z.array(WorkflowStageWithOrdersSchema),
 	activeBatches: z.array(z.object({ id: z.string(), name: z.string() })),
 });
 
