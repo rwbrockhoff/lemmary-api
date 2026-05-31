@@ -72,11 +72,11 @@ export async function updateStore(
 			const newDueDate =
 				updates.leadTimeDays === null
 					? sql<Date | null>`NULL`
-					: sql<Date>`order_date + (${updates.leadTimeDays} || ' days')::interval`;
+					: sql<Date>`order_date + INTERVAL '1 day' * ${updates.leadTimeDays}`;
 
 			await trx
 				.updateTable('orders')
-				.set({ due_date: newDueDate, updated_at: new Date() })
+				.set({ due_date: newDueDate, updated_at: sql`NOW()` })
 				.where('store_id', '=', store.id)
 				.where('fulfillment_status', '=', 'pending')
 				.execute();

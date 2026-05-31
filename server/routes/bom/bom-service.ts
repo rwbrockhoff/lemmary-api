@@ -213,7 +213,7 @@ export async function updateBomItem(
 			length: input.length,
 			quantity: input.quantity,
 			material_id: materialId,
-			updated_at: new Date(),
+			updated_at: sql`NOW()`,
 		})
 		.where('id', '=', bomItemId)
 		.where('store_id', '=', store.id)
@@ -422,7 +422,7 @@ export async function getOrCreateMaterial(
 		if (existing.purchase_url !== purchaseUrl) {
 			await db
 				.updateTable('materials')
-				.set({ purchase_url: purchaseUrl, updated_at: new Date() })
+				.set({ purchase_url: purchaseUrl, updated_at: sql`NOW()` })
 				.where('id', '=', existing.id)
 				.execute();
 		}

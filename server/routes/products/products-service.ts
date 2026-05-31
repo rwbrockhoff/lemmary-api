@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import {
 	getStoreForUser,
@@ -38,7 +39,7 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 						is_visible: product.is_visible,
 						image_url: product.image_url,
 						product_url: product.product_url,
-						updated_at: new Date(),
+						updated_at: sql`NOW()`,
 					}),
 				)
 				.returning('id')
@@ -63,7 +64,7 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 							stock_quantity: (eb) => eb.ref('excluded.stock_quantity'),
 							stock_unlimited: (eb) => eb.ref('excluded.stock_unlimited'),
 							image_url: (eb) => eb.ref('excluded.image_url'),
-							updated_at: new Date(),
+							updated_at: sql`NOW()`,
 						}),
 					)
 					.execute();

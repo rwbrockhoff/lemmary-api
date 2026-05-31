@@ -117,7 +117,7 @@ export async function reconcileCompletedOrderStages(
 
 	await trx
 		.updateTable('orders')
-		.set({ workflow_stage_id: finalStage.id, updated_at: new Date() })
+		.set({ workflow_stage_id: finalStage.id, updated_at: sql`NOW()` })
 		.where(
 			'id',
 			'in',
@@ -177,7 +177,7 @@ async function upsertOrders(
 						promo_code: order.promo_code,
 						discount_total: order.discount_total,
 						workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-						updated_at: new Date(),
+						updated_at: sql`NOW()`,
 					}),
 				)
 				.returning('id')
@@ -203,7 +203,7 @@ async function upsertOrders(
 							unit_price: (eb) => eb.ref('excluded.unit_price'),
 							image_url: (eb) => eb.ref('excluded.image_url'),
 							workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-							updated_at: new Date(),
+							updated_at: sql`NOW()`,
 						}),
 					)
 					.execute();
@@ -426,7 +426,7 @@ export async function updateOrderStage(
 
 	const updated = await db
 		.updateTable('orders')
-		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.set({ workflow_stage_id: stageId, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
@@ -449,7 +449,7 @@ export async function updateOrderNotes(
 
 	return db
 		.updateTable('orders')
-		.set({ order_notes: notes, updated_at: new Date() })
+		.set({ order_notes: notes, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
@@ -598,7 +598,7 @@ export async function updateOrderItemStage(
 
 	return db
 		.updateTable('order_items')
-		.set({ workflow_stage_id: stageId, updated_at: new Date() })
+		.set({ workflow_stage_id: stageId, updated_at: sql`NOW()` })
 		.where('id', '=', itemId)
 		.where('order_id', '=', orderId)
 		.returningAll()
@@ -629,7 +629,7 @@ export async function completeAllOrderItems(userId: string, orderId: string) {
 
 	await db
 		.updateTable('order_items')
-		.set({ workflow_stage_id: completeStage.id, updated_at: new Date() })
+		.set({ workflow_stage_id: completeStage.id, updated_at: sql`NOW()` })
 		.where('order_id', '=', orderId)
 		.execute();
 

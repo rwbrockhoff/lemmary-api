@@ -32,7 +32,7 @@ async function getTopProducts(storeId: string, rangeDays: number) {
 		FROM order_items oi
 		INNER JOIN orders o ON o.id = oi.order_id
 		WHERE o.store_id = ${storeId}
-			AND o.order_date >= NOW() - (${rangeDays} || ' days')::interval
+			AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 		GROUP BY oi.product_name
 		ORDER BY SUM(oi.quantity * COALESCE(oi.unit_price::numeric, 0)) DESC
 		LIMIT 5
@@ -72,7 +72,7 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			SELECT DISTINCT customer_email
 			FROM orders
 			WHERE store_id = ${storeId}
-				AND order_date >= NOW() - (${rangeDays} || ' days')::interval
+				AND order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 				AND customer_email IS NOT NULL
 		),
 		current_repeat AS (
@@ -80,7 +80,7 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			FROM orders o
 			INNER JOIN customer_first_order cfo USING (customer_email)
 			WHERE o.store_id = ${storeId}
-				AND o.order_date >= NOW() - (${rangeDays} || ' days')::interval
+				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 				AND o.order_date > cfo.first_order_date
 				AND o.customer_email IS NOT NULL
 		),
@@ -88,8 +88,8 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			SELECT DISTINCT customer_email
 			FROM orders
 			WHERE store_id = ${storeId}
-				AND order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
-				AND order_date < NOW() - (${rangeDays} || ' days')::interval
+				AND order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+				AND order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
 				AND customer_email IS NOT NULL
 		),
 		prior_repeat AS (
@@ -97,8 +97,8 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			FROM orders o
 			INNER JOIN customer_first_order cfo USING (customer_email)
 			WHERE o.store_id = ${storeId}
-				AND o.order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
-				AND o.order_date < NOW() - (${rangeDays} || ' days')::interval
+				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+				AND o.order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
 				AND o.order_date > cfo.first_order_date
 				AND o.customer_email IS NOT NULL
 		)
@@ -135,24 +135,24 @@ async function getCouponUsage(storeId: string, rangeDays: number) {
 	const rows = await sql<CouponUsageRow>`
 		SELECT
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - (${rangeDays} || ' days')::interval
+				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 					AND promo_code IS NOT NULL
 			) AS current_with_promo,
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - (${rangeDays} || ' days')::interval
+				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 			) AS current_total,
 			AVG(discount_total::numeric) FILTER (
-				WHERE order_date >= NOW() - (${rangeDays} || ' days')::interval
+				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 					AND promo_code IS NOT NULL
 			)::text AS avg_discount,
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
-					AND order_date < NOW() - (${rangeDays} || ' days')::interval
+				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+					AND order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
 					AND promo_code IS NOT NULL
 			) AS prior_with_promo,
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
-					AND order_date < NOW() - (${rangeDays} || ' days')::interval
+				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+					AND order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
 			) AS prior_total
 		FROM orders
 		WHERE store_id = ${storeId}
@@ -198,7 +198,7 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 						ELSE b.quantity * oi.quantity
 					END
 				) FILTER (
-					WHERE o.order_date >= NOW() - (${rangeDays} || ' days')::interval
+					WHERE o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
 				) AS current_qty,
 				SUM(
 					CASE
@@ -207,8 +207,8 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 						ELSE b.quantity * oi.quantity
 					END
 				) FILTER (
-					WHERE o.order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
-						AND o.order_date < NOW() - (${rangeDays} || ' days')::interval
+					WHERE o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+						AND o.order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
 				) AS prior_qty
 			FROM order_items oi
 			INNER JOIN orders o ON o.id = oi.order_id
@@ -216,7 +216,7 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 			INNER JOIN materials m ON m.id = b.material_id
 			INNER JOIN bom_material_types bmt ON bmt.id = m.material_type_id
 			WHERE o.store_id = ${storeId}
-				AND o.order_date >= NOW() - (${rangeDays * 2} || ' days')::interval
+				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
 			GROUP BY bmt.id, bmt.name, m.color, b.measurement
 		)
 		SELECT
@@ -267,7 +267,7 @@ async function getStageBottleneck(storeId: string, rangeDays: number) {
 		FROM transitions t
 		INNER JOIN order_workflow_stages s ON s.id = t.to_stage_id
 		WHERE t.next_transition_at IS NOT NULL
-			AND t.transitioned_at >= NOW() - (${rangeDays} || ' days')::interval
+			AND t.transitioned_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
 		GROUP BY s.id, s.name, s.color, s.position
 		ORDER BY s.position ASC
 	`.execute(db);

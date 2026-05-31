@@ -1,4 +1,4 @@
-import type { UpdateObject } from 'kysely';
+import { sql, type UpdateObject } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
@@ -99,7 +99,7 @@ export async function updateWorkflowStage(
 	if (!store) return { ok: false, error: 'no_store' };
 
 	const set: UpdateObject<Database, 'order_workflow_stages'> = {
-		updated_at: new Date(),
+		updated_at: sql`NOW()`,
 	};
 
 	if (updates.name !== undefined) {
@@ -151,7 +151,7 @@ export async function deleteWorkflowStage(
 
 	await db
 		.updateTable('order_workflow_stages')
-		.set({ archived_at: new Date(), updated_at: new Date() })
+		.set({ archived_at: sql`NOW()`, updated_at: sql`NOW()` })
 		.where('id', '=', stageId)
 		.where('store_id', '=', store.id)
 		.execute();
@@ -170,7 +170,7 @@ export async function reorderWorkflowStages(
 		for (let i = 0; i < input.orderedIds.length; i++) {
 			await trx
 				.updateTable('order_workflow_stages')
-				.set({ position: i, updated_at: new Date() })
+				.set({ position: i, updated_at: sql`NOW()` })
 				.where('id', '=', input.orderedIds[i])
 				.where('store_id', '=', store.id)
 				.execute();
