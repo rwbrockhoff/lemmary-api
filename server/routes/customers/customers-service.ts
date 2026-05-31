@@ -32,6 +32,7 @@ export async function getCustomerByEmail(
 			'orders.subtotal',
 			'orders.grand_total',
 			'orders.customer_name',
+			'orders.order_notes',
 			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
 		])
 		.where('orders.store_id', '=', store.id)
@@ -48,6 +49,8 @@ export async function getCustomerByEmail(
 
 	// Use the most recent name in case it changed across orders.
 	const name = orders[0].customer_name;
+	// Orders come back DESC by order_date, so the earliest is at the tail
+	const firstOrderDate = orders[orders.length - 1].order_date;
 
 	return {
 		email,
@@ -55,6 +58,7 @@ export async function getCustomerByEmail(
 		tier: computeCustomerTier(orders.length),
 		orderCount: orders.length,
 		lifetimeSpend: lifetimeSpend.toFixed(2),
+		firstOrderDate,
 		orders: orders.map((order) => ({
 			id: order.id,
 			order_number: order.order_number,
@@ -64,6 +68,7 @@ export async function getCustomerByEmail(
 			subtotal: order.subtotal,
 			grand_total: order.grand_total,
 			item_count: order.item_count,
+			order_notes: order.order_notes,
 		})),
 	};
 }

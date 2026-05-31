@@ -19,6 +19,7 @@ export const CustomerOrderSchema = z
 		subtotal: z.string().nullable(),
 		grand_total: z.string().nullable(),
 		item_count: z.number().int(),
+		order_notes: z.string().nullable(),
 	})
 	.strict();
 
@@ -29,6 +30,7 @@ export const CustomerDetailSchema = z
 		tier: CustomerTierSchema,
 		orderCount: z.number().int(),
 		lifetimeSpend: z.string(),
+		firstOrderDate: z.coerce.date(),
 		orders: z.array(CustomerOrderSchema),
 	})
 	.strict();
