@@ -65,6 +65,7 @@ export async function getBatch(userId: string, batchId: string) {
 			'production_batch_orders.completed',
 			'orders.order_number',
 			'orders.customer_name',
+			'orders.order_notes',
 			'orders.order_date',
 			'orders.due_date',
 			'orders.grand_total',
