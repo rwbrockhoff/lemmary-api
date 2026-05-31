@@ -268,6 +268,7 @@ async function getStageBottleneck(storeId: string, rangeDays: number) {
 		INNER JOIN order_workflow_stages s ON s.id = t.to_stage_id
 		WHERE t.next_transition_at IS NOT NULL
 			AND t.transitioned_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
+			AND s.is_complete = false
 		GROUP BY s.id, s.name, s.color, s.position
 		ORDER BY s.position ASC
 	`.execute(db);
