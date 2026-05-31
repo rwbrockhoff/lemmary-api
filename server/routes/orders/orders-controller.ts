@@ -10,6 +10,7 @@ import {
 	updateOrderItemStage,
 	completeAllOrderItems,
 	getWorkflowBoard,
+	getStageOrders,
 } from './orders-service.js';
 import type { GetOrdersQuery } from './contract/types.js';
 
@@ -84,6 +85,22 @@ export async function handleGetWorkflowBoard(
 ) {
 	const board = await getWorkflowBoard(request.userId);
 	return successResponse(reply, board);
+}
+
+export async function handleGetStageOrders(
+	request: FastifyRequest<{
+		Params: { stageId: string };
+		Querystring: { limit: number; offset: number };
+	}>,
+	reply: FastifyReply,
+) {
+	const { stageId } = request.params;
+	const { limit, offset } = request.query;
+
+	const result = await getStageOrders(request.userId, stageId, limit, offset);
+	if (!result) throw AppError.notFound('Stage not found');
+
+	return successResponse(reply, result);
 }
 
 export async function handleUpdateOrderItemStage(

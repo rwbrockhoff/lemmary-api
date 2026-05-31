@@ -551,32 +551,33 @@ export async function getWorkflowBoard(userId: string) {
 	if (!store) return { stages: [], activeBatches: [] };
 
 	// fire all four independent queries in parallel
-	const [openOrders, completedOrders, stages, activeBatches] = await Promise.all([
-		workflowOrdersBase(store.id)
-			.where('order_workflow_stages.is_complete', '!=', true)
-			.where('orders.fulfillment_status', '=', 'pending')
-			.orderBy('order_date', 'asc')
-			.execute(),
-		// fetch one extra row to detect hasMore without a count query
-		workflowOrdersBase(store.id)
-			.where('order_workflow_stages.is_complete', '=', true)
-			.orderBy('orders.updated_at', 'desc')
-			.limit(COMPLETED_PAGE_SIZE + 1)
-			.execute(),
-		db
-			.selectFrom('order_workflow_stages')
-			.selectAll()
-			.where('store_id', '=', store.id)
-			.orderBy('position', 'asc')
-			.execute(),
-		db
-			.selectFrom('production_batches')
-			.select(['id', 'name'])
-			.where('store_id', '=', store.id)
-			.where('status', '=', 'Active')
-			.orderBy('created_at', 'desc')
-			.execute(),
-	]);
+	const [openOrders, completedOrders, stages, activeBatches] =
+		await Promise.all([
+			workflowOrdersBase(store.id)
+				.where('order_workflow_stages.is_complete', '!=', true)
+				.where('orders.fulfillment_status', '=', 'pending')
+				.orderBy('order_date', 'asc')
+				.execute(),
+			// fetch one extra row to detect hasMore without a count query
+			workflowOrdersBase(store.id)
+				.where('order_workflow_stages.is_complete', '=', true)
+				.orderBy('orders.updated_at', 'desc')
+				.limit(COMPLETED_PAGE_SIZE + 1)
+				.execute(),
+			db
+				.selectFrom('order_workflow_stages')
+				.selectAll()
+				.where('store_id', '=', store.id)
+				.orderBy('position', 'asc')
+				.execute(),
+			db
+				.selectFrom('production_batches')
+				.select(['id', 'name'])
+				.where('store_id', '=', store.id)
+				.where('status', '=', 'Active')
+				.orderBy('created_at', 'desc')
+				.execute(),
+		]);
 
 	const completedHasMore = completedOrders.length > COMPLETED_PAGE_SIZE;
 	const completedSlice = completedHasMore
@@ -610,6 +611,53 @@ export async function getWorkflowBoard(userId: string) {
 		stages: stagesWithOrders,
 		activeBatches,
 	};
+}
+
+export async function getStageOrders(
+	userId: string,
+	stageId: string,
+	limit: number,
+	offset: number,
+) {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	// confirm the stage belongs to this user's store before pulling orders
+	const stage = await db
+		.selectFrom('order_workflow_stages')
+		.select(['id', 'is_complete'])
+		.where('id', '=', stageId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!stage) return null;
+
+	// fetch one extra row to detect hasMore without a count query
+	const rows = await workflowOrdersBase(store.id)
+		.where('orders.workflow_stage_id', '=', stageId)
+		.orderBy(
+			stage.is_complete ? 'orders.updated_at' : 'order_date',
+			stage.is_complete ? 'desc' : 'asc',
+		)
+		.limit(limit + 1)
+		.offset(offset)
+		.execute();
+
+	const hasMore = rows.length > limit;
+	const sliced = hasMore ? rows.slice(0, limit) : rows;
+
+	const storeUrl = getStoreUrl(store.platform_config);
+
+	const orders = sliced.map((row) => ({
+		...row,
+		order_url: buildOrderUrl(storeUrl, row.platform_order_id),
+		customer_tier:
+			row.customer_order_count !== null
+				? computeCustomerTier(row.customer_order_count)
+				: null,
+	}));
+
+	return { orders, hasMore };
 }
 
 export async function updateOrderItemStage(

@@ -109,6 +109,20 @@ export const WorkflowBoardResponseSchema = z.object({
 	activeBatches: z.array(z.object({ id: z.string(), name: z.string() })),
 });
 
+export const StageOrdersParamSchema = z.object({
+	stageId: z.uuid(),
+});
+
+export const StageOrdersQuerySchema = z.object({
+	limit: z.coerce.number().int().min(1).max(50).default(15),
+	offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const StageOrdersResponseSchema = z.object({
+	orders: z.array(OrderSummarySchema),
+	hasMore: z.boolean(),
+});
+
 export const SyncOrdersResponseSchema = z.object({
 	synced: z.number(),
 	storeId: z.string(),

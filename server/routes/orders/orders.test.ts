@@ -159,6 +159,44 @@ describe('Orders API', () => {
 		}
 	});
 
+	it('GET /orders/workflow-board/stages/:stageId/orders returns paginated orders for one stage', async () => {
+		// grab any stage that has at least one seeded order
+		const stage = await db
+			.selectFrom('orders')
+			.innerJoin(
+				'order_workflow_stages',
+				'order_workflow_stages.id',
+				'orders.workflow_stage_id',
+			)
+			.select('order_workflow_stages.id')
+			.where('orders.store_id', '=', TEST_STORE_ID)
+			.executeTakeFirstOrThrow();
+
+		const response = await app.inject(
+			withAuth(
+				'GET',
+				`/orders/workflow-board/stages/${stage.id}/orders?limit=5&offset=0`,
+			),
+		);
+
+		expect(response.statusCode).toBe(200);
+		const { orders, hasMore } = response.json().data;
+		expect(Array.isArray(orders)).toBe(true);
+		expect(orders.length).toBeLessThanOrEqual(5);
+		expect(typeof hasMore).toBe('boolean');
+	});
+
+	it('GET /orders/workflow-board/stages/:stageId/orders returns 404 for an unknown stage', async () => {
+		const response = await app.inject(
+			withAuth(
+				'GET',
+				`/orders/workflow-board/stages/00000000-0000-0000-0000-000000000000/orders`,
+			),
+		);
+
+		expect(response.statusCode).toBe(404);
+	});
+
 	it('PUT /orders/:orderId/notes updates the notes', async () => {
 		const order = await db
 			.selectFrom('orders')

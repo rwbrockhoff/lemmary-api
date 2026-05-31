@@ -9,6 +9,9 @@ import {
 	OrderItemSchema,
 	OrderDetailSchema,
 	WorkflowBoardResponseSchema,
+	StageOrdersParamSchema,
+	StageOrdersQuerySchema,
+	StageOrdersResponseSchema,
 	SyncOrdersResponseSchema,
 	CompleteItemsResponseSchema,
 	OrderIdParamSchema,
@@ -24,6 +27,7 @@ import {
 	handleUpdateOrderNotes,
 	handleUpdateOrderItemStage,
 	handleGetWorkflowBoard,
+	handleGetStageOrders,
 	handleCompleteAllOrderItems,
 } from './orders-controller.js';
 
@@ -71,6 +75,22 @@ export async function ordersRoutes(app: FastifyInstance) {
 			},
 		},
 		handleGetWorkflowBoard,
+	);
+
+	r.get(
+		'/orders/workflow-board/stages/:stageId/orders',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Get paginated orders for a single workflow stage',
+				params: StageOrdersParamSchema,
+				querystring: StageOrdersQuerySchema,
+				response: {
+					200: successSchema(StageOrdersResponseSchema),
+				},
+			},
+		},
+		handleGetStageOrders,
 	);
 
 	r.get(
