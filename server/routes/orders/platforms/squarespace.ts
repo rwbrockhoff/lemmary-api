@@ -1,4 +1,5 @@
 import type { NewOrder, NewOrderItem } from '../../../db/database-types.js';
+import { applyOrNull } from '../../../utils/nullable.js';
 
 const BASE_URL = 'https://api.squarespace.com/1.0/commerce/orders';
 
@@ -144,7 +145,7 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 			raw.discountLines?.find((line) => line.promoCode)?.promoCode ?? null,
 		discount_total: raw.discountTotal?.value ?? '0',
 		currency: raw.grandTotal?.currency ?? 'USD',
-		fulfilled_on: raw.fulfilledOn ? new Date(raw.fulfilledOn) : null,
+		fulfilled_on: applyOrNull(raw.fulfilledOn, (v) => new Date(v)),
 		tracking_number: raw.fulfillments?.[0]?.trackingNumber ?? null,
 		tracking_url: raw.fulfillments?.[0]?.trackingUrl ?? null,
 		carrier_name: raw.fulfillments?.[0]?.carrierName ?? null,

@@ -189,7 +189,7 @@ async function getOnTimeDelivery(storeId: string, rangeDays: number) {
 				WHERE fulfilled_on IS NOT NULL
 					AND due_date IS NOT NULL
 					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays}
-					AND fulfilled_on <= due_date
+					AND fulfilled_on::date <= due_date::date
 			) AS current_on_time,
 			COUNT(*) FILTER (
 				WHERE fulfilled_on IS NOT NULL
@@ -201,7 +201,7 @@ async function getOnTimeDelivery(storeId: string, rangeDays: number) {
 					AND due_date IS NOT NULL
 					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
 					AND fulfilled_on < NOW() - INTERVAL '1 day' * ${rangeDays}
-					AND fulfilled_on <= due_date
+					AND fulfilled_on::date <= due_date::date
 			) AS prior_on_time,
 			COUNT(*) FILTER (
 				WHERE fulfilled_on IS NOT NULL

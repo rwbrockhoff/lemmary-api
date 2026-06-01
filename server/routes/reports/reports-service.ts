@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
+import { applyOrNull } from '../../utils/nullable.js';
 
 export async function getProductionSummary(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -141,7 +142,7 @@ export async function getMaterialsReport(userId: string) {
 				});
 			} else if (bom.measurement === 'linear') {
 				const length = bom.length ? Number(bom.length) : 0;
-				const parsedWidth = bom.size ? Number(bom.size) : null;
+				const parsedWidth = applyOrNull(bom.size, Number);
 				linearRaw.push({
 					material_type: bom.material_type,
 					width:
