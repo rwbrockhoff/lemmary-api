@@ -8,6 +8,7 @@ import {
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
+import { applyOrNull } from '../../utils/nullable.js';
 import {
 	fetchSquarespaceOrders,
 	type NormalizedOrder,
@@ -35,10 +36,7 @@ function formatWorkflowOrder<
 	return {
 		...row,
 		order_url: buildOrderUrl(storeUrl, row.platform_order_id),
-		customer_tier:
-			row.customer_order_count !== null
-				? computeCustomerTier(row.customer_order_count)
-				: null,
+		customer_tier: applyOrNull(row.customer_order_count, computeCustomerTier),
 	};
 }
 
@@ -397,10 +395,7 @@ export async function getOrders(
 			...row,
 			items: itemsByOrder.get(row.id) ?? [],
 			order_url: buildOrderUrl(storeUrl, row.platform_order_id),
-			customer_tier:
-				row.customer_order_count !== null
-					? computeCustomerTier(row.customer_order_count)
-					: null,
+			customer_tier: applyOrNull(row.customer_order_count, computeCustomerTier),
 		})),
 		hasMore,
 		lastSyncedAt: store.last_synced_at,
@@ -456,10 +451,7 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		...order,
 		items,
 		order_url: buildOrderUrl(storeUrl, order.platform_order_id),
-		customer_tier:
-			order.customer_order_count !== null
-				? computeCustomerTier(order.customer_order_count)
-				: null,
+		customer_tier: applyOrNull(order.customer_order_count, computeCustomerTier),
 	};
 }
 
