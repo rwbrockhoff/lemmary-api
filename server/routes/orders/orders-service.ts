@@ -257,12 +257,14 @@ async function upsertOrders(
 export async function syncOrders(userId: string) {
 	const store = await getStoreWithAccessToken(userId);
 	if (!store) return null;
+
+	const syncStartedAt = new Date();
 	const orders = await fetchOrdersFromPlatform(store);
 	const synced = await upsertOrders(store.id, orders, store.lead_time_days);
 
 	await db
 		.updateTable('stores')
-		.set({ last_synced_at: new Date() })
+		.set({ last_synced_at: syncStartedAt })
 		.where('id', '=', store.id)
 		.execute();
 
