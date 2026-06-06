@@ -18,12 +18,12 @@ import {
 	OrderItemParamsSchema,
 	UpdateOrderStageBodySchema,
 	UpdateOrderNotesBodySchema,
-	CreateCustomOrderSchema,
+	DeleteOrderResponseSchema,
 } from './contract/schemas.js';
 import {
 	handleSyncOrders,
 	handleGetOrders,
-	handleCreateCustomOrder,
+	handleDeleteOrder,
 	handleGetOrder,
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
@@ -32,8 +32,11 @@ import {
 	handleGetStageOrders,
 	handleCompleteAllOrderItems,
 } from './orders-controller.js';
+import { customOrderRoutes } from './custom/custom-order-routes.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
+	await app.register(customOrderRoutes);
+
 	const r = app.withTypeProvider<ZodTypeProvider>();
 
 	r.post(
@@ -48,21 +51,6 @@ export async function ordersRoutes(app: FastifyInstance) {
 			},
 		},
 		handleSyncOrders,
-	);
-
-	r.post(
-		'/orders/custom',
-		{
-			schema: {
-				tags: [ApiTags.ORDERS],
-				summary: 'Create a custom order',
-				body: CreateCustomOrderSchema,
-				response: {
-					201: successSchema(OrderDetailSchema),
-				},
-			},
-		},
-		handleCreateCustomOrder,
 	);
 
 	r.get(
@@ -123,6 +111,21 @@ export async function ordersRoutes(app: FastifyInstance) {
 			},
 		},
 		handleGetOrder,
+	);
+
+	r.delete(
+		'/orders/:orderId',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Delete a custom or work order',
+				params: OrderIdParamSchema,
+				response: {
+					200: successSchema(DeleteOrderResponseSchema),
+				},
+			},
+		},
+		handleDeleteOrder,
 	);
 
 	r.put(

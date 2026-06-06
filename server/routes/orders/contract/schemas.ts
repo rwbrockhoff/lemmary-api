@@ -170,3 +170,16 @@ export const CreateCustomOrderSchema = z.object({
 	order_notes: z.string().nullable().optional(),
 	items: z.array(CreateCustomOrderItemSchema).min(1),
 });
+
+export const UpdateCustomOrderSchema = z.object({
+	customer_name: z.string().min(1).optional(),
+	customer_email: z.email().nullable().optional(),
+	order_date: z.coerce.date().optional(),
+	due_date: z.coerce.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	order_description: z.string().nullable().optional(),
+});
+
+export const DeleteOrderResponseSchema = z.object({
+	id: z.string(),
+});

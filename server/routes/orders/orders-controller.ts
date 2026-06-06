@@ -1,11 +1,10 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { successResponse, createdSuccess } from '../../utils/api-responses.js';
+import { successResponse } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
 import {
-	syncOrders,
 	getOrders,
 	getOrderWithItems,
-	createCustomOrder,
+	deleteOrder,
 	updateOrderStage,
 	updateOrderNotes,
 	updateOrderItemStage,
@@ -13,7 +12,8 @@ import {
 	getWorkflowBoard,
 	getStageOrders,
 } from './orders-service.js';
-import type { GetOrdersQuery, CreateCustomOrder } from './contract/types.js';
+import { syncOrders } from './sync-service.js';
+import type { GetOrdersQuery } from './contract/types.js';
 
 export async function handleSyncOrders(
 	request: FastifyRequest,
@@ -32,14 +32,19 @@ export async function handleGetOrders(
 	return successResponse(reply, result);
 }
 
-export async function handleCreateCustomOrder(
-	request: FastifyRequest<{ Body: CreateCustomOrder }>,
+export async function handleDeleteOrder(
+	request: FastifyRequest<{ Params: { orderId: string } }>,
 	reply: FastifyReply,
 ) {
-	const order = await createCustomOrder(request.userId, request.body);
-	if (!order)
-		throw AppError.badRequest('Connect a store before creating orders');
-	return createdSuccess(reply, order, 'Order created');
+	const result = await deleteOrder(request.userId, request.params.orderId);
+
+	if (!result.ok) {
+		if (result.error === 'platform')
+			throw AppError.conflict('Synced orders cannot be deleted.');
+		throw AppError.notFound('Order not found');
+	}
+
+	return successResponse(reply, { id: request.params.orderId });
 }
 
 export async function handleGetOrder(
