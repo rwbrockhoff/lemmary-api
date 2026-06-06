@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { netRevenueSum } from '../../../utils/revenue.js';
+import type { OperationsData } from './contract/types.js';
 
 export const VALID_RANGES = [30, 90, 365] as const;
 export type OperationsRange = (typeof VALID_RANGES)[number];
@@ -11,46 +12,6 @@ const bucketForRange = (range: OperationsRange): OperationsBucket => {
 	if (range === 30) return 'day';
 	if (range === 90) return 'week';
 	return 'month';
-};
-
-export type OperationsData = {
-	range: OperationsRange;
-	bucket: OperationsBucket;
-	revenue: {
-		current: string;
-		previous: string;
-		changePercent: number;
-	};
-	avgOrderValue: {
-		current: string;
-		previous: string;
-		changePercent: number;
-	};
-	ordersInProgress: number;
-	ordersCompletedInPeriod: number;
-	avgLeadTime: {
-		days: number | null;
-		target: number | null;
-	};
-	dueSoon: Array<{
-		id: string;
-		orderNumber: string;
-		customerName: string;
-		orderDate: Date;
-		dueDate: Date | null;
-		daysUntilDue: number | null;
-		grandTotal: string | null;
-		itemCount: number;
-		itemsCompleted: number;
-		workflowStageName: string | null;
-		workflowStageColor: string | null;
-	}>;
-	ordersTrend: Array<{
-		date: string;
-		count: number;
-		revenue: string;
-		avgOrderValue: string;
-	}>;
 };
 
 const emptyDashboard = (range: OperationsRange): OperationsData => ({
