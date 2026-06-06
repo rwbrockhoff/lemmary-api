@@ -1,10 +1,11 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { successResponse } from '../../utils/api-responses.js';
+import { successResponse, createdSuccess } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
 import {
 	syncOrders,
 	getOrders,
 	getOrderWithItems,
+	createCustomOrder,
 	updateOrderStage,
 	updateOrderNotes,
 	updateOrderItemStage,
@@ -12,7 +13,7 @@ import {
 	getWorkflowBoard,
 	getStageOrders,
 } from './orders-service.js';
-import type { GetOrdersQuery } from './contract/types.js';
+import type { GetOrdersQuery, CreateCustomOrder } from './contract/types.js';
 
 export async function handleSyncOrders(
 	request: FastifyRequest,
@@ -29,6 +30,16 @@ export async function handleGetOrders(
 ) {
 	const result = await getOrders(request.userId, request.query);
 	return successResponse(reply, result);
+}
+
+export async function handleCreateCustomOrder(
+	request: FastifyRequest<{ Body: CreateCustomOrder }>,
+	reply: FastifyReply,
+) {
+	const order = await createCustomOrder(request.userId, request.body);
+	if (!order)
+		throw AppError.badRequest('Connect a store before creating orders');
+	return createdSuccess(reply, order, 'Order created');
 }
 
 export async function handleGetOrder(

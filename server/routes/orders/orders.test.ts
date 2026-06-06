@@ -549,4 +549,57 @@ describe('Orders API', () => {
 		expect(response.statusCode).toBe(200);
 		expect(response.json().data.workflow_stage_id).toBe(stage.id);
 	});
+
+	it('POST /orders/custom creates a custom order with items', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/orders/custom', {
+				payload: {
+					customer_name: 'Pam Beesly',
+					customer_email: 'pam@dundermifflin.com',
+					items: [
+						{
+							product_name: 'Watercolor Tote',
+							quantity: 2,
+							unit_price: '45.00',
+						},
+					],
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(201);
+		const order = response.json().data;
+		expect(order.order_type).toBe('custom');
+		expect(order.order_number).toMatch(/^C-\d+$/);
+		expect(order.platform_order_id).toBeNull();
+		expect(order.customer_name).toBe('Pam Beesly');
+		expect(order.items).toHaveLength(1);
+		expect(order.items[0].product_name).toBe('Watercolor Tote');
+		expect(Number(order.subtotal)).toBe(90);
+	});
+
+	it('POST /orders/custom rejects an order with no items', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/orders/custom', {
+				payload: {
+					customer_name: 'Jim Halpert',
+					items: [],
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it('POST /orders/custom rejects a missing customer name', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/orders/custom', {
+				payload: {
+					items: [{ product_name: 'Watercolor Tote', quantity: 1 }],
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(400);
+	});
 });

@@ -153,3 +153,20 @@ export const UpdateOrderStageBodySchema = z.object({
 export const UpdateOrderNotesBodySchema = z.object({
 	notes: z.string(),
 });
+
+export const CreateCustomOrderItemSchema = z.object({
+	product_name: z.string().min(1),
+	platform_sku: z.string().nullable().optional(),
+	variant_label: z.array(VariantOptionSchema).nullable().optional(),
+	quantity: z.number().int().min(1),
+	unit_price: z.string().nullable().optional(),
+});
+
+export const CreateCustomOrderSchema = z.object({
+	customer_name: z.string().min(1),
+	customer_email: z.email().nullable().optional(),
+	order_date: z.coerce.date().optional(),
+	due_date: z.coerce.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	items: z.array(CreateCustomOrderItemSchema).min(1),
+});

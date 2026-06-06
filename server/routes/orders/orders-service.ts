@@ -9,11 +9,13 @@ import {
 import { toJsonb } from '../../utils/json.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
 import { applyOrNull } from '../../utils/nullable.js';
+import { generateOrderNumber } from './utils/order-number.js';
+import { sumLineItems } from './utils/order-totals.js';
 import {
 	fetchSquarespaceOrders,
 	type NormalizedOrder,
 } from './platforms/squarespace.js';
-import type { GetOrdersQuery } from './contract/types.js';
+import type { GetOrdersQuery, CreateCustomOrder } from './contract/types.js';
 
 function getStoreUrl(platformConfig: unknown): string | null {
 	return (
@@ -462,6 +464,58 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		order_url: buildOrderUrl(storeUrl, order.platform_order_id),
 		customer_tier: applyOrNull(order.customer_order_count, computeCustomerTier),
 	};
+}
+
+export async function createCustomOrder(
+	userId: string,
+	input: CreateCustomOrder,
+) {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const { orderStageId, itemStageId } = await getDefaultStageIds(store.id);
+	const subtotal = sumLineItems(input.items);
+
+	const orderId = await db.transaction().execute(async (trx) => {
+		const orderNumber = await generateOrderNumber(trx, store.id, 'custom');
+
+		const order = await trx
+			.insertInto('orders')
+			.values({
+				store_id: store.id,
+				order_type: 'custom',
+				order_number: orderNumber,
+				customer_name: input.customer_name,
+				customer_email: input.customer_email ?? null,
+				order_date: input.order_date ?? new Date(),
+				due_date: input.due_date ?? null,
+				order_notes: input.order_notes ?? null,
+				workflow_stage_id: orderStageId,
+				subtotal,
+				grand_total: subtotal,
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		await trx
+			.insertInto('order_items')
+			.values(
+				input.items.map((item) => ({
+					order_id: order.id,
+					product_name: item.product_name,
+					platform_sku: item.platform_sku ?? null,
+					variant_label: toJsonb(item.variant_label ?? null),
+					quantity: item.quantity,
+					unit_price: item.unit_price ?? null,
+					workflow_stage_id: itemStageId,
+				})),
+			)
+			.execute();
+
+		return order.id;
+	});
+
+	return getOrderWithItems(userId, orderId);
 }
 
 export async function updateOrderStage(

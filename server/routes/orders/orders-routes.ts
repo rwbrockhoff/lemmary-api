@@ -18,10 +18,12 @@ import {
 	OrderItemParamsSchema,
 	UpdateOrderStageBodySchema,
 	UpdateOrderNotesBodySchema,
+	CreateCustomOrderSchema,
 } from './contract/schemas.js';
 import {
 	handleSyncOrders,
 	handleGetOrders,
+	handleCreateCustomOrder,
 	handleGetOrder,
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
@@ -46,6 +48,21 @@ export async function ordersRoutes(app: FastifyInstance) {
 			},
 		},
 		handleSyncOrders,
+	);
+
+	r.post(
+		'/orders/custom',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Create a custom order',
+				body: CreateCustomOrderSchema,
+				response: {
+					201: successSchema(OrderDetailSchema),
+				},
+			},
+		},
+		handleCreateCustomOrder,
 	);
 
 	r.get(
