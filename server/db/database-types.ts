@@ -97,9 +97,12 @@ export type NewOrderStageHistory = Insertable<OrderStageHistoryTable>;
 export interface OrderTable {
 	id: Generated<string>;
 	store_id: string;
-	platform_order_id: string;
+	order_type: Generated<string>;
+	platform_order_id: string | null;
 	order_number: string;
-	customer_name: string;
+	order_title: string | null;
+	order_description: string | null;
+	customer_name: string | null;
 	customer_email: string | null;
 	order_date: Date;
 	fulfillment_status: Generated<string>;

@@ -23,15 +23,18 @@ function getStoreUrl(platformConfig: unknown): string | null {
 
 function buildOrderUrl(
 	storeUrl: string | null,
-	platformOrderId: string,
+	platformOrderId: string | null,
 ): string | null {
-	return storeUrl
+	return storeUrl && platformOrderId
 		? `${storeUrl}/commerce/orders/${platformOrderId}/authenticated`
 		: null;
 }
 
 function formatWorkflowOrder<
-	T extends { platform_order_id: string; customer_order_count: number | null },
+	T extends {
+		platform_order_id: string | null;
+		customer_order_count: number | null;
+	},
 >(row: T, storeUrl: string | null) {
 	return {
 		...row,
@@ -198,23 +201,27 @@ async function upsertOrders(
 					due_date: dueDate,
 				})
 				.onConflict((oc) =>
-					oc.columns(['store_id', 'platform_order_id']).doUpdateSet({
-						customer_name: order.customer_name,
-						customer_email: order.customer_email,
-						fulfillment_status: order.fulfillment_status,
-						subtotal: order.subtotal,
-						shipping_total: order.shipping_total,
-						grand_total: order.grand_total,
-						shipping_method: order.shipping_method,
-						fulfilled_on: order.fulfilled_on,
-						tracking_number: order.tracking_number,
-						tracking_url: order.tracking_url,
-						carrier_name: order.carrier_name,
-						promo_code: order.promo_code,
-						discount_total: order.discount_total,
-						workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-						updated_at: sql`NOW()`,
-					}),
+					oc
+						.columns(['store_id', 'platform_order_id'])
+						// Only matches platform orders
+						.where('platform_order_id', 'is not', null)
+						.doUpdateSet({
+							customer_name: order.customer_name,
+							customer_email: order.customer_email,
+							fulfillment_status: order.fulfillment_status,
+							subtotal: order.subtotal,
+							shipping_total: order.shipping_total,
+							grand_total: order.grand_total,
+							shipping_method: order.shipping_method,
+							fulfilled_on: order.fulfilled_on,
+							tracking_number: order.tracking_number,
+							tracking_url: order.tracking_url,
+							carrier_name: order.carrier_name,
+							promo_code: order.promo_code,
+							discount_total: order.discount_total,
+							workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
+							updated_at: sql`NOW()`,
+						}),
 				)
 				.returning('id')
 				.executeTakeFirstOrThrow();

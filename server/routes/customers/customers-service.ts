@@ -48,7 +48,8 @@ export async function getCustomerByEmail(
 	);
 
 	// Use the most recent name in case it changed across orders.
-	const name = orders[0].customer_name;
+	const name = orders[0].customer_name ?? '';
+
 	// Orders come back DESC by order_date, so the earliest is at the tail
 	const firstOrderDate = orders[orders.length - 1].order_date;
 

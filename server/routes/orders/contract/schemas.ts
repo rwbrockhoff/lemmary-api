@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CUSTOMER_TIERS } from '../../../utils/customer-tier.js';
+import { ORDER_TYPE_VALUES } from './constants.js';
 
 export const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -9,9 +10,12 @@ export const VariantOptionSchema = z.object({
 const OrderColumnsSchema = z.object({
 	id: z.string(),
 	store_id: z.string(),
-	platform_order_id: z.string(),
+	order_type: z.enum(ORDER_TYPE_VALUES),
+	platform_order_id: z.string().nullable(),
 	order_number: z.string(),
-	customer_name: z.string(),
+	order_title: z.string().nullable(),
+	order_description: z.string().nullable(),
+	customer_name: z.string().nullable(),
 	customer_email: z.string().nullable(),
 	order_date: z.date(),
 	fulfillment_status: z.string(),

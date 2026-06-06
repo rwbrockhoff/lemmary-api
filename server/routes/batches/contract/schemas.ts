@@ -114,7 +114,7 @@ const BatchDetailOrderSchema = z.object({
 	order_id: z.string(),
 	completed: z.boolean(),
 	order_number: z.string(),
-	customer_name: z.string(),
+	customer_name: z.string().nullable(),
 	order_notes: z.string().nullable(),
 	order_date: z.date(),
 	due_date: z.date().nullable(),

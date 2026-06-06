@@ -27,7 +27,7 @@ export const OperationsResponseSchema = z.object({
 		z.object({
 			id: z.string(),
 			orderNumber: z.string(),
-			customerName: z.string(),
+			customerName: z.string().nullable(),
 			orderDate: z.date(),
 			dueDate: z.date().nullable(),
 			daysUntilDue: z.number().nullable(),
