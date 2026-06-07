@@ -118,6 +118,79 @@ describe('Orders API', () => {
 		expect(Number(historyAfter.count)).toBe(Number(historyBefore.count) + 1);
 	});
 
+	it('PUT /orders/:orderId/stage fulfills a custom order in a complete stage and reopens it', async () => {
+		// A fresh custom order starts out pending
+		const created = await app.inject(
+			withAuth('POST', '/orders/custom', {
+				payload: {
+					customer_name: 'Creed Bratton',
+					items: [{ product_name: 'Mung Beans', quantity: 1 }],
+				},
+			}),
+		);
+		const orderId = created.json().data.id;
+
+		// Grab a completed and an open stage to move the order between
+		const completeStage = await db
+			.selectFrom('order_workflow_stages')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('is_complete', '=', true)
+			.executeTakeFirstOrThrow();
+
+		const openStage = await db
+			.selectFrom('order_workflow_stages')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('is_complete', '=', false)
+			.executeTakeFirstOrThrow();
+
+		// Moving into a completed stage should mark it fulfilled
+		const fulfilled = await app.inject(
+			withAuth('PUT', `/orders/${orderId}/stage`, {
+				payload: { stageId: completeStage.id },
+			}),
+		);
+		expect(fulfilled.statusCode).toBe(200);
+		expect(fulfilled.json().data.fulfillment_status).toBe('fulfilled');
+
+		// Reopening it should drop it back to pending
+		const reopened = await app.inject(
+			withAuth('PUT', `/orders/${orderId}/stage`, {
+				payload: { stageId: openStage.id },
+			}),
+		);
+		expect(reopened.json().data.fulfillment_status).toBe('pending');
+	});
+
+	it('PUT /orders/:orderId/stage leaves platform order fulfillment untouched', async () => {
+		// Platform fulfillment comes from the sync, so a stage move shouldn't touch it
+		const platformOrder = await db
+			.selectFrom('orders')
+			.select(['id', 'fulfillment_status'])
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('order_type', '=', 'platform')
+			.executeTakeFirstOrThrow();
+
+		const completeStage = await db
+			.selectFrom('order_workflow_stages')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('is_complete', '=', true)
+			.executeTakeFirstOrThrow();
+
+		const response = await app.inject(
+			withAuth('PUT', `/orders/${platformOrder.id}/stage`, {
+				payload: { stageId: completeStage.id },
+			}),
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data.fulfillment_status).toBe(
+			platformOrder.fulfillment_status,
+		);
+	});
+
 	it('GET /orders?status=completed returns fulfilled orders', async () => {
 		const response = await app.inject(
 			withAuth('GET', '/orders?status=completed'),

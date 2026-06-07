@@ -276,14 +276,33 @@ export async function updateOrderStage(
 
 	const current = await db
 		.selectFrom('orders')
-		.select('workflow_stage_id')
+		.select(['workflow_stage_id', 'order_type'])
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.executeTakeFirst();
 
+	const targetStage = await db
+		.selectFrom('order_workflow_stages')
+		.select('is_complete')
+		.where('id', '=', stageId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	const updates: { workflow_stage_id: string; fulfillment_status?: string } = {
+		workflow_stage_id: stageId,
+	};
+
+	// Platform orders get their fulfillment from the sync. Our own orders have no
+	// such step, so reaching a completed stage fulfills them (and reopening resets).
+	if (current && current.order_type !== 'platform' && targetStage) {
+		updates.fulfillment_status = targetStage.is_complete
+			? 'fulfilled'
+			: 'pending';
+	}
+
 	const updated = await db
 		.updateTable('orders')
-		.set({ workflow_stage_id: stageId, updated_at: sql`NOW()` })
+		.set({ ...updates, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
