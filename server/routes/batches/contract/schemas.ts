@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORDER_TYPE_VALUES } from '../../orders/contract/constants.js';
 
 const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -113,6 +114,8 @@ const BatchDetailOrderSchema = z.object({
 	id: z.string(),
 	order_id: z.string(),
 	completed: z.boolean(),
+	order_type: z.enum(ORDER_TYPE_VALUES),
+	fulfillment_status: z.string(),
 	order_number: z.string(),
 	customer_name: z.string().nullable(),
 	order_notes: z.string().nullable(),
