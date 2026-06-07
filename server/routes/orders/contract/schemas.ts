@@ -158,6 +158,7 @@ export const CreateCustomOrderItemSchema = z.object({
 	product_name: z.string().min(1),
 	platform_sku: z.string().nullable().optional(),
 	variant_label: z.array(VariantOptionSchema).nullable().optional(),
+	image_url: z.string().nullable().optional(),
 	quantity: z.number().int().min(1),
 	unit_price: z.string().nullable().optional(),
 });
@@ -176,6 +177,7 @@ export const UpdateCustomOrderItemSchema = z.object({
 	product_name: z.string().min(1),
 	platform_sku: z.string().nullable().optional(),
 	variant_label: z.array(VariantOptionSchema).nullable().optional(),
+	image_url: z.string().nullable().optional(),
 	quantity: z.number().int().min(1),
 	unit_price: z.string().nullable().optional(),
 });

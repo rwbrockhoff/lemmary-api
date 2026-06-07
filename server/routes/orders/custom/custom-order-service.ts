@@ -52,6 +52,7 @@ export async function createCustomOrder(
 					product_name: item.product_name,
 					platform_sku: item.platform_sku ?? null,
 					variant_label: toJsonb(item.variant_label ?? null),
+					image_url: item.image_url ?? null,
 					quantity: item.quantity,
 					unit_price: item.unit_price ?? null,
 					workflow_stage_id: itemStageId,

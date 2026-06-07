@@ -29,6 +29,28 @@ describe('Orders API', () => {
 		expect(body.data).toHaveProperty('lastSyncedAt');
 	});
 
+	it('GET /orders counts item quantity, not line item rows, for progress', async () => {
+		const created = await app.inject(
+			withAuth('POST', '/orders/custom', {
+				payload: {
+					customer_name: 'Phyllis Vance',
+					items: [
+						{ product_name: 'Bloomers Tote', quantity: 3, unit_price: '25.00' },
+					],
+				},
+			}),
+		);
+		const orderId = created.json().data.id;
+
+		const response = await app.inject(withAuth('GET', '/orders'));
+		const order = response.json().data.orders.find(
+			(o: { id: string }) => o.id === orderId,
+		);
+
+		expect(order).toBeDefined();
+		expect(order.item_count).toBe(3);
+	});
+
 	it('GET /orders includes customer_tier on each row', async () => {
 		const response = await app.inject(withAuth('GET', '/orders'));
 

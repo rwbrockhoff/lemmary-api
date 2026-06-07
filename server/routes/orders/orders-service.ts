@@ -81,8 +81,8 @@ export async function getOrders(
 				)
 				.select([
 					'oi.order_id',
-					sql<number>`count(*)`.as('total'),
-					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+					sql<number>`coalesce(sum(oi.quantity), 0)`.as('total'),
+					sql<number>`coalesce(sum(oi.quantity) filter (where s.is_complete = true), 0)`.as(
 						'completed',
 					),
 				])
@@ -334,8 +334,8 @@ function workflowOrdersBase(storeId: string) {
 				)
 				.select([
 					'oi.order_id',
-					sql<number>`count(*)`.as('total'),
-					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+					sql<number>`coalesce(sum(oi.quantity), 0)`.as('total'),
+					sql<number>`coalesce(sum(oi.quantity) filter (where s.is_complete = true), 0)`.as(
 						'completed',
 					),
 				])
