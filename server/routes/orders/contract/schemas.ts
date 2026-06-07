@@ -71,6 +71,8 @@ export const GetOrdersQuerySchema = z.object({
 	status: z.enum(['pending', 'completed']).default('pending'),
 	limit: z.coerce.number().int().min(1).max(50).default(15),
 	offset: z.coerce.number().int().min(0).default(0),
+	// Also include this batch's orders (incl. completed) alongside pending ones
+	includeBatchId: z.uuid().optional(),
 });
 
 export const GetOrdersResponseSchema = z.object({

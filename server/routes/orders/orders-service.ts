@@ -52,7 +52,7 @@ function logStageTransition(
 
 export async function getOrders(
 	userId: string,
-	{ status, limit, offset }: GetOrdersQuery,
+	{ status, limit, offset, includeBatchId }: GetOrdersQuery,
 ) {
 	const store = await getStoreForUser(userId);
 	if (!store) return { orders: [], hasMore: false, lastSyncedAt: null };
@@ -133,12 +133,31 @@ export async function getOrders(
 		])
 		.where('orders.store_id', '=', store.id);
 
-	const filteredQuery = isPending
-		? baseQuery
+	// Open orders: pending and not manually placed in a completed stage. When a
+	// batchId is passed, also include that batch's orders so completed ones still show.
+	const pendingFiltered = includeBatchId
+		? baseQuery.where((eb) =>
+				eb.or([
+					eb.and([
+						eb('orders.fulfillment_status', '=', 'pending'),
+						sql<SqlBool>`order_workflow_stages.is_complete is not true`,
+					]),
+					eb(
+						'orders.id',
+						'in',
+						eb
+							.selectFrom('production_batch_orders')
+							.select('order_id')
+							.where('batch_id', '=', includeBatchId),
+					),
+				]),
+			)
+		: baseQuery
 				.where('orders.fulfillment_status', '=', 'pending')
-				// exclude orders the user has manually placed in a completed stage
-				.where(sql<SqlBool>`order_workflow_stages.is_complete is not true`)
-				.orderBy('order_date', 'asc')
+				.where(sql<SqlBool>`order_workflow_stages.is_complete is not true`);
+
+	const filteredQuery = isPending
+		? pendingFiltered.orderBy('order_date', 'asc')
 		: baseQuery
 				.where('orders.fulfillment_status', '!=', 'pending')
 				.orderBy('order_date', 'desc')
