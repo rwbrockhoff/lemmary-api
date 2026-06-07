@@ -171,6 +171,15 @@ export const CreateCustomOrderSchema = z.object({
 	items: z.array(CreateCustomOrderItemSchema).min(1),
 });
 
+export const UpdateCustomOrderItemSchema = z.object({
+	id: z.uuid().optional(),
+	product_name: z.string().min(1),
+	platform_sku: z.string().nullable().optional(),
+	variant_label: z.array(VariantOptionSchema).nullable().optional(),
+	quantity: z.number().int().min(1),
+	unit_price: z.string().nullable().optional(),
+});
+
 export const UpdateCustomOrderSchema = z.object({
 	customer_name: z.string().min(1).optional(),
 	customer_email: z.email().nullable().optional(),
@@ -178,6 +187,7 @@ export const UpdateCustomOrderSchema = z.object({
 	due_date: z.coerce.date().nullable().optional(),
 	order_notes: z.string().nullable().optional(),
 	order_description: z.string().nullable().optional(),
+	items: z.array(UpdateCustomOrderItemSchema).min(1).optional(),
 });
 
 export const DeleteOrderResponseSchema = z.object({

@@ -7,7 +7,11 @@ import { getDefaultStageIds } from '../utils/default-stages.js';
 import { generateOrderNumber } from '../utils/order-number.js';
 import { sumLineItems } from '../utils/order-totals.js';
 import { getOrderWithItems } from '../orders-service.js';
-import type { CreateCustomOrder, UpdateCustomOrder } from '../contract/types.js';
+import { syncCustomOrderItems } from './custom-order-items.js';
+import type {
+	CreateCustomOrder,
+	UpdateCustomOrder,
+} from '../contract/types.js';
 
 export async function createCustomOrder(
 	userId: string,
@@ -89,14 +93,28 @@ export async function updateCustomOrder(
 	if (input.order_description !== undefined)
 		updates.order_description = input.order_description;
 
-	if (Object.keys(updates).length > 0) {
-		await db
+	if (input.items) {
+		const subtotal = sumLineItems(input.items);
+		updates.subtotal = subtotal;
+		updates.grand_total = subtotal;
+	}
+
+	const { itemStageId } = input.items
+		? await getDefaultStageIds(store.id)
+		: { itemStageId: null };
+
+	await db.transaction().execute(async (trx) => {
+		await trx
 			.updateTable('orders')
 			.set({ ...updates, updated_at: sql`NOW()` })
 			.where('id', '=', orderId)
 			.where('store_id', '=', store.id)
 			.execute();
-	}
+
+		if (input.items) {
+			await syncCustomOrderItems(trx, orderId, input.items, itemStageId);
+		}
+	});
 
 	return getOrderWithItems(userId, orderId);
 }
