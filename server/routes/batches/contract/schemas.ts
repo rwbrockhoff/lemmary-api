@@ -117,6 +117,7 @@ const BatchDetailOrderSchema = z.object({
 	order_type: z.enum(ORDER_TYPE_VALUES),
 	fulfillment_status: z.string(),
 	order_number: z.string(),
+	order_title: z.string().nullable(),
 	customer_name: z.string().nullable(),
 	order_notes: z.string().nullable(),
 	order_date: z.date(),

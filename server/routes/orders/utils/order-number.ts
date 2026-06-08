@@ -17,7 +17,7 @@ export async function generateOrderNumber(
 	const result = await trx
 		.selectFrom('orders')
 		.select(
-			sql<number>`coalesce(max(cast(substring(order_number from '[0-9]+$') as integer)), 1000)`.as(
+			sql<number>`coalesce(max(cast(substring(order_number from '[0-9]+$') as integer)), 0)`.as(
 				'last',
 			),
 		)
@@ -25,5 +25,5 @@ export async function generateOrderNumber(
 		.where('order_number', 'like', `${prefix}-%`)
 		.executeTakeFirst();
 
-	return `${prefix}-${(result?.last ?? 1000) + 1}`;
+	return `${prefix}-${(result?.last ?? 0) + 1}`;
 }

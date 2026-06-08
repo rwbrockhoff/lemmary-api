@@ -430,7 +430,7 @@ async function seed() {
 		`  BOM: ${fabricData.length} fabric + ${hardwareData.length} hardware entries`,
 	);
 
-	// Adds 3 custom orders for dev (e.g. C-1001)
+	// Adds 3 custom orders for dev (e.g. C-1)
 	faker.seed(42);
 
 	const defaultOrderStage = await db
@@ -464,7 +464,7 @@ async function seed() {
 		const orderDate = faker.date.recent({ days: 30 });
 		const dueDate = new Date(orderDate);
 		dueDate.setDate(dueDate.getDate() + 21);
-		const orderNumber = `C-${String(1001 + i).padStart(4, '0')}`;
+		const orderNumber = `C-${i + 1}`;
 
 		const products = faker.helpers.arrayElements(
 			distinctProducts,
