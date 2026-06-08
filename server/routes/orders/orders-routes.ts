@@ -33,9 +33,11 @@ import {
 	handleCompleteAllOrderItems,
 } from './orders-controller.js';
 import { customOrderRoutes } from './custom/custom-order-routes.js';
+import { workOrderRoutes } from './work-order/work-order-routes.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
 	await app.register(customOrderRoutes);
+	await app.register(workOrderRoutes);
 
 	const r = app.withTypeProvider<ZodTypeProvider>();
 

@@ -1,17 +1,17 @@
 import { sql } from 'kysely';
 import type { Transaction } from 'kysely';
-import type { Database } from '../../../db/database-types.js';
-import { toJsonb } from '../../../utils/json.js';
-import type { UpdateCustomOrderItem } from '../contract/types.js';
+import type { Database } from '../../db/database-types.js';
+import { toJsonb } from '../../utils/json.js';
+import type { UpdateOrderLineItem } from './contract/types.js';
 
-// Handles updates to custom order linte items
-// Adds new items, deleted removed items, and preserves item stage
+// Handles updates to order line items (custom and work orders)
+// Adds new items, deletes removed items, and preserves item stage
 // when user swaps to different product or variant (if in progress)
 
-export async function syncCustomOrderItems(
+export async function syncOrderItems(
 	trx: Transaction<Database>,
 	orderId: string,
-	items: UpdateCustomOrderItem[],
+	items: UpdateOrderLineItem[],
 	itemStageId: string | null,
 ) {
 	const existing = await trx
@@ -28,10 +28,7 @@ export async function syncCustomOrderItems(
 	// Delete removed items
 	const idsToDelete = [...existingIds].filter((id) => !incomingIds.has(id));
 	if (idsToDelete.length > 0) {
-		await trx
-			.deleteFrom('order_items')
-			.where('id', 'in', idsToDelete)
-			.execute();
+		await trx.deleteFrom('order_items').where('id', 'in', idsToDelete).execute();
 	}
 
 	// Insert new items
@@ -54,9 +51,9 @@ export async function syncCustomOrderItems(
 			.execute();
 	}
 
-	// Update items that have changed product or variant (preserves stage)
+	// Update items that changed product or variant (preserves stage)
 	const itemsToUpdate = items.filter(
-		(item): item is UpdateCustomOrderItem & { id: string } =>
+		(item): item is UpdateOrderLineItem & { id: string } =>
 			item.id !== undefined && existingIds.has(item.id),
 	);
 
