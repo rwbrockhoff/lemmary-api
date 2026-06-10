@@ -25,11 +25,11 @@ async function fetchOrdersFromPlatform(
 function calculateDueDate(
 	orderDate: Date,
 	leadTimeDays: number | null,
-): Date | null {
+): string | null {
 	if (!leadTimeDays) return null;
 	const due = new Date(orderDate);
 	due.setDate(due.getDate() + leadTimeDays);
-	return due;
+	return due.toISOString().slice(0, 10);
 }
 
 // Reconciles customer's order workflow stage to be completed when
@@ -51,7 +51,7 @@ export async function reconcileCompletedOrderStages(
 
 	const outOfSyncOrders = await trx
 		.selectFrom('orders')
-		.select(['id', 'workflow_stage_id', 'fulfilled_on'])
+		.select(['id', 'workflow_stage_id', 'fulfilled_at'])
 		.where('store_id', '=', storeId)
 		.where('fulfillment_status', '=', 'fulfilled')
 		.where(sql<SqlBool>`workflow_stage_id is distinct from ${finalStage.id}`)
@@ -77,7 +77,7 @@ export async function reconcileCompletedOrderStages(
 				order_id: o.id,
 				from_stage_id: o.workflow_stage_id,
 				to_stage_id: finalStage.id,
-				transitioned_at: o.fulfilled_on ?? new Date(),
+				transitioned_at: o.fulfilled_at ?? new Date(),
 			})),
 		)
 		.execute();
@@ -144,7 +144,7 @@ async function upsertOrders(
 							shipping_total: order.shipping_total,
 							grand_total: order.grand_total,
 							shipping_method: order.shipping_method,
-							fulfilled_on: order.fulfilled_on,
+							fulfilled_at: order.fulfilled_at,
 							tracking_number: order.tracking_number,
 							tracking_url: order.tracking_url,
 							carrier_name: order.carrier_name,

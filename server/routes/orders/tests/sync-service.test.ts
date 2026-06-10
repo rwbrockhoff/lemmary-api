@@ -156,7 +156,7 @@ describe('reconcileCompletedOrderStages', () => {
 			});
 	});
 
-	it('backdates history transitions to fulfilled_on', async () => {
+	it('backdates history transitions to fulfilled_at', async () => {
 		const ROLLBACK = new Error('__rollback_test_tx__');
 
 		await db
@@ -194,7 +194,7 @@ describe('reconcileCompletedOrderStages', () => {
 					.set({
 						fulfillment_status: 'fulfilled',
 						workflow_stage_id: firstStage.id,
-						fulfilled_on: fulfilledOn,
+						fulfilled_at: fulfilledOn,
 					})
 					.where('id', '=', order.id)
 					.execute();

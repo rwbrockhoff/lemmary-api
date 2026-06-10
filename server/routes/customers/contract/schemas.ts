@@ -15,7 +15,7 @@ export const CustomerOrderSchema = z
 		order_number: z.string(),
 		order_date: z.coerce.date(),
 		fulfillment_status: z.string(),
-		due_date: z.coerce.date().nullable(),
+		due_date: z.iso.date().nullable(),
 		subtotal: z.string().nullable(),
 		grand_total: z.string().nullable(),
 		item_count: z.number().int(),

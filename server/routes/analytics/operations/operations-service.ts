@@ -93,7 +93,7 @@ export async function getOperations(
 		.selectFrom('orders')
 		.select(db.fn.count<number>('id').as('count'))
 		.where('store_id', '=', store.id)
-		.where('fulfilled_on', '>=', periodStart)
+		.where('fulfilled_at', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
 	const leadTime = await db
@@ -101,13 +101,13 @@ export async function getOperations(
 		.select(
 			sql<
 				string | null
-			>`avg(extract(epoch from (fulfilled_on - order_date)) / 86400)::text`.as(
+			>`avg(extract(epoch from (fulfilled_at - order_date)) / 86400)::text`.as(
 				'avg_days',
 			),
 		)
 		.where('store_id', '=', store.id)
-		.where('fulfilled_on', 'is not', null)
-		.where('fulfilled_on', '>=', periodStart)
+		.where('fulfilled_at', 'is not', null)
+		.where('fulfilled_at', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
 	const avgLeadTimeDays =
@@ -146,6 +146,8 @@ export async function getOperations(
 		.select([
 			'orders.id',
 			'orders.order_number',
+			'orders.order_type',
+			'orders.order_title',
 			'orders.customer_name',
 			'orders.order_date',
 			'orders.due_date',
@@ -164,12 +166,22 @@ export async function getOperations(
 
 	const dueSoon = dueSoonRaw.map((row) => {
 		const dueDate = row.due_date;
-		const daysUntilDue = dueDate
-			? Math.ceil((dueDate.getTime() - now.getTime()) / dayMs)
-			: null;
+		let daysUntilDue: number | null = null;
+		if (dueDate) {
+			const [y, m, d] = dueDate.split('-').map(Number);
+			const dueUtc = Date.UTC(y, m - 1, d);
+			const todayUtc = Date.UTC(
+				now.getUTCFullYear(),
+				now.getUTCMonth(),
+				now.getUTCDate(),
+			);
+			daysUntilDue = Math.round((dueUtc - todayUtc) / dayMs);
+		}
 		return {
 			id: row.id,
 			orderNumber: row.order_number,
+			orderType: row.order_type,
+			orderTitle: row.order_title,
 			customerName: row.customer_name,
 			orderDate: row.order_date,
 			dueDate,

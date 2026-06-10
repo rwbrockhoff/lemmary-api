@@ -450,7 +450,7 @@ async function seed() {
 	await db
 		.deleteFrom('orders')
 		.where('store_id', '=', DEV_STORE_ID)
-		.where('order_type', '=', 'custom')
+		.where('order_type', 'in', ['custom', 'work'])
 		.execute();
 
 	const distinctProducts = [
@@ -491,7 +491,7 @@ async function seed() {
 				customer_email: `${customerName.toLowerCase().replace(/\s/g, '.')}@example.com`,
 				order_date: orderDate,
 				fulfillment_status: 'pending',
-				due_date: dueDate,
+				due_date: dueDate.toISOString().slice(0, 10),
 				workflow_stage_id: defaultOrderStage.id,
 				subtotal: subtotal.toFixed(2),
 				shipping_total: '0.00',
@@ -519,6 +519,46 @@ async function seed() {
 	}
 
 	console.log(`  Custom orders: ${CUSTOM_ORDER_COUNT} seeded`);
+
+	// Adds 1 work order for dev (e.g. WO-1)
+	const workProducts = faker.helpers.arrayElements(distinctProducts, 2);
+	const workOrderDate = faker.date.recent({ days: 14 });
+	const workDueDate = new Date(workOrderDate);
+	workDueDate.setDate(workDueDate.getDate() + 21);
+
+	const workOrder = await db
+		.insertInto('orders')
+		.values({
+			store_id: DEV_STORE_ID,
+			order_type: 'work',
+			platform_order_id: null,
+			order_number: 'WO-1',
+			order_title: 'Restock backstock slings',
+			order_date: workOrderDate,
+			fulfillment_status: 'pending',
+			due_date: workDueDate.toISOString().slice(0, 10),
+			workflow_stage_id: defaultOrderStage.id,
+			currency: 'USD',
+		})
+		.returning('id')
+		.executeTakeFirstOrThrow();
+
+	await db
+		.insertInto('order_items')
+		.values(
+			workProducts.map((product) => ({
+				order_id: workOrder.id,
+				platform_line_item_id: null,
+				platform_sku: product.platform_sku,
+				product_name: product.product_name,
+				variant_label: sql`${JSON.stringify([{ name: 'Variant', value: product.variant }])}::jsonb`,
+				quantity: faker.number.int({ min: 2, max: 6 }),
+				workflow_stage_id: defaultItemStage.id,
+			})),
+		)
+		.execute();
+
+	console.log('  Work orders: 1 seeded');
 
 	await db.destroy();
 	console.log('Seed complete');

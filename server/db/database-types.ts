@@ -1,4 +1,5 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
+import type { OrderType } from './enums.js';
 
 export interface Database {
 	users: UserTable;
@@ -97,7 +98,7 @@ export type NewOrderStageHistory = Insertable<OrderStageHistoryTable>;
 export interface OrderTable {
 	id: Generated<string>;
 	store_id: string;
-	order_type: Generated<string>;
+	order_type: Generated<OrderType>;
 	platform_order_id: string | null;
 	order_number: string;
 	order_title: string | null;
@@ -106,7 +107,7 @@ export interface OrderTable {
 	customer_email: string | null;
 	order_date: Date;
 	fulfillment_status: Generated<string>;
-	due_date: Date | null;
+	due_date: string | null;
 	workflow_stage_id: string | null;
 	subtotal: string | null;
 	shipping_total: string | null;
@@ -115,7 +116,7 @@ export interface OrderTable {
 	discount_total: Generated<string>;
 	shipping_method: string | null;
 	order_notes: string | null;
-	fulfilled_on: Date | null;
+	fulfilled_at: Date | null;
 	tracking_number: string | null;
 	tracking_url: string | null;
 	carrier_name: string | null;
@@ -206,7 +207,7 @@ export interface ProductionBatchTable {
 	store_id: string;
 	name: string;
 	status: Generated<string>;
-	due_date: Date | null;
+	due_date: string | null;
 	completed_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

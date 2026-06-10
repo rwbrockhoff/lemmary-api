@@ -441,7 +441,7 @@ export async function getWorkflowBoard(userId: string) {
 			// fetch one extra row to detect hasMore without a count query
 			workflowOrdersBase(store.id)
 				.where('order_workflow_stages.is_complete', '=', true)
-				.orderBy('orders.fulfilled_on', 'desc')
+				.orderBy('orders.fulfilled_at', 'desc')
 				.orderBy('orders.order_date', 'desc')
 				.limit(COMPLETED_PAGE_SIZE + 1)
 				.execute(),
@@ -512,7 +512,7 @@ export async function getStageOrders(
 
 	const sortedQuery = stage.is_complete
 		? baseQuery
-				.orderBy('orders.fulfilled_on', 'desc')
+				.orderBy('orders.fulfilled_at', 'desc')
 				.orderBy('orders.order_date', 'desc')
 		: baseQuery.orderBy('order_date', 'asc');
 
