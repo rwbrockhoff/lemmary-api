@@ -156,6 +156,11 @@ export const UpdateOrderNotesBodySchema = z.object({
 	notes: z.string(),
 });
 
+export const UpdateOrderDatesBodySchema = z.object({
+	order_date: z.coerce.date().optional(),
+	due_date: z.iso.date().nullable().optional(),
+});
+
 // Line items are the same shape for any user created order
 export const CreateOrderLineItemSchema = z.object({
 	product_name: z.string().min(1),

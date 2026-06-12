@@ -18,6 +18,7 @@ import {
 	OrderItemParamsSchema,
 	UpdateOrderStageBodySchema,
 	UpdateOrderNotesBodySchema,
+	UpdateOrderDatesBodySchema,
 	DeleteOrderResponseSchema,
 } from './contract/schemas.js';
 import {
@@ -27,6 +28,7 @@ import {
 	handleGetOrder,
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
+	handleUpdateOrderDates,
 	handleUpdateOrderItemStage,
 	handleGetWorkflowBoard,
 	handleGetStageOrders,
@@ -160,6 +162,22 @@ export async function ordersRoutes(app: FastifyInstance) {
 			},
 		},
 		handleUpdateOrderNotes,
+	);
+
+	r.put(
+		'/orders/:orderId/dates',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Update order and due dates',
+				params: OrderIdParamSchema,
+				body: UpdateOrderDatesBodySchema,
+				response: {
+					200: successSchema(OrderSchema),
+				},
+			},
+		},
+		handleUpdateOrderDates,
 	);
 
 	r.put(

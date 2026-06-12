@@ -7,6 +7,7 @@ import {
 	deleteOrder,
 	updateOrderStage,
 	updateOrderNotes,
+	updateOrderDates,
 	updateOrderItemStage,
 	completeAllOrderItems,
 	getWorkflowBoard,
@@ -89,6 +90,23 @@ export async function handleUpdateOrderNotes(
 		request.userId,
 		request.params.orderId,
 		notes,
+	);
+
+	if (!order) throw AppError.notFound('Order not found');
+	return successResponse(reply, order);
+}
+
+export async function handleUpdateOrderDates(
+	request: FastifyRequest<{
+		Params: { orderId: string };
+		Body: { order_date?: Date; due_date?: string | null };
+	}>,
+	reply: FastifyReply,
+) {
+	const order = await updateOrderDates(
+		request.userId,
+		request.params.orderId,
+		request.body,
 	);
 
 	if (!order) throw AppError.notFound('Order not found');

@@ -1,5 +1,6 @@
 import { sql, type SqlBool } from 'kysely';
 import { db } from '../../db/connection.js';
+import type { OrderUpdate } from '../../db/database-types.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
 import { applyOrNull } from '../../utils/nullable.js';
@@ -345,6 +346,39 @@ export async function updateOrderNotes(
 	return db
 		.updateTable('orders')
 		.set({ order_notes: notes, updated_at: sql`NOW()` })
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.returningAll()
+		.executeTakeFirst();
+}
+
+export async function updateOrderDates(
+	userId: string,
+	orderId: string,
+	input: { order_date?: Date; due_date?: string | null },
+) {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const existing = await db
+		.selectFrom('orders')
+		.select('order_type')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+	if (!existing) return null;
+
+	const updates: OrderUpdate = {};
+	if (input.due_date !== undefined) updates.due_date = input.due_date;
+	// order_date comes from the platform on synced orders, so only app-created
+	// (custom/work) orders are allowed to change it
+	if (input.order_date !== undefined && existing.order_type !== 'platform') {
+		updates.order_date = input.order_date;
+	}
+
+	return db
+		.updateTable('orders')
+		.set({ ...updates, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
