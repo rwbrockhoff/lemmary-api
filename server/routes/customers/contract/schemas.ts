@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CUSTOMER_TIERS } from '../../../utils/customer-tier.js';
+import { ORDER_TYPE_VALUES } from '../../orders/contract/constants.js';
 
 export const CustomerTierSchema = z.enum(CUSTOMER_TIERS);
 
@@ -13,6 +14,7 @@ export const CustomerOrderSchema = z
 	.object({
 		id: z.uuid(),
 		order_number: z.string(),
+		order_type: z.enum(ORDER_TYPE_VALUES),
 		order_date: z.coerce.date(),
 		fulfillment_status: z.string(),
 		due_date: z.iso.date().nullable(),

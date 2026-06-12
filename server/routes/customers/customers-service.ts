@@ -26,6 +26,7 @@ export async function getCustomerByEmail(
 		.select([
 			'orders.id',
 			'orders.order_number',
+			'orders.order_type',
 			'orders.order_date',
 			'orders.fulfillment_status',
 			'orders.due_date',
@@ -63,6 +64,7 @@ export async function getCustomerByEmail(
 		orders: orders.map((order) => ({
 			id: order.id,
 			order_number: order.order_number,
+			order_type: order.order_type,
 			order_date: order.order_date,
 			fulfillment_status: order.fulfillment_status,
 			due_date: order.due_date,
