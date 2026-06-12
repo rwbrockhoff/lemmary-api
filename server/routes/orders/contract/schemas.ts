@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CUSTOMER_TIERS } from '../../../utils/customer-tier.js';
+import { ORDER_TYPE_VALUES } from './constants.js';
 
 export const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -9,13 +10,16 @@ export const VariantOptionSchema = z.object({
 const OrderColumnsSchema = z.object({
 	id: z.string(),
 	store_id: z.string(),
-	platform_order_id: z.string(),
+	order_type: z.enum(ORDER_TYPE_VALUES),
+	platform_order_id: z.string().nullable(),
 	order_number: z.string(),
-	customer_name: z.string(),
+	order_title: z.string().nullable(),
+	order_description: z.string().nullable(),
+	customer_name: z.string().nullable(),
 	customer_email: z.string().nullable(),
 	order_date: z.date(),
 	fulfillment_status: z.string(),
-	due_date: z.date().nullable(),
+	due_date: z.iso.date().nullable(),
 	workflow_stage_id: z.string().nullable(),
 	subtotal: z.string().nullable(),
 	shipping_total: z.string().nullable(),
@@ -24,7 +28,7 @@ const OrderColumnsSchema = z.object({
 	discount_total: z.string(),
 	shipping_method: z.string().nullable(),
 	order_notes: z.string().nullable(),
-	fulfilled_on: z.date().nullable(),
+	fulfilled_at: z.date().nullable(),
 	tracking_number: z.string().nullable(),
 	tracking_url: z.string().nullable(),
 	carrier_name: z.string().nullable(),
@@ -67,6 +71,8 @@ export const GetOrdersQuerySchema = z.object({
 	status: z.enum(['pending', 'completed']).default('pending'),
 	limit: z.coerce.number().int().min(1).max(50).default(15),
 	offset: z.coerce.number().int().min(0).default(0),
+	// Also include this batch's orders (incl. completed) alongside pending ones
+	includeBatchId: z.uuid().optional(),
 });
 
 export const GetOrdersResponseSchema = z.object({
@@ -148,4 +154,70 @@ export const UpdateOrderStageBodySchema = z.object({
 
 export const UpdateOrderNotesBodySchema = z.object({
 	notes: z.string(),
+});
+
+export const UpdateOrderDatesBodySchema = z.object({
+	order_date: z.coerce.date().optional(),
+	due_date: z.iso.date().nullable().optional(),
+});
+
+// Line items are the same shape for any user created order
+export const CreateOrderLineItemSchema = z.object({
+	product_name: z.string().min(1),
+	platform_sku: z.string().nullable().optional(),
+	variant_label: z.array(VariantOptionSchema).nullable().optional(),
+	image_url: z.string().nullable().optional(),
+	quantity: z.number().int().min(1),
+	unit_price: z.string().nullable().optional(),
+});
+
+export const UpdateOrderLineItemSchema = z.object({
+	id: z.uuid().optional(),
+	product_name: z.string().min(1),
+	platform_sku: z.string().nullable().optional(),
+	variant_label: z.array(VariantOptionSchema).nullable().optional(),
+	image_url: z.string().nullable().optional(),
+	quantity: z.number().int().min(1),
+	unit_price: z.string().nullable().optional(),
+});
+
+export const CreateCustomOrderSchema = z.object({
+	customer_name: z.string().min(1),
+	customer_email: z.email().nullable().optional(),
+	order_date: z.coerce.date().optional(),
+	due_date: z.iso.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	items: z.array(CreateOrderLineItemSchema).min(1),
+});
+
+export const UpdateCustomOrderSchema = z.object({
+	customer_name: z.string().min(1).optional(),
+	customer_email: z.email().nullable().optional(),
+	order_date: z.coerce.date().optional(),
+	due_date: z.iso.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	order_description: z.string().nullable().optional(),
+	items: z.array(UpdateOrderLineItemSchema).min(1).optional(),
+});
+
+export const CreateWorkOrderSchema = z.object({
+	order_title: z.string().min(1),
+	order_description: z.string().nullable().optional(),
+	order_date: z.coerce.date().optional(),
+	due_date: z.iso.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	items: z.array(CreateOrderLineItemSchema).min(1),
+});
+
+export const UpdateWorkOrderSchema = z.object({
+	order_title: z.string().min(1).optional(),
+	order_description: z.string().nullable().optional(),
+	order_date: z.coerce.date().optional(),
+	due_date: z.iso.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	items: z.array(UpdateOrderLineItemSchema).min(1).optional(),
+});
+
+export const DeleteOrderResponseSchema = z.object({
+	id: z.string(),
 });

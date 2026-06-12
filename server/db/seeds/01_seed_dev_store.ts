@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import * as path from 'path';
 import pg from 'pg';
 import { Kysely, PostgresDialect, sql } from 'kysely';
+import { faker } from '@faker-js/faker';
+import { DEMO_CUSTOMERS } from './data/demo/demo-customers.js';
 import type { Database } from '../database-types.js';
 import { DEV_USER_ID, DEV_STORE_ID } from '../../config/constants.js';
 
@@ -427,6 +429,136 @@ async function seed() {
 	console.log(
 		`  BOM: ${fabricData.length} fabric + ${hardwareData.length} hardware entries`,
 	);
+
+	// Adds 3 custom orders for dev (e.g. C-1)
+	faker.seed(42);
+
+	const defaultOrderStage = await db
+		.selectFrom('order_workflow_stages')
+		.select('id')
+		.where('store_id', '=', DEV_STORE_ID)
+		.where('is_default', '=', true)
+		.executeTakeFirstOrThrow();
+
+	const defaultItemStage = await db
+		.selectFrom('order_item_workflow_stages')
+		.select('id')
+		.where('store_id', '=', DEV_STORE_ID)
+		.where('is_default', '=', true)
+		.executeTakeFirstOrThrow();
+
+	await db
+		.deleteFrom('orders')
+		.where('store_id', '=', DEV_STORE_ID)
+		.where('order_type', 'in', ['custom', 'work'])
+		.execute();
+
+	const distinctProducts = [
+		...new Map(fabricData.map((entry) => [entry.platform_sku, entry])).values(),
+	];
+
+	const CUSTOM_ORDER_COUNT = 3;
+
+	for (let i = 0; i < CUSTOM_ORDER_COUNT; i++) {
+		const customerName = faker.helpers.arrayElement(DEMO_CUSTOMERS);
+		const orderDate = faker.date.recent({ days: 30 });
+		const dueDate = new Date(orderDate);
+		dueDate.setDate(dueDate.getDate() + 21);
+		const orderNumber = `C-${i + 1}`;
+
+		const products = faker.helpers.arrayElements(
+			distinctProducts,
+			faker.number.int({ min: 1, max: 3 }),
+		);
+		const items = products.map((product) => ({
+			product,
+			quantity: faker.number.int({ min: 1, max: 4 }),
+			unitPrice: Number(faker.commerce.price({ min: 40, max: 200 })),
+		}));
+		const subtotal = items.reduce(
+			(sum, item) => sum + item.unitPrice * item.quantity,
+			0,
+		);
+
+		const order = await db
+			.insertInto('orders')
+			.values({
+				store_id: DEV_STORE_ID,
+				order_type: 'custom',
+				platform_order_id: null,
+				order_number: orderNumber,
+				customer_name: customerName,
+				customer_email: `${customerName.toLowerCase().replace(/\s/g, '.')}@example.com`,
+				order_date: orderDate,
+				fulfillment_status: 'pending',
+				due_date: dueDate.toISOString().slice(0, 10),
+				workflow_stage_id: defaultOrderStage.id,
+				subtotal: subtotal.toFixed(2),
+				shipping_total: '0.00',
+				grand_total: subtotal.toFixed(2),
+				currency: 'USD',
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		await db
+			.insertInto('order_items')
+			.values(
+				items.map((item) => ({
+					order_id: order.id,
+					platform_line_item_id: null,
+					platform_sku: item.product.platform_sku,
+					product_name: item.product.product_name,
+					variant_label: sql`${JSON.stringify([{ name: 'Variant', value: item.product.variant }])}::jsonb`,
+					quantity: item.quantity,
+					unit_price: item.unitPrice.toFixed(2),
+					workflow_stage_id: defaultItemStage.id,
+				})),
+			)
+			.execute();
+	}
+
+	console.log(`  Custom orders: ${CUSTOM_ORDER_COUNT} seeded`);
+
+	// Adds 1 work order for dev (e.g. WO-1)
+	const workProducts = faker.helpers.arrayElements(distinctProducts, 2);
+	const workOrderDate = faker.date.recent({ days: 14 });
+	const workDueDate = new Date(workOrderDate);
+	workDueDate.setDate(workDueDate.getDate() + 21);
+
+	const workOrder = await db
+		.insertInto('orders')
+		.values({
+			store_id: DEV_STORE_ID,
+			order_type: 'work',
+			platform_order_id: null,
+			order_number: 'WO-1',
+			order_title: 'Restock backstock slings',
+			order_date: workOrderDate,
+			fulfillment_status: 'pending',
+			due_date: workDueDate.toISOString().slice(0, 10),
+			workflow_stage_id: defaultOrderStage.id,
+			currency: 'USD',
+		})
+		.returning('id')
+		.executeTakeFirstOrThrow();
+
+	await db
+		.insertInto('order_items')
+		.values(
+			workProducts.map((product) => ({
+				order_id: workOrder.id,
+				platform_line_item_id: null,
+				platform_sku: product.platform_sku,
+				product_name: product.product_name,
+				variant_label: sql`${JSON.stringify([{ name: 'Variant', value: product.variant }])}::jsonb`,
+				quantity: faker.number.int({ min: 2, max: 6 }),
+				workflow_stage_id: defaultItemStage.id,
+			})),
+		)
+		.execute();
+
+	console.log('  Work orders: 1 seeded');
 
 	await db.destroy();
 	console.log('Seed complete');

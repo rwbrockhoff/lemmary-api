@@ -63,7 +63,10 @@ export async function getBatch(userId: string, batchId: string) {
 			'production_batch_orders.id',
 			'production_batch_orders.order_id',
 			'production_batch_orders.completed',
+			'orders.order_type',
+			'orders.fulfillment_status',
 			'orders.order_number',
+			'orders.order_title',
 			'orders.customer_name',
 			'orders.order_notes',
 			'orders.order_date',
@@ -144,7 +147,6 @@ export async function createBatch(
 		.select('id')
 		.where('id', 'in', orderIds)
 		.where('store_id', '=', store.id)
-		.where('fulfillment_status', '=', 'pending')
 		.execute();
 
 	if (orders.length !== orderIds.length) {
@@ -200,7 +202,6 @@ export async function updateBatch(
 				.select('id')
 				.where('id', 'in', updates.orderIds)
 				.where('store_id', '=', store.id)
-				.where('fulfillment_status', '=', 'pending')
 				.execute();
 
 			if (orders.length !== updates.orderIds.length) {

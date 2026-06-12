@@ -130,6 +130,44 @@ describe('Batches API', () => {
 		return res.json().data.id as string;
 	};
 
+	it('PUT /batches/:batchId stays editable when an order has been completed', async () => {
+		const batchId = await createBatch();
+
+		// Mark one of the batch's orders fulfilled, like completing a custom order does
+		const batchOrder = await db
+			.selectFrom('production_batch_orders')
+			.select('order_id')
+			.where('batch_id', '=', batchId)
+			.executeTakeFirstOrThrow();
+		await db
+			.updateTable('orders')
+			.set({ fulfillment_status: 'fulfilled' })
+			.where('id', '=', batchOrder.order_id)
+			.execute();
+
+		// Re-saving the batch should still succeed, not reject the fulfilled order
+		const batchOrders = await db
+			.selectFrom('production_batch_orders')
+			.select('order_id')
+			.where('batch_id', '=', batchId)
+			.execute();
+
+		const response = await app.inject(
+			withAuth('PUT', `/batches/${batchId}`, {
+				payload: { orderIds: batchOrders.map((o) => o.order_id) },
+			}),
+		);
+
+		expect(response.statusCode).toBe(200);
+
+		// Restore the shared seed order so it doesn't look out of sync to other tests
+		await db
+			.updateTable('orders')
+			.set({ fulfillment_status: 'pending' })
+			.where('id', '=', batchOrder.order_id)
+			.execute();
+	});
+
 	it('PUT /batches/:batchId/orders/:id completes an order and cascades to its items', async () => {
 		const batchId = await createBatch();
 		const batchOrder = await db

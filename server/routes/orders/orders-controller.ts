@@ -2,16 +2,18 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { successResponse } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
 import {
-	syncOrders,
 	getOrders,
 	getOrderWithItems,
+	deleteOrder,
 	updateOrderStage,
 	updateOrderNotes,
+	updateOrderDates,
 	updateOrderItemStage,
 	completeAllOrderItems,
 	getWorkflowBoard,
 	getStageOrders,
 } from './orders-service.js';
+import { syncOrders } from './sync-service.js';
 import type { GetOrdersQuery } from './contract/types.js';
 
 export async function handleSyncOrders(
@@ -29,6 +31,21 @@ export async function handleGetOrders(
 ) {
 	const result = await getOrders(request.userId, request.query);
 	return successResponse(reply, result);
+}
+
+export async function handleDeleteOrder(
+	request: FastifyRequest<{ Params: { orderId: string } }>,
+	reply: FastifyReply,
+) {
+	const result = await deleteOrder(request.userId, request.params.orderId);
+
+	if (!result.ok) {
+		if (result.error === 'platform')
+			throw AppError.conflict('Synced orders cannot be deleted.');
+		throw AppError.notFound('Order not found');
+	}
+
+	return successResponse(reply, { id: request.params.orderId });
 }
 
 export async function handleGetOrder(
@@ -73,6 +90,23 @@ export async function handleUpdateOrderNotes(
 		request.userId,
 		request.params.orderId,
 		notes,
+	);
+
+	if (!order) throw AppError.notFound('Order not found');
+	return successResponse(reply, order);
+}
+
+export async function handleUpdateOrderDates(
+	request: FastifyRequest<{
+		Params: { orderId: string };
+		Body: { order_date?: Date; due_date?: string | null };
+	}>,
+	reply: FastifyReply,
+) {
+	const order = await updateOrderDates(
+		request.userId,
+		request.params.orderId,
+		request.body,
 	);
 
 	if (!order) throw AppError.notFound('Order not found');

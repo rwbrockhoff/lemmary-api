@@ -8,14 +8,14 @@ export const CreateBomItemRequestSchema = z.object({
 	platform_sku: z.string(),
 	product_name: z.string(),
 	variant: z.string().nullable(),
-	piece: z.string().min(1),
+	piece: z.string(),
 	length: z.string().nullable(),
 	quantity: z.number(),
 	material_id: z.uuid().nullable(),
 });
 
 export const UpdateBomItemRequestSchema = z.object({
-	piece: z.string().min(1),
+	piece: z.string(),
 	length: z.string().nullable(),
 	quantity: z.number(),
 	measurement: MeasurementSchema,

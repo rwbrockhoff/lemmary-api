@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORDER_TYPE_VALUES } from '../../orders/contract/constants.js';
 
 const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -48,7 +49,7 @@ export const BatchSchema = z.object({
 	store_id: z.string(),
 	name: z.string(),
 	status: z.string(),
-	due_date: z.date().nullable(),
+	due_date: z.iso.date().nullable(),
 	completed_at: z.date().nullable(),
 	created_at: z.date(),
 	updated_at: z.date(),
@@ -113,11 +114,14 @@ const BatchDetailOrderSchema = z.object({
 	id: z.string(),
 	order_id: z.string(),
 	completed: z.boolean(),
+	order_type: z.enum(ORDER_TYPE_VALUES),
+	fulfillment_status: z.string(),
 	order_number: z.string(),
-	customer_name: z.string(),
+	order_title: z.string().nullable(),
+	customer_name: z.string().nullable(),
 	order_notes: z.string().nullable(),
 	order_date: z.date(),
-	due_date: z.date().nullable(),
+	due_date: z.iso.date().nullable(),
 	grand_total: z.string().nullable(),
 	workflow_stage_id: z.string().nullable(),
 	workflow_stage_name: z.string().nullable(),

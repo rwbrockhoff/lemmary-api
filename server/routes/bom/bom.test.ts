@@ -52,6 +52,26 @@ describe('BOM API', () => {
 		expect(response.json().data.piece).toBe('Test Piece');
 	});
 
+	it('POST /bom allows an empty piece so a row can be added then filled in', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/bom', {
+				payload: {
+					measurement: 'count',
+					platform_sku: 'TEST-SKU-EMPTY',
+					product_name: 'Test Product',
+					variant: null,
+					piece: '',
+					length: null,
+					quantity: 1,
+					material_id: null,
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(201);
+		expect(response.json().data.piece).toBe('');
+	});
+
 	it('PUT /bom/:bomItemId updates a BOM item', async () => {
 		const created = await app.inject(
 			withAuth('POST', '/bom', {

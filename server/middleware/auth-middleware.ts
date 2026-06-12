@@ -85,9 +85,10 @@ export async function authMiddleware(
 		request.method !== 'GET' &&
 		!DEMO_WRITE_ALLOWLIST.includes(request.url)
 	) {
-		return reply
-			.status(403)
-			.send({ error: 'Demo mode is read-only. Sign up to make changes.' });
+		return reply.status(403).send({
+			error: 'Demo mode is read-only. Sign up to make changes.',
+			code: 'DEMO_READ_ONLY',
+		});
 	}
 }
 

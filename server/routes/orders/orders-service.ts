@@ -1,18 +1,9 @@
-import { sql, type Transaction, type SqlBool } from 'kysely';
+import { sql, type SqlBool } from 'kysely';
 import { db } from '../../db/connection.js';
-import type { Database } from '../../db/database-types.js';
-import {
-	getStoreForUser,
-	getStoreWithAccessToken,
-	type StoreWithAccessToken,
-} from '../../utils/store.js';
-import { toJsonb } from '../../utils/json.js';
+import type { OrderUpdate } from '../../db/database-types.js';
+import { getStoreForUser } from '../../utils/store.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
 import { applyOrNull } from '../../utils/nullable.js';
-import {
-	fetchSquarespaceOrders,
-	type NormalizedOrder,
-} from './platforms/squarespace.js';
 import type { GetOrdersQuery } from './contract/types.js';
 
 function getStoreUrl(platformConfig: unknown): string | null {
@@ -23,15 +14,18 @@ function getStoreUrl(platformConfig: unknown): string | null {
 
 function buildOrderUrl(
 	storeUrl: string | null,
-	platformOrderId: string,
+	platformOrderId: string | null,
 ): string | null {
-	return storeUrl
+	return storeUrl && platformOrderId
 		? `${storeUrl}/commerce/orders/${platformOrderId}/authenticated`
 		: null;
 }
 
 function formatWorkflowOrder<
-	T extends { platform_order_id: string; customer_order_count: number | null },
+	T extends {
+		platform_order_id: string | null;
+		customer_order_count: number | null;
+	},
 >(row: T, storeUrl: string | null) {
 	return {
 		...row,
@@ -57,221 +51,9 @@ function logStageTransition(
 		});
 }
 
-async function fetchOrdersFromPlatform(
-	store: StoreWithAccessToken,
-): Promise<NormalizedOrder[]> {
-	if (store.platform === 'squarespace') {
-		return fetchSquarespaceOrders(store.access_token, store.last_synced_at);
-	}
-
-	throw new Error(`Unsupported platform: ${store.platform}`);
-}
-
-async function getDefaultStageIds(storeId: string) {
-	const orderStage = await db
-		.selectFrom('order_workflow_stages')
-		.select('id')
-		.where('store_id', '=', storeId)
-		.where('is_default', '=', true)
-		.executeTakeFirst();
-
-	const itemStage = await db
-		.selectFrom('order_item_workflow_stages')
-		.select('id')
-		.where('store_id', '=', storeId)
-		.where('is_default', '=', true)
-		.executeTakeFirst();
-
-	return {
-		orderStageId: orderStage?.id ?? null,
-		itemStageId: itemStage?.id ?? null,
-	};
-}
-
-function calculateDueDate(
-	orderDate: Date,
-	leadTimeDays: number | null,
-): Date | null {
-	if (!leadTimeDays) return null;
-	const due = new Date(orderDate);
-	due.setDate(due.getDate() + leadTimeDays);
-	return due;
-}
-
-// Reconciles customer's order workflow stage to be completed when
-// order is synced to platform and flag changes from pending -> complete
-
-export async function reconcileCompletedOrderStages(
-	trx: Transaction<Database>,
-	storeId: string,
-) {
-	const finalStage = await trx
-		.selectFrom('order_workflow_stages')
-		.select('id')
-		.where('store_id', '=', storeId)
-		.where('is_complete', '=', true)
-		.executeTakeFirst();
-
-	// store has no complete stage configured - return early
-	if (!finalStage) return 0;
-
-	const outOfSyncOrders = await trx
-		.selectFrom('orders')
-		.select(['id', 'workflow_stage_id', 'fulfilled_on'])
-		.where('store_id', '=', storeId)
-		.where('fulfillment_status', '=', 'fulfilled')
-		.where(sql<SqlBool>`workflow_stage_id is distinct from ${finalStage.id}`)
-		.execute();
-
-	// no orders out of sync - return early
-	if (outOfSyncOrders.length === 0) return 0;
-
-	await trx
-		.updateTable('orders')
-		.set({ workflow_stage_id: finalStage.id, updated_at: sql`NOW()` })
-		.where(
-			'id',
-			'in',
-			outOfSyncOrders.map((o) => o.id),
-		)
-		.execute();
-
-	await trx
-		.insertInto('order_stage_history')
-		.values(
-			outOfSyncOrders.map((o) => ({
-				order_id: o.id,
-				from_stage_id: o.workflow_stage_id,
-				to_stage_id: finalStage.id,
-				transitioned_at: o.fulfilled_on ?? new Date(),
-			})),
-		)
-		.execute();
-
-	// reconcile order items to the complete stage too
-	const finalItemStage = await trx
-		.selectFrom('order_item_workflow_stages')
-		.select('id')
-		.where('store_id', '=', storeId)
-		.where('is_complete', '=', true)
-		.executeTakeFirst();
-
-	if (finalItemStage) {
-		await trx
-			.updateTable('order_items')
-			.set({ workflow_stage_id: finalItemStage.id, updated_at: sql`NOW()` })
-			.where(
-				sql<SqlBool>`order_id in (
-					select id from orders
-					where store_id = ${storeId} and workflow_stage_id = ${finalStage.id}
-				)`,
-			)
-			.where(
-				sql<SqlBool>`workflow_stage_id is distinct from ${finalItemStage.id}`,
-			)
-			.execute();
-	}
-
-	// return total # of orders updated to is_complete workflow stage
-	return outOfSyncOrders.length;
-}
-
-async function upsertOrders(
-	storeId: string,
-	orders: NormalizedOrder[],
-	leadTimeDays: number | null,
-) {
-	const { orderStageId, itemStageId } = await getDefaultStageIds(storeId);
-
-	return db.transaction().execute(async (trx) => {
-		let synced = 0;
-
-		for (const { order, items } of orders) {
-			const dueDate = calculateDueDate(order.order_date, leadTimeDays);
-
-			const result = await trx
-				.insertInto('orders')
-				.values({
-					...order,
-					store_id: storeId,
-					workflow_stage_id: orderStageId,
-					due_date: dueDate,
-				})
-				.onConflict((oc) =>
-					oc.columns(['store_id', 'platform_order_id']).doUpdateSet({
-						customer_name: order.customer_name,
-						customer_email: order.customer_email,
-						fulfillment_status: order.fulfillment_status,
-						subtotal: order.subtotal,
-						shipping_total: order.shipping_total,
-						grand_total: order.grand_total,
-						shipping_method: order.shipping_method,
-						fulfilled_on: order.fulfilled_on,
-						tracking_number: order.tracking_number,
-						tracking_url: order.tracking_url,
-						carrier_name: order.carrier_name,
-						promo_code: order.promo_code,
-						discount_total: order.discount_total,
-						workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-						updated_at: sql`NOW()`,
-					}),
-				)
-				.returning('id')
-				.executeTakeFirstOrThrow();
-
-			if (items.length > 0) {
-				// EXCLUDED.column refers to each row's proposed values on conflict
-				await trx
-					.insertInto('order_items')
-					.values(
-						items.map((item) => ({
-							...item,
-							variant_label: toJsonb(item.variant_label),
-							order_id: result.id,
-							workflow_stage_id: itemStageId,
-						})),
-					)
-					.onConflict((oc) =>
-						oc.columns(['order_id', 'platform_line_item_id']).doUpdateSet({
-							product_name: (eb) => eb.ref('excluded.product_name'),
-							variant_label: (eb) => eb.ref('excluded.variant_label'),
-							quantity: (eb) => eb.ref('excluded.quantity'),
-							unit_price: (eb) => eb.ref('excluded.unit_price'),
-							image_url: (eb) => eb.ref('excluded.image_url'),
-							workflow_stage_id: sql`COALESCE(order_items.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
-							updated_at: sql`NOW()`,
-						}),
-					)
-					.execute();
-			}
-
-			synced++;
-		}
-
-		await reconcileCompletedOrderStages(trx, storeId);
-
-		return synced;
-	});
-}
-
-export async function syncOrders(userId: string) {
-	const store = await getStoreWithAccessToken(userId);
-	if (!store) return null;
-	const orders = await fetchOrdersFromPlatform(store);
-	const synced = await upsertOrders(store.id, orders, store.lead_time_days);
-
-	await db
-		.updateTable('stores')
-		.set({ last_synced_at: new Date() })
-		.where('id', '=', store.id)
-		.execute();
-
-	return { synced, storeId: store.id };
-}
-
 export async function getOrders(
 	userId: string,
-	{ status, limit, offset }: GetOrdersQuery,
+	{ status, limit, offset, includeBatchId }: GetOrdersQuery,
 ) {
 	const store = await getStoreForUser(userId);
 	if (!store) return { orders: [], hasMore: false, lastSyncedAt: null };
@@ -300,8 +82,8 @@ export async function getOrders(
 				)
 				.select([
 					'oi.order_id',
-					sql<number>`count(*)`.as('total'),
-					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+					sql<number>`coalesce(sum(oi.quantity), 0)`.as('total'),
+					sql<number>`coalesce(sum(oi.quantity) filter (where s.is_complete = true), 0)`.as(
 						'completed',
 					),
 				])
@@ -352,12 +134,31 @@ export async function getOrders(
 		])
 		.where('orders.store_id', '=', store.id);
 
-	const filteredQuery = isPending
-		? baseQuery
+	// Open orders: pending and not manually placed in a completed stage. When a
+	// batchId is passed, also include that batch's orders so completed ones still show.
+	const pendingFiltered = includeBatchId
+		? baseQuery.where((eb) =>
+				eb.or([
+					eb.and([
+						eb('orders.fulfillment_status', '=', 'pending'),
+						sql<SqlBool>`order_workflow_stages.is_complete is not true`,
+					]),
+					eb(
+						'orders.id',
+						'in',
+						eb
+							.selectFrom('production_batch_orders')
+							.select('order_id')
+							.where('batch_id', '=', includeBatchId),
+					),
+				]),
+			)
+		: baseQuery
 				.where('orders.fulfillment_status', '=', 'pending')
-				// exclude orders the user has manually placed in a completed stage
-				.where(sql<SqlBool>`order_workflow_stages.is_complete is not true`)
-				.orderBy('order_date', 'asc')
+				.where(sql<SqlBool>`order_workflow_stages.is_complete is not true`);
+
+	const filteredQuery = isPending
+		? pendingFiltered.orderBy('order_date', 'asc')
 		: baseQuery
 				.where('orders.fulfillment_status', '!=', 'pending')
 				.orderBy('order_date', 'desc')
@@ -455,6 +256,36 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 	};
 }
 
+type DeleteOrderResult =
+	| { ok: true }
+	| { ok: false; error: 'not_found' | 'platform' };
+
+export async function deleteOrder(
+	userId: string,
+	orderId: string,
+): Promise<DeleteOrderResult> {
+	const store = await getStoreForUser(userId);
+	if (!store) return { ok: false, error: 'not_found' };
+
+	const order = await db
+		.selectFrom('orders')
+		.select('order_type')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!order) return { ok: false, error: 'not_found' };
+	if (order.order_type === 'platform') return { ok: false, error: 'platform' };
+
+	await db
+		.deleteFrom('orders')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.execute();
+
+	return { ok: true };
+}
+
 export async function updateOrderStage(
 	userId: string,
 	orderId: string,
@@ -465,14 +296,33 @@ export async function updateOrderStage(
 
 	const current = await db
 		.selectFrom('orders')
-		.select('workflow_stage_id')
+		.select(['workflow_stage_id', 'order_type'])
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.executeTakeFirst();
 
+	const targetStage = await db
+		.selectFrom('order_workflow_stages')
+		.select('is_complete')
+		.where('id', '=', stageId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	const updates: { workflow_stage_id: string; fulfillment_status?: string } = {
+		workflow_stage_id: stageId,
+	};
+
+	// Platform orders get their fulfillment from the sync. Our own orders have no
+	// such step, so reaching a completed stage fulfills them (and reopening resets).
+	if (current && current.order_type !== 'platform' && targetStage) {
+		updates.fulfillment_status = targetStage.is_complete
+			? 'fulfilled'
+			: 'pending';
+	}
+
 	const updated = await db
 		.updateTable('orders')
-		.set({ workflow_stage_id: stageId, updated_at: sql`NOW()` })
+		.set({ ...updates, updated_at: sql`NOW()` })
 		.where('id', '=', orderId)
 		.where('store_id', '=', store.id)
 		.returningAll()
@@ -502,6 +352,39 @@ export async function updateOrderNotes(
 		.executeTakeFirst();
 }
 
+export async function updateOrderDates(
+	userId: string,
+	orderId: string,
+	input: { order_date?: Date; due_date?: string | null },
+) {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const existing = await db
+		.selectFrom('orders')
+		.select('order_type')
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+	if (!existing) return null;
+
+	const updates: OrderUpdate = {};
+	if (input.due_date !== undefined) updates.due_date = input.due_date;
+	// order_date comes from the platform on synced orders, so only app-created
+	// (custom/work) orders are allowed to change it
+	if (input.order_date !== undefined && existing.order_type !== 'platform') {
+		updates.order_date = input.order_date;
+	}
+
+	return db
+		.updateTable('orders')
+		.set({ ...updates, updated_at: sql`NOW()` })
+		.where('id', '=', orderId)
+		.where('store_id', '=', store.id)
+		.returningAll()
+		.executeTakeFirst();
+}
+
 function workflowOrdersBase(storeId: string) {
 	return db
 		.with('customer_counts', (qb) =>
@@ -523,8 +406,8 @@ function workflowOrdersBase(storeId: string) {
 				)
 				.select([
 					'oi.order_id',
-					sql<number>`count(*)`.as('total'),
-					sql<number>`count(*) filter (where s.is_complete = true)`.as(
+					sql<number>`coalesce(sum(oi.quantity), 0)`.as('total'),
+					sql<number>`coalesce(sum(oi.quantity) filter (where s.is_complete = true), 0)`.as(
 						'completed',
 					),
 				])
@@ -592,7 +475,7 @@ export async function getWorkflowBoard(userId: string) {
 			// fetch one extra row to detect hasMore without a count query
 			workflowOrdersBase(store.id)
 				.where('order_workflow_stages.is_complete', '=', true)
-				.orderBy('orders.fulfilled_on', 'desc')
+				.orderBy('orders.fulfilled_at', 'desc')
 				.orderBy('orders.order_date', 'desc')
 				.limit(COMPLETED_PAGE_SIZE + 1)
 				.execute(),
@@ -663,7 +546,7 @@ export async function getStageOrders(
 
 	const sortedQuery = stage.is_complete
 		? baseQuery
-				.orderBy('orders.fulfilled_on', 'desc')
+				.orderBy('orders.fulfilled_at', 'desc')
 				.orderBy('orders.order_date', 'desc')
 		: baseQuery.orderBy('order_date', 'asc');
 

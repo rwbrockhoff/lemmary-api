@@ -71,8 +71,8 @@ export async function updateStore(
 		) {
 			const newDueDate =
 				updates.leadTimeDays === null
-					? sql<Date | null>`NULL`
-					: sql<Date>`order_date + INTERVAL '1 day' * ${updates.leadTimeDays}`;
+					? sql<string | null>`NULL`
+					: sql<string>`(order_date + INTERVAL '1 day' * ${updates.leadTimeDays})::date`;
 
 			await trx
 				.updateTable('orders')

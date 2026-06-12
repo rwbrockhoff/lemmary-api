@@ -38,6 +38,7 @@ describe('Customers API', () => {
 		expect(body.data.orderCount).toBeGreaterThan(0);
 		expect(Array.isArray(body.data.orders)).toBe(true);
 		expect(body.data.orders.length).toBe(body.data.orderCount);
+		expect(body.data.orders[0]).toHaveProperty('order_type');
 	});
 
 	it('GET /customers/:email computes a valid tier', async () => {

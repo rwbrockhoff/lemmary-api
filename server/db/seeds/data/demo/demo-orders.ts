@@ -16,6 +16,9 @@ export type DemoOrderSpec = {
 	items: DemoOrderItem[];
 	promoCode?: string;
 	discountTotal?: number;
+	orderType?: 'custom' | 'work';
+	orderTitle?: string;
+	orderNumber?: string;
 };
 
 const ORDER_COUNT = 140;
@@ -136,4 +139,43 @@ function generateDemoOrders(): DemoOrderSpec[] {
 	return orders.sort((a, b) => b.dayOffset - a.dayOffset);
 }
 
-export const DEMO_ORDERS: DemoOrderSpec[] = generateDemoOrders();
+// A work order and two custom orders so the demo shows the non-platform order
+// types. C-1 reuses an existing customer for a mixed order history.
+const MANUAL_DEMO_ORDERS: DemoOrderSpec[] = [
+	{
+		orderType: 'work',
+		orderNumber: 'WO-1',
+		orderTitle: 'Backstock build — bestsellers',
+		dayOffset: 5,
+		customerIndex: 0,
+		stageName: 'Cutting',
+		fulfilled: false,
+		items: [
+			{ platformSku: 'TS-CRO-TAN', quantity: 6 },
+			{ platformSku: 'TS-WAL-BLK', quantity: 4 },
+		],
+	},
+	{
+		orderType: 'custom',
+		orderNumber: 'C-1',
+		dayOffset: 8,
+		customerIndex: 0,
+		stageName: 'Stitching',
+		fulfilled: false,
+		items: [{ platformSku: 'TS-TOT-BLK', quantity: 2 }],
+	},
+	{
+		orderType: 'custom',
+		orderNumber: 'C-2',
+		dayOffset: 3,
+		customerIndex: 4,
+		stageName: 'New',
+		fulfilled: false,
+		items: [{ platformSku: 'TS-FOB-COG', quantity: 1 }],
+	},
+];
+
+export const DEMO_ORDERS: DemoOrderSpec[] = [
+	...generateDemoOrders(),
+	...MANUAL_DEMO_ORDERS,
+];

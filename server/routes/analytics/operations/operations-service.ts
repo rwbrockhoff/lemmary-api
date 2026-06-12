@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { netRevenueSum } from '../../../utils/revenue.js';
+import type { OperationsData } from './contract/types.js';
 
 export const VALID_RANGES = [30, 90, 365] as const;
 export type OperationsRange = (typeof VALID_RANGES)[number];
@@ -11,46 +12,6 @@ const bucketForRange = (range: OperationsRange): OperationsBucket => {
 	if (range === 30) return 'day';
 	if (range === 90) return 'week';
 	return 'month';
-};
-
-export type OperationsData = {
-	range: OperationsRange;
-	bucket: OperationsBucket;
-	revenue: {
-		current: string;
-		previous: string;
-		changePercent: number;
-	};
-	avgOrderValue: {
-		current: string;
-		previous: string;
-		changePercent: number;
-	};
-	ordersInProgress: number;
-	ordersCompletedInPeriod: number;
-	avgLeadTime: {
-		days: number | null;
-		target: number | null;
-	};
-	dueSoon: Array<{
-		id: string;
-		orderNumber: string;
-		customerName: string;
-		orderDate: Date;
-		dueDate: Date | null;
-		daysUntilDue: number | null;
-		grandTotal: string | null;
-		itemCount: number;
-		itemsCompleted: number;
-		workflowStageName: string | null;
-		workflowStageColor: string | null;
-	}>;
-	ordersTrend: Array<{
-		date: string;
-		count: number;
-		revenue: string;
-		avgOrderValue: string;
-	}>;
 };
 
 const emptyDashboard = (range: OperationsRange): OperationsData => ({
@@ -132,7 +93,7 @@ export async function getOperations(
 		.selectFrom('orders')
 		.select(db.fn.count<number>('id').as('count'))
 		.where('store_id', '=', store.id)
-		.where('fulfilled_on', '>=', periodStart)
+		.where('fulfilled_at', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
 	const leadTime = await db
@@ -140,13 +101,13 @@ export async function getOperations(
 		.select(
 			sql<
 				string | null
-			>`avg(extract(epoch from (fulfilled_on - order_date)) / 86400)::text`.as(
+			>`avg(extract(epoch from (fulfilled_at - order_date)) / 86400)::text`.as(
 				'avg_days',
 			),
 		)
 		.where('store_id', '=', store.id)
-		.where('fulfilled_on', 'is not', null)
-		.where('fulfilled_on', '>=', periodStart)
+		.where('fulfilled_at', 'is not', null)
+		.where('fulfilled_at', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
 	const avgLeadTimeDays =
@@ -185,6 +146,8 @@ export async function getOperations(
 		.select([
 			'orders.id',
 			'orders.order_number',
+			'orders.order_type',
+			'orders.order_title',
 			'orders.customer_name',
 			'orders.order_date',
 			'orders.due_date',
@@ -203,12 +166,22 @@ export async function getOperations(
 
 	const dueSoon = dueSoonRaw.map((row) => {
 		const dueDate = row.due_date;
-		const daysUntilDue = dueDate
-			? Math.ceil((dueDate.getTime() - now.getTime()) / dayMs)
-			: null;
+		let daysUntilDue: number | null = null;
+		if (dueDate) {
+			const [y, m, d] = dueDate.split('-').map(Number);
+			const dueUtc = Date.UTC(y, m - 1, d);
+			const todayUtc = Date.UTC(
+				now.getUTCFullYear(),
+				now.getUTCMonth(),
+				now.getUTCDate(),
+			);
+			daysUntilDue = Math.round((dueUtc - todayUtc) / dayMs);
+		}
 		return {
 			id: row.id,
 			orderNumber: row.order_number,
+			orderType: row.order_type,
+			orderTitle: row.order_title,
 			customerName: row.customer_name,
 			orderDate: row.order_date,
 			dueDate,

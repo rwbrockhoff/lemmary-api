@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORDER_TYPE_VALUES } from '../../../orders/contract/constants.js';
 
 export const OperationsQuerySchema = z.object({
 	range: z.enum(['30', '90', '365']).default('30'),
@@ -27,9 +28,11 @@ export const OperationsResponseSchema = z.object({
 		z.object({
 			id: z.string(),
 			orderNumber: z.string(),
-			customerName: z.string(),
+			orderType: z.enum(ORDER_TYPE_VALUES),
+			orderTitle: z.string().nullable(),
+			customerName: z.string().nullable(),
 			orderDate: z.date(),
-			dueDate: z.date().nullable(),
+			dueDate: z.iso.date().nullable(),
 			daysUntilDue: z.number().nullable(),
 			grandTotal: z.string().nullable(),
 			itemCount: z.number(),

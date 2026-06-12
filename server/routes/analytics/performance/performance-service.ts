@@ -186,28 +186,28 @@ async function getOnTimeDelivery(storeId: string, rangeDays: number) {
 	const rows = await sql<OnTimeDeliveryRow>`
 		SELECT
 			COUNT(*) FILTER (
-				WHERE fulfilled_on IS NOT NULL
+				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays}
-					AND fulfilled_on::date <= due_date::date
+					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at::date <= due_date
 			) AS current_on_time,
 			COUNT(*) FILTER (
-				WHERE fulfilled_on IS NOT NULL
+				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
 			) AS current_total,
 			COUNT(*) FILTER (
-				WHERE fulfilled_on IS NOT NULL
+				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-					AND fulfilled_on < NOW() - INTERVAL '1 day' * ${rangeDays}
-					AND fulfilled_on::date <= due_date::date
+					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+					AND fulfilled_at < NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at::date <= due_date
 			) AS prior_on_time,
 			COUNT(*) FILTER (
-				WHERE fulfilled_on IS NOT NULL
+				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_on >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-					AND fulfilled_on < NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+					AND fulfilled_at < NOW() - INTERVAL '1 day' * ${rangeDays}
 			) AS prior_total
 		FROM orders
 		WHERE store_id = ${storeId}

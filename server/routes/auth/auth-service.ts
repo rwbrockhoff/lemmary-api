@@ -7,6 +7,7 @@ import {
 	setCachedUserId,
 	deleteCachedUserId,
 } from '../../utils/session-cache.js';
+import type { CurrentUser } from './contract/types.js';
 
 type RegisterUserParams = {
 	email: string;
@@ -119,15 +120,6 @@ export async function loginUser({
 		refreshToken: data.session.refresh_token,
 	};
 }
-
-export type CurrentUser = {
-	userId: string;
-	email: string;
-	firstName: string | null;
-	lastName: string | null;
-	avatarUrl: string | null;
-	isDemo: boolean;
-};
 
 export async function getCurrentUser(
 	userId: string,

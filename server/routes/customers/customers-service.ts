@@ -26,6 +26,7 @@ export async function getCustomerByEmail(
 		.select([
 			'orders.id',
 			'orders.order_number',
+			'orders.order_type',
 			'orders.order_date',
 			'orders.fulfillment_status',
 			'orders.due_date',
@@ -48,7 +49,8 @@ export async function getCustomerByEmail(
 	);
 
 	// Use the most recent name in case it changed across orders.
-	const name = orders[0].customer_name;
+	const name = orders[0].customer_name ?? '';
+
 	// Orders come back DESC by order_date, so the earliest is at the tail
 	const firstOrderDate = orders[orders.length - 1].order_date;
 
@@ -62,6 +64,7 @@ export async function getCustomerByEmail(
 		orders: orders.map((order) => ({
 			id: order.id,
 			order_number: order.order_number,
+			order_type: order.order_type,
 			order_date: order.order_date,
 			fulfillment_status: order.fulfillment_status,
 			due_date: order.due_date,

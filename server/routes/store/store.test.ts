@@ -48,9 +48,11 @@ describe('Store API', () => {
 			.where('id', '=', order.id)
 			.executeTakeFirstOrThrow();
 
-		const diffDays = Math.round(
-			(updated.due_date!.getTime() - order.order_date.getTime()) / 86400000,
+		const dueDay = Date.parse(updated.due_date! + 'T00:00:00Z');
+		const orderDay = Date.parse(
+			order.order_date.toISOString().slice(0, 10) + 'T00:00:00Z',
 		);
+		const diffDays = Math.round((dueDay - orderDay) / 86400000);
 		expect(diffDays).toBe(30);
 
 		// Restore the seeded lead time + reprice due dates back so other suites are unaffected

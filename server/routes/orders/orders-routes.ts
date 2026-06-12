@@ -18,20 +18,29 @@ import {
 	OrderItemParamsSchema,
 	UpdateOrderStageBodySchema,
 	UpdateOrderNotesBodySchema,
+	UpdateOrderDatesBodySchema,
+	DeleteOrderResponseSchema,
 } from './contract/schemas.js';
 import {
 	handleSyncOrders,
 	handleGetOrders,
+	handleDeleteOrder,
 	handleGetOrder,
 	handleUpdateOrderStage,
 	handleUpdateOrderNotes,
+	handleUpdateOrderDates,
 	handleUpdateOrderItemStage,
 	handleGetWorkflowBoard,
 	handleGetStageOrders,
 	handleCompleteAllOrderItems,
 } from './orders-controller.js';
+import { customOrderRoutes } from './custom/custom-order-routes.js';
+import { workOrderRoutes } from './work-order/work-order-routes.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
+	await app.register(customOrderRoutes);
+	await app.register(workOrderRoutes);
+
 	const r = app.withTypeProvider<ZodTypeProvider>();
 
 	r.post(
@@ -108,6 +117,21 @@ export async function ordersRoutes(app: FastifyInstance) {
 		handleGetOrder,
 	);
 
+	r.delete(
+		'/orders/:orderId',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Delete a custom or work order',
+				params: OrderIdParamSchema,
+				response: {
+					200: successSchema(DeleteOrderResponseSchema),
+				},
+			},
+		},
+		handleDeleteOrder,
+	);
+
 	r.put(
 		'/orders/:orderId/stage',
 		{
@@ -138,6 +162,22 @@ export async function ordersRoutes(app: FastifyInstance) {
 			},
 		},
 		handleUpdateOrderNotes,
+	);
+
+	r.put(
+		'/orders/:orderId/dates',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Update order and due dates',
+				params: OrderIdParamSchema,
+				body: UpdateOrderDatesBodySchema,
+				response: {
+					200: successSchema(OrderSchema),
+				},
+			},
+		},
+		handleUpdateOrderDates,
 	);
 
 	r.put(
