@@ -287,7 +287,11 @@ async function seedDemo() {
 		dueDate.setDate(dueDate.getDate() + 14);
 		const customerName =
 			DEMO_CUSTOMERS[spec.customerIndex % DEMO_CUSTOMERS.length];
-		const orderNumber = `TS-${String(1000 + i).padStart(4, '0')}`;
+		const orderType = spec.orderType ?? 'platform';
+		const isWork = orderType === 'work';
+		const isManual = orderType !== 'platform';
+		const orderNumber =
+			spec.orderNumber ?? `TS-${String(1000 + i).padStart(4, '0')}`;
 		const stageId = stageByName.get(spec.stageName) ?? null;
 		const fulfilledOn = spec.fulfilled
 			? daysAgo(spec.fulfilledDayOffset ?? Math.max(0, spec.dayOffset - 8))
@@ -304,17 +308,21 @@ async function seedDemo() {
 			.insertInto('orders')
 			.values({
 				store_id: DEMO_STORE_ID,
-				platform_order_id: `sq-${orderNumber}`,
+				order_type: orderType,
+				platform_order_id: isManual ? null : `sq-${orderNumber}`,
 				order_number: orderNumber,
-				customer_name: customerName,
-				customer_email: `${customerName.toLowerCase().replace(/\s/g, '.')}@example.com`,
+				order_title: spec.orderTitle ?? null,
+				customer_name: isWork ? null : customerName,
+				customer_email: isWork
+					? null
+					: `${customerName.toLowerCase().replace(/\s/g, '.')}@example.com`,
 				order_date: orderDate,
 				fulfillment_status: spec.fulfilled ? 'fulfilled' : 'pending',
 				due_date: dueDate.toISOString().slice(0, 10),
 				workflow_stage_id: stageId,
-				subtotal: orderTotal.toString(),
-				shipping_total: '12.00',
-				grand_total: grandTotal.toString(),
+				subtotal: isWork ? null : orderTotal.toString(),
+				shipping_total: isWork ? null : '12.00',
+				grand_total: isWork ? null : grandTotal.toString(),
 				currency: 'USD',
 				fulfilled_at: fulfilledOn,
 				promo_code: spec.promoCode ?? null,
