@@ -1,4 +1,9 @@
-import { supabase, supabaseAdmin } from '../../db/supabase-client.js';
+import { sql } from 'kysely';
+import {
+	supabase,
+	supabaseAdmin,
+	createUserClient,
+} from '../../db/supabase-client.js';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
 import { DEMO_USER_ID } from '../../config/constants.js';
@@ -8,17 +13,21 @@ import {
 	deleteCachedUserId,
 } from '../../utils/session-cache.js';
 import type { CurrentUser } from './contract/types.js';
-
-type RegisterUserParams = {
-	email: string;
-	password: string;
-	firstName: string;
-	lastName: string;
-};
-
-type RegisterUserResult =
-	| { success: true; userId: string; needsEmailConfirmation: boolean }
-	| { success: false; error: string; statusCode: 400 | 409 | 500 };
+import type {
+	RegisterUserParams,
+	RegisterUserResult,
+	LoginUserParams,
+	LoginUserResult,
+	ResetPasswordParams,
+	ResetPasswordResult,
+	ChangePasswordParams,
+	ChangeEmailParams,
+	ChangeCredentialResult,
+	IdentityResult,
+	ExchangeOauthSessionParams,
+	ExchangeOauthSessionResult,
+	AuthenticateResult,
+} from './auth-service-types.js';
 
 export async function registerUser({
 	email,
@@ -81,15 +90,6 @@ export async function registerUser({
 	};
 }
 
-type LoginUserParams = {
-	email: string;
-	password: string;
-};
-
-type LoginUserResult =
-	| { success: true; userId: string; email: string; refreshToken: string }
-	| { success: false; error: string; statusCode: 401 | 500 };
-
 export async function loginUser({
 	email,
 	password,
@@ -148,15 +148,6 @@ export async function requestPasswordReset(email: string): Promise<void> {
 	});
 }
 
-type ResetPasswordParams = {
-	accessToken: string;
-	newPassword: string;
-};
-
-type ResetPasswordResult =
-	| { success: true }
-	| { success: false; error: string; statusCode: 400 | 401 };
-
 export async function resetPassword({
 	accessToken,
 	newPassword,
@@ -184,14 +175,111 @@ export async function resetPassword({
 	return { success: true };
 }
 
-type ExchangeOauthSessionParams = {
-	accessToken: string;
-	refreshToken: string;
-};
+export async function changePassword({
+	userId,
+	currentPassword,
+	newPassword,
+}: ChangePasswordParams): Promise<ChangeCredentialResult> {
+	const user = await db
+		.selectFrom('users')
+		.select('email')
+		.where('id', '=', userId)
+		.executeTakeFirst();
 
-type ExchangeOauthSessionResult =
-	| { success: true; userId: string; email: string }
-	| { success: false; error: string; statusCode: 401 };
+	if (!user) {
+		return { success: false, error: 'Account not found', statusCode: 401 };
+	}
+
+	const { error: verifyError } = await supabase.auth.signInWithPassword({
+		email: user.email,
+		password: currentPassword,
+	});
+
+	if (verifyError) {
+		return {
+			success: false,
+			error: 'Current password is incorrect',
+			statusCode: 401,
+		};
+	}
+
+	const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+		userId,
+		{ password: newPassword },
+	);
+
+	if (updateError) {
+		return { success: false, error: updateError.message, statusCode: 400 };
+	}
+
+	return { success: true };
+}
+
+export async function changeEmail({
+	userId,
+	currentPassword,
+	newEmail,
+}: ChangeEmailParams): Promise<ChangeCredentialResult> {
+	const user = await db
+		.selectFrom('users')
+		.select('email')
+		.where('id', '=', userId)
+		.executeTakeFirst();
+
+	if (!user) {
+		return { success: false, error: 'Account not found', statusCode: 401 };
+	}
+
+	if (newEmail === user.email) {
+		return {
+			success: false,
+			error: 'That is already your email address',
+			statusCode: 400,
+		};
+	}
+
+	const { data, error: verifyError } = await supabase.auth.signInWithPassword({
+		email: user.email,
+		password: currentPassword,
+	});
+
+	if (verifyError || !data.session) {
+		return {
+			success: false,
+			error: 'Current password is incorrect',
+			statusCode: 401,
+		};
+	}
+
+	const userClient = createUserClient(data.session.access_token);
+	const { error: updateError } = await userClient.auth.updateUser(
+		{ email: newEmail },
+		{ emailRedirectTo: `${env.FRONTEND_URL}/auth/callback` },
+	);
+
+	if (updateError) {
+		return { success: false, error: updateError.message, statusCode: 400 };
+	}
+
+	return { success: true };
+}
+
+export async function getUserIdentity(userId: string): Promise<IdentityResult> {
+	const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+	if (error || !data.user) {
+		return { success: false, error: 'Account not found', statusCode: 401 };
+	}
+
+	const { provider, providers } = data.user.app_metadata;
+	const providerList = providers ?? (provider ? [provider] : []);
+
+	return {
+		success: true,
+		hasPassword: providerList.includes('email'),
+		providers: providerList,
+	};
+}
 
 export async function exchangeOauthSession({
 	accessToken,
@@ -214,9 +302,17 @@ export async function exchangeOauthSession({
 
 	const existing = await db
 		.selectFrom('users')
-		.select('id')
+		.select(['id', 'email'])
 		.where('id', '=', data.user.id)
 		.executeTakeFirst();
+
+	if (existing && existing.email !== email) {
+		await db
+			.updateTable('users')
+			.set({ email, updated_at: sql`NOW()` })
+			.where('id', '=', data.user.id)
+			.execute();
+	}
 
 	if (!existing) {
 		const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
@@ -265,10 +361,6 @@ export async function exchangeOauthSession({
 
 	return { success: true, userId: data.user.id, email };
 }
-
-type AuthenticateResult =
-	| { success: true; userId: string; newRefreshToken: string | null }
-	| { success: false };
 
 export async function authenticateRefreshToken(
 	refreshToken: string,

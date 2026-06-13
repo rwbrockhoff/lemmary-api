@@ -11,6 +11,9 @@ import {
 	DemoLoginResponseSchema,
 	ForgotPasswordRequestSchema,
 	ResetPasswordRequestSchema,
+	ChangePasswordRequestSchema,
+	ChangeEmailRequestSchema,
+	IdentityResponseSchema,
 	OauthSessionRequestSchema,
 	OauthSessionResponseSchema,
 	AuthStatusResponseSchema,
@@ -22,6 +25,9 @@ import {
 	handleLogout,
 	handleForgotPassword,
 	handleResetPassword,
+	handleChangePassword,
+	handleChangeEmail,
+	handleGetIdentity,
 	handleStatus,
 	handleOauthSession,
 } from './auth-controller.js';
@@ -121,6 +127,50 @@ export async function authRoutes(app: FastifyInstance) {
 			},
 		},
 		handleResetPassword,
+	);
+
+	r.get(
+		'/auth/identity',
+		{
+			schema: {
+				tags: [ApiTags.AUTH],
+				summary: 'Get sign in methods for the current account',
+				response: {
+					200: successSchema(IdentityResponseSchema),
+				},
+			},
+		},
+		handleGetIdentity,
+	);
+
+	r.put(
+		'/auth/password',
+		{
+			schema: {
+				tags: [ApiTags.AUTH],
+				summary: 'Change password while signed in',
+				body: ChangePasswordRequestSchema,
+				response: {
+					200: successSchema(z.null()),
+				},
+			},
+		},
+		handleChangePassword,
+	);
+
+	r.put(
+		'/auth/email',
+		{
+			schema: {
+				tags: [ApiTags.AUTH],
+				summary: 'Change email while signed in',
+				body: ChangeEmailRequestSchema,
+				response: {
+					200: successSchema(z.null()),
+				},
+			},
+		},
+		handleChangeEmail,
 	);
 
 	r.post(
