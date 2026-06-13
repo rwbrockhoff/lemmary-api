@@ -251,7 +251,22 @@ export async function changeEmail({
 		};
 	}
 
-	const userClient = createUserClient(data.session.access_token);
+	const userClient = createUserClient();
+
+	// Handle session error
+	const { error: sessionError } = await userClient.auth.setSession({
+		access_token: data.session.access_token,
+		refresh_token: data.session.refresh_token,
+	});
+
+	if (sessionError) {
+		return {
+			success: false,
+			error: 'Could not verify your session',
+			statusCode: 401,
+		};
+	}
+
 	const { error: updateError } = await userClient.auth.updateUser(
 		{ email: newEmail },
 		{ emailRedirectTo: `${env.FRONTEND_URL}/auth/callback` },
