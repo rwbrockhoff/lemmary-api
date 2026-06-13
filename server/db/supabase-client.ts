@@ -18,3 +18,13 @@ export const supabaseAdmin = createClient(
 		},
 	},
 );
+
+export function createUserClient(accessToken: string) {
+	return createClient(env.SUPABASE_CLIENT, env.SUPABASE_KEY, {
+		global: { headers: { Authorization: `Bearer ${accessToken}` } },
+		auth: {
+			autoRefreshToken: false,
+			persistSession: false,
+		},
+	});
+}
