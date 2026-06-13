@@ -10,6 +10,7 @@ export async function getStoreSettings(userId: string) {
 			platform: null,
 			leadTimeDays: null,
 			storeUrl: null,
+			timezone: null,
 		};
 	}
 
@@ -22,6 +23,7 @@ export async function getStoreSettings(userId: string) {
 		platform: store.platform,
 		leadTimeDays: store.lead_time_days,
 		storeUrl: platformConfig.store_url ?? null,
+		timezone: store.timezone,
 	};
 }
 

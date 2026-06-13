@@ -10,6 +10,7 @@ const storeSummaryColumns = [
 	'store_name',
 	'platform_config',
 	'lead_time_days',
+	'timezone',
 	'last_synced_at',
 	'created_at',
 	'updated_at',

@@ -182,14 +182,18 @@ type OnTimeDeliveryRow = {
 	prior_total: number;
 };
 
-async function getOnTimeDelivery(storeId: string, rangeDays: number) {
+async function getOnTimeDelivery(
+	storeId: string,
+	rangeDays: number,
+	timeZone: string,
+) {
 	const rows = await sql<OnTimeDeliveryRow>`
 		SELECT
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
 					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
-					AND fulfilled_at::date <= due_date
+					AND (fulfilled_at AT TIME ZONE ${timeZone})::date <= due_date
 			) AS current_on_time,
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
@@ -201,7 +205,7 @@ async function getOnTimeDelivery(storeId: string, rangeDays: number) {
 					AND due_date IS NOT NULL
 					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
 					AND fulfilled_at < NOW() - INTERVAL '1 day' * ${rangeDays}
-					AND fulfilled_at::date <= due_date
+					AND (fulfilled_at AT TIME ZONE ${timeZone})::date <= due_date
 			) AS prior_on_time,
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
@@ -378,7 +382,7 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		getTopProducts(store.id, rangeDays),
 		getCustomerMix(store.id, rangeDays),
 		getCouponUsage(store.id, rangeDays),
-		getOnTimeDelivery(store.id, rangeDays),
+		getOnTimeDelivery(store.id, rangeDays, store.timezone),
 		getMaterialConsumption(store.id, rangeDays),
 	]);
 
