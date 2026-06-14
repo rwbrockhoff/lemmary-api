@@ -1,8 +1,13 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-dotenv.config({ path: envFile });
+function resolveEnvFile(nodeEnv: string | undefined): string {
+	if (nodeEnv === 'test') return '.env.test';
+	if (nodeEnv === 'production') return '.env.production';
+	return '.env';
+}
+
+dotenv.config({ path: resolveEnvFile(process.env.NODE_ENV) });
 
 const envSchema = z.object({
 	PORT: z.coerce.number().default(3001),
