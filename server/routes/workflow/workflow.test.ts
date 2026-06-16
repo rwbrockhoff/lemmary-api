@@ -15,21 +15,22 @@ describe('Workflow Stages API', () => {
 		await app.close();
 	});
 
-	it('GET /workflow/stages returns the order and item stages', async () => {
-		const response = await app.inject(withAuth('GET', '/workflow/stages'));
+	it('GET /workflow/order-stages returns the order stages', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/workflow/order-stages'),
+		);
 
 		expect(response.statusCode).toBe(200);
 		const body = response.json();
-		expect(Array.isArray(body.data.orderStages)).toBe(true);
-		expect(Array.isArray(body.data.itemStages)).toBe(true);
-		expect(body.data.orderStages.length).toBeGreaterThan(0);
-		expect(body.data.orderStages[0]).toHaveProperty('name');
-		expect(body.data.orderStages[0]).toHaveProperty('position');
+		expect(Array.isArray(body.data)).toBe(true);
+		expect(body.data.length).toBeGreaterThan(0);
+		expect(body.data[0]).toHaveProperty('name');
+		expect(body.data[0]).toHaveProperty('position');
 	});
 
-	it('POST /workflow/stages creates a new stage', async () => {
+	it('POST /workflow/order-stages creates a new stage', async () => {
 		const response = await app.inject(
-			withAuth('POST', '/workflow/stages', {
+			withAuth('POST', '/workflow/order-stages', {
 				payload: { name: 'Packaging', color: 'lavender' },
 			}),
 		);
@@ -40,16 +41,16 @@ describe('Workflow Stages API', () => {
 		expect(body.data.color).toBe('lavender');
 	});
 
-	it('PUT /workflow/stages/:id updates a stage', async () => {
+	it('PUT /workflow/order-stages/:id updates a stage', async () => {
 		const createResponse = await app.inject(
-			withAuth('POST', '/workflow/stages', {
+			withAuth('POST', '/workflow/order-stages', {
 				payload: { name: 'Inspection', color: 'sage' },
 			}),
 		);
 		const stageId = createResponse.json().data.id;
 
 		const updateResponse = await app.inject(
-			withAuth('PUT', `/workflow/stages/${stageId}`, {
+			withAuth('PUT', `/workflow/order-stages/${stageId}`, {
 				payload: { name: 'Final Inspection' },
 			}),
 		);
@@ -58,13 +59,15 @@ describe('Workflow Stages API', () => {
 		expect(updateResponse.json().data.name).toBe('Final Inspection');
 	});
 
-	it('PUT /workflow/stages/order updates stage positions', async () => {
-		const listResponse = await app.inject(withAuth('GET', '/workflow/stages'));
-		const stages = listResponse.json().data.orderStages;
+	it('PUT /workflow/order-stages/position updates stage positions', async () => {
+		const listResponse = await app.inject(
+			withAuth('GET', '/workflow/order-stages'),
+		);
+		const stages = listResponse.json().data;
 		const reversedIds = stages.map((s: { id: string }) => s.id).reverse();
 
 		const response = await app.inject(
-			withAuth('PUT', '/workflow/stages/order', {
+			withAuth('PUT', '/workflow/order-stages/position', {
 				payload: { orderedIds: reversedIds },
 			}),
 		);
@@ -72,24 +75,24 @@ describe('Workflow Stages API', () => {
 		expect(response.statusCode).toBe(200);
 	});
 
-	it('DELETE /workflow/stages/:id removes a stage', async () => {
+	it('DELETE /workflow/order-stages/:id removes a stage', async () => {
 		const createResponse = await app.inject(
-			withAuth('POST', '/workflow/stages', {
+			withAuth('POST', '/workflow/order-stages', {
 				payload: { name: 'Temporary', color: 'coral' },
 			}),
 		);
 		const stageId = createResponse.json().data.id;
 
 		const deleteResponse = await app.inject(
-			withAuth('DELETE', `/workflow/stages/${stageId}`),
+			withAuth('DELETE', `/workflow/order-stages/${stageId}`),
 		);
 
 		expect(deleteResponse.statusCode).toBe(200);
 	});
 
-	it('PUT /workflow/stages/:id returns 404 for an unknown stage', async () => {
+	it('PUT /workflow/order-stages/:id returns 404 for an unknown stage', async () => {
 		const response = await app.inject(
-			withAuth('PUT', `/workflow/stages/${NON_APP_USER_ID}`, {
+			withAuth('PUT', `/workflow/order-stages/${NON_APP_USER_ID}`, {
 				payload: { name: 'Edge Burnishing' },
 			}),
 		);
@@ -97,17 +100,17 @@ describe('Workflow Stages API', () => {
 		expect(response.statusCode).toBe(404);
 	});
 
-	it('DELETE /workflow/stages/:id returns 404 for an unknown stage', async () => {
+	it('DELETE /workflow/order-stages/:id returns 404 for an unknown stage', async () => {
 		const response = await app.inject(
-			withAuth('DELETE', `/workflow/stages/${NON_APP_USER_ID}`),
+			withAuth('DELETE', `/workflow/order-stages/${NON_APP_USER_ID}`),
 		);
 
 		expect(response.statusCode).toBe(404);
 	});
 
-	it('POST /workflow/stages returns 404 when the user has no connected store', async () => {
+	it('POST /workflow/order-stages returns 404 when the user has no connected store', async () => {
 		const response = await app.inject(
-			withAuth('POST', '/workflow/stages', {
+			withAuth('POST', '/workflow/order-stages', {
 				userId: NON_APP_USER_ID,
 				payload: { name: 'Quality Check', color: 'sage' },
 			}),

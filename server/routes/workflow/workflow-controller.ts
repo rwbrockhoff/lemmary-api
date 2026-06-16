@@ -1,8 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import {
-	successResponse,
-	createdSuccess,
-} from '../../utils/api-responses.js';
+import { successResponse, createdSuccess } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
 import type {
 	CreateWorkflowStageRequest,
@@ -10,18 +7,18 @@ import type {
 	ReorderWorkflowStagesRequest,
 } from './contract/types.js';
 import {
-	getWorkflowStages,
+	getOrderStages,
 	createWorkflowStage,
 	updateWorkflowStage,
 	deleteWorkflowStage,
 	reorderWorkflowStages,
 } from './workflow-service.js';
 
-export async function handleGetWorkflowStages(
+export async function handleGetOrderStages(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	const stages = await getWorkflowStages(request.userId);
+	const stages = await getOrderStages(request.userId);
 	return successResponse(reply, stages);
 }
 

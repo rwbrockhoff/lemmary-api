@@ -7,13 +7,13 @@ import {
 	UpdateWorkflowStageRequestSchema,
 	ReorderWorkflowStagesRequestSchema,
 	WorkflowStageResponseSchema,
-	GetWorkflowStagesResponseSchema,
+	WorkflowStageListResponseSchema,
 	StageIdParamSchema,
 	ReorderWorkflowStagesResponseSchema,
 	DeleteWorkflowStageResponseSchema,
 } from './contract/schemas.js';
 import {
-	handleGetWorkflowStages,
+	handleGetOrderStages,
 	handleCreateWorkflowStage,
 	handleUpdateWorkflowStage,
 	handleDeleteWorkflowStage,
@@ -24,25 +24,25 @@ export async function workflowRoutes(app: FastifyInstance) {
 	const r = app.withTypeProvider<ZodTypeProvider>();
 
 	r.get(
-		'/workflow/stages',
+		'/workflow/order-stages',
 		{
 			schema: {
 				tags: [ApiTags.WORKFLOW_STAGES],
-				summary: 'List order and item workflow stages',
+				summary: 'List order workflow stages',
 				response: {
-					200: successSchema(GetWorkflowStagesResponseSchema),
+					200: successSchema(WorkflowStageListResponseSchema),
 				},
 			},
 		},
-		handleGetWorkflowStages,
+		handleGetOrderStages,
 	);
 
 	r.post(
-		'/workflow/stages',
+		'/workflow/order-stages',
 		{
 			schema: {
 				tags: [ApiTags.WORKFLOW_STAGES],
-				summary: 'Create a workflow stage',
+				summary: 'Create an order workflow stage',
 				body: CreateWorkflowStageRequestSchema,
 				response: {
 					201: successSchema(WorkflowStageResponseSchema),
@@ -53,11 +53,11 @@ export async function workflowRoutes(app: FastifyInstance) {
 	);
 
 	r.put(
-		'/workflow/stages/order',
+		'/workflow/order-stages/position',
 		{
 			schema: {
 				tags: [ApiTags.WORKFLOW_STAGES],
-				summary: 'Reorder workflow stages',
+				summary: 'Reorder order workflow stages',
 				body: ReorderWorkflowStagesRequestSchema,
 				response: {
 					200: successSchema(ReorderWorkflowStagesResponseSchema),
@@ -68,11 +68,11 @@ export async function workflowRoutes(app: FastifyInstance) {
 	);
 
 	r.put(
-		'/workflow/stages/:id',
+		'/workflow/order-stages/:id',
 		{
 			schema: {
 				tags: [ApiTags.WORKFLOW_STAGES],
-				summary: 'Update a workflow stage',
+				summary: 'Update an order workflow stage',
 				params: StageIdParamSchema,
 				body: UpdateWorkflowStageRequestSchema,
 				response: {
@@ -84,11 +84,11 @@ export async function workflowRoutes(app: FastifyInstance) {
 	);
 
 	r.delete(
-		'/workflow/stages/:id',
+		'/workflow/order-stages/:id',
 		{
 			schema: {
 				tags: [ApiTags.WORKFLOW_STAGES],
-				summary: 'Delete a workflow stage',
+				summary: 'Delete an order workflow stage',
 				params: StageIdParamSchema,
 				response: {
 					200: successSchema(DeleteWorkflowStageResponseSchema),
