@@ -8,11 +8,11 @@ import type {
 } from './contract/types.js';
 import {
 	getOrderStages,
-	createWorkflowStage,
-	updateWorkflowStage,
-	deleteWorkflowStage,
-	reorderWorkflowStages,
-} from './workflow-service.js';
+	createOrderStage,
+	updateOrderStage,
+	deleteOrderStage,
+	reorderOrderStages,
+} from './order-stages-service.js';
 
 export async function handleGetOrderStages(
 	request: FastifyRequest,
@@ -22,23 +22,23 @@ export async function handleGetOrderStages(
 	return successResponse(reply, stages);
 }
 
-export async function handleCreateWorkflowStage(
+export async function handleCreateOrderStage(
 	request: FastifyRequest<{ Body: CreateWorkflowStageRequest }>,
 	reply: FastifyReply,
 ) {
-	const result = await createWorkflowStage(request.userId, request.body);
+	const result = await createOrderStage(request.userId, request.body);
 	if (!result.ok) throw AppError.notFound('Store not found');
 	return createdSuccess(reply, result.stage);
 }
 
-export async function handleUpdateWorkflowStage(
+export async function handleUpdateOrderStage(
 	request: FastifyRequest<{
 		Params: { id: string };
 		Body: UpdateWorkflowStageRequest;
 	}>,
 	reply: FastifyReply,
 ) {
-	const result = await updateWorkflowStage(
+	const result = await updateOrderStage(
 		request.userId,
 		request.params.id,
 		request.body,
@@ -52,11 +52,11 @@ export async function handleUpdateWorkflowStage(
 	return successResponse(reply, result.stage);
 }
 
-export async function handleDeleteWorkflowStage(
+export async function handleDeleteOrderStage(
 	request: FastifyRequest<{ Params: { id: string } }>,
 	reply: FastifyReply,
 ) {
-	const result = await deleteWorkflowStage(request.userId, request.params.id);
+	const result = await deleteOrderStage(request.userId, request.params.id);
 
 	if (!result.ok) {
 		if (result.error === 'no_store') throw AppError.notFound('Store not found');
@@ -72,11 +72,11 @@ export async function handleDeleteWorkflowStage(
 	return successResponse(reply, { id: request.params.id });
 }
 
-export async function handleReorderWorkflowStages(
+export async function handleReorderOrderStages(
 	request: FastifyRequest<{ Body: ReorderWorkflowStagesRequest }>,
 	reply: FastifyReply,
 ) {
-	const result = await reorderWorkflowStages(request.userId, request.body);
+	const result = await reorderOrderStages(request.userId, request.body);
 	if (!result.ok) throw AppError.notFound('Store not found');
 	return successResponse(reply, { ok: true });
 }

@@ -14,11 +14,11 @@ import {
 } from './contract/schemas.js';
 import {
 	handleGetOrderStages,
-	handleCreateWorkflowStage,
-	handleUpdateWorkflowStage,
-	handleDeleteWorkflowStage,
-	handleReorderWorkflowStages,
-} from './workflow-controller.js';
+	handleCreateOrderStage,
+	handleUpdateOrderStage,
+	handleDeleteOrderStage,
+	handleReorderOrderStages,
+} from './order-stages-controller.js';
 
 export async function workflowRoutes(app: FastifyInstance) {
 	const r = app.withTypeProvider<ZodTypeProvider>();
@@ -49,7 +49,7 @@ export async function workflowRoutes(app: FastifyInstance) {
 				},
 			},
 		},
-		handleCreateWorkflowStage,
+		handleCreateOrderStage,
 	);
 
 	r.put(
@@ -64,7 +64,7 @@ export async function workflowRoutes(app: FastifyInstance) {
 				},
 			},
 		},
-		handleReorderWorkflowStages,
+		handleReorderOrderStages,
 	);
 
 	r.put(
@@ -80,7 +80,7 @@ export async function workflowRoutes(app: FastifyInstance) {
 				},
 			},
 		},
-		handleUpdateWorkflowStage,
+		handleUpdateOrderStage,
 	);
 
 	r.delete(
@@ -95,6 +95,6 @@ export async function workflowRoutes(app: FastifyInstance) {
 				},
 			},
 		},
-		handleDeleteWorkflowStage,
+		handleDeleteOrderStage,
 	);
 }
