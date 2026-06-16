@@ -19,6 +19,13 @@ import {
 	handleDeleteOrderStage,
 	handleReorderOrderStages,
 } from './order-stages-controller.js';
+import {
+	handleGetItemStages,
+	handleCreateItemStage,
+	handleUpdateItemStage,
+	handleDeleteItemStage,
+	handleReorderItemStages,
+} from './item-stages-controller.js';
 
 export async function workflowRoutes(app: FastifyInstance) {
 	const r = app.withTypeProvider<ZodTypeProvider>();
@@ -96,5 +103,80 @@ export async function workflowRoutes(app: FastifyInstance) {
 			},
 		},
 		handleDeleteOrderStage,
+	);
+
+	r.get(
+		'/workflow/item-stages',
+		{
+			schema: {
+				tags: [ApiTags.WORKFLOW_STAGES],
+				summary: 'List item workflow stages',
+				response: {
+					200: successSchema(WorkflowStageListResponseSchema),
+				},
+			},
+		},
+		handleGetItemStages,
+	);
+
+	r.post(
+		'/workflow/item-stages',
+		{
+			schema: {
+				tags: [ApiTags.WORKFLOW_STAGES],
+				summary: 'Create an item workflow stage',
+				body: CreateWorkflowStageRequestSchema,
+				response: {
+					201: successSchema(WorkflowStageResponseSchema),
+				},
+			},
+		},
+		handleCreateItemStage,
+	);
+
+	r.put(
+		'/workflow/item-stages/position',
+		{
+			schema: {
+				tags: [ApiTags.WORKFLOW_STAGES],
+				summary: 'Reorder item workflow stages',
+				body: ReorderWorkflowStagesRequestSchema,
+				response: {
+					200: successSchema(ReorderWorkflowStagesResponseSchema),
+				},
+			},
+		},
+		handleReorderItemStages,
+	);
+
+	r.put(
+		'/workflow/item-stages/:id',
+		{
+			schema: {
+				tags: [ApiTags.WORKFLOW_STAGES],
+				summary: 'Update an item workflow stage',
+				params: StageIdParamSchema,
+				body: UpdateWorkflowStageRequestSchema,
+				response: {
+					200: successSchema(WorkflowStageResponseSchema),
+				},
+			},
+		},
+		handleUpdateItemStage,
+	);
+
+	r.delete(
+		'/workflow/item-stages/:id',
+		{
+			schema: {
+				tags: [ApiTags.WORKFLOW_STAGES],
+				summary: 'Delete an item workflow stage',
+				params: StageIdParamSchema,
+				response: {
+					200: successSchema(DeleteWorkflowStageResponseSchema),
+				},
+			},
+		},
+		handleDeleteItemStage,
 	);
 }
