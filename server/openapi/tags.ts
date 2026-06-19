@@ -6,7 +6,6 @@ export const ApiTags = {
 	PRODUCTS: 'Products',
 	REPORTS: 'Reports',
 	ANALYTICS: 'Analytics',
-	SETTINGS: 'Settings',
 	STORE: 'Store',
 	WORKFLOW_STAGES: 'Workflow Stages',
 	CUSTOMERS: 'Customers',
