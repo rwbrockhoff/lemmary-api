@@ -1,9 +1,13 @@
-import { sql, type UpdateObject } from 'kysely';
+import { sql, type UpdateObject, type Kysely } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
+import {
+	DEFAULT_ORDER_STAGES,
+	DEFAULT_ITEM_STAGES,
+} from '../../config/default-workflow-stages.js';
 import type { Database } from '../../db/database-types.js';
 import type { UpdateStoreRequestSchema } from './contract/schemas.js';
 
@@ -22,6 +26,25 @@ type UpdateStoreError = {
 };
 
 type UpdateStoreResult = UpdateStoreSuccess | UpdateStoreError;
+
+export async function createDefaultStages(
+	storeId: string,
+	trx: Kysely<Database> = db,
+) {
+	await trx
+		.insertInto('order_workflow_stages')
+		.values(
+			DEFAULT_ORDER_STAGES.map((stage) => ({ ...stage, store_id: storeId })),
+		)
+		.execute();
+
+	await trx
+		.insertInto('order_item_workflow_stages')
+		.values(
+			DEFAULT_ITEM_STAGES.map((stage) => ({ ...stage, store_id: storeId })),
+		)
+		.execute();
+}
 
 export async function updateStore(
 	userId: string,
