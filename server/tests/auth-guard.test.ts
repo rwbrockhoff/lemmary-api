@@ -12,7 +12,7 @@ const PROTECTED_ROUTES: ProtectedRoute[] = [
 	['GET', '/workflow/order-stages'],
 	['GET', '/reports/production-summary'],
 	['GET', '/reports/materials'],
-	['GET', '/settings'],
+	['GET', '/store'],
 	['GET', '/bom/material-types'],
 	['GET', '/products'],
 	['PATCH', '/store'],

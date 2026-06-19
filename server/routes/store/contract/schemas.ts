@@ -22,3 +22,24 @@ export const UpdateStoreResponseSchema = z
 		leadTimeDays: z.number().nullable(),
 	})
 	.strict();
+
+export const CreateStoreRequestSchema = z
+	.object({
+		storeName: z.string().trim().min(1).max(100),
+		accessToken: z.string().min(1),
+		timezone: z
+			.string()
+			.refine(isValidTimeZone, { message: 'Invalid timezone' }),
+		leadTimeDays: z.number().int().min(0).nullable().optional(),
+		storeUrl: z.url().nullable().optional(),
+	})
+	.strict();
+
+export const StoreResponseSchema = z.object({
+	connected: z.boolean(),
+	storeName: z.string().nullable(),
+	platform: z.enum(['squarespace', 'shopify', 'etsy']).nullable(),
+	leadTimeDays: z.number().nullable(),
+	storeUrl: z.string().nullable(),
+	timezone: z.string().nullable(),
+});

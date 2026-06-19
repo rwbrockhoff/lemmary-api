@@ -33,7 +33,6 @@ export const openApiMetadata = {
 			name: ApiTags.ANALYTICS,
 			description: 'Performance and operations analytics',
 		},
-		{ name: ApiTags.SETTINGS, description: 'Account and store settings' },
 		{
 			name: ApiTags.STORE,
 			description: 'Store connection and platform configuration',

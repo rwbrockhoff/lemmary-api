@@ -10,7 +10,6 @@ import { reportsRoutes } from './routes/reports/reports-routes.js';
 import { batchesRoutes } from './routes/batches/batches-routes.js';
 import { authRoutes } from './routes/auth/auth-routes.js';
 import { analyticsRoutes } from './routes/analytics/analytics-routes.js';
-import { settingsRoutes } from './routes/settings/settings-routes.js';
 import { storeRoutes } from './routes/store/store-routes.js';
 import { workflowRoutes } from './routes/workflow/workflow-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
@@ -62,7 +61,6 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(ordersRoutes);
 	app.register(reportsRoutes);
 	app.register(batchesRoutes);
-	app.register(settingsRoutes);
 	app.register(storeRoutes);
 	app.register(workflowRoutes);
 	app.register(productsRoutes);
