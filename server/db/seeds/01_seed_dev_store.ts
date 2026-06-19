@@ -6,6 +6,7 @@ import pg from 'pg';
 import { Kysely, PostgresDialect, sql } from 'kysely';
 import { faker } from '@faker-js/faker';
 import { DEMO_CUSTOMERS } from './data/demo/demo-customers.js';
+import { DEV_ORDER_STAGES, DEV_ITEM_STAGES } from './data/dev/dev-workflow.js';
 import type { Database } from '../database-types.js';
 import { DEV_USER_ID, DEV_STORE_ID } from '../../config/constants.js';
 
@@ -105,94 +106,12 @@ async function seed() {
 
 	await db
 		.insertInto('order_workflow_stages')
-		.values([
-			{
-				store_id: DEV_STORE_ID,
-				name: 'New',
-				position: 0,
-				color: 'slate',
-				is_default: true,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'In Progress 🔄',
-				position: 1,
-				color: 'cobalt',
-				is_default: false,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Order Finished 🙌🏻',
-				position: 2,
-				color: 'lavender',
-				is_default: false,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Ready to Ship 📦',
-				position: 3,
-				color: 'lavender',
-				is_default: false,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Fulfilled 👏🏻',
-				position: 4,
-				color: 'pine',
-				is_default: false,
-				is_complete: true,
-			},
-		])
+		.values(DEV_ORDER_STAGES.map((s) => ({ ...s, store_id: DEV_STORE_ID })))
 		.execute();
 
 	await db
 		.insertInto('order_item_workflow_stages')
-		.values([
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Not Started',
-				position: 0,
-				color: 'slate',
-				is_default: true,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Fabric Cut ✂️',
-				position: 1,
-				color: 'cobalt',
-				is_default: false,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Components Ready 📎',
-				position: 2,
-				color: 'cobalt',
-				is_default: false,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'In Progress 🔄',
-				position: 3,
-				color: 'lavender',
-				is_default: false,
-				is_complete: false,
-			},
-			{
-				store_id: DEV_STORE_ID,
-				name: 'Done 👏🏻',
-				position: 4,
-				color: 'pine',
-				is_default: false,
-				is_complete: true,
-			},
-		])
+		.values(DEV_ITEM_STAGES.map((s) => ({ ...s, store_id: DEV_STORE_ID })))
 		.execute();
 
 	console.log('  Workflow stages seeded');
