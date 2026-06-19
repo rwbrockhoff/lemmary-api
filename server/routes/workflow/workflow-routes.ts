@@ -11,6 +11,7 @@ import {
 	StageIdParamSchema,
 	ReorderWorkflowStagesResponseSchema,
 	DeleteWorkflowStageResponseSchema,
+	DeleteItemStageQuerySchema,
 } from './contract/schemas.js';
 import {
 	handleGetOrderStages,
@@ -172,6 +173,7 @@ export async function workflowRoutes(app: FastifyInstance) {
 				tags: [ApiTags.WORKFLOW_STAGES],
 				summary: 'Delete an item workflow stage',
 				params: StageIdParamSchema,
+				querystring: DeleteItemStageQuerySchema,
 				response: {
 					200: successSchema(DeleteWorkflowStageResponseSchema),
 				},

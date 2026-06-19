@@ -5,6 +5,7 @@ import type {
 	CreateWorkflowStageRequest,
 	UpdateWorkflowStageRequest,
 	ReorderWorkflowStagesRequest,
+	DeleteItemStageQuery,
 } from './contract/types.js';
 import {
 	getItemStages,
@@ -53,10 +54,17 @@ export async function handleUpdateItemStage(
 }
 
 export async function handleDeleteItemStage(
-	request: FastifyRequest<{ Params: { id: string } }>,
+	request: FastifyRequest<{
+		Params: { id: string };
+		Querystring: DeleteItemStageQuery;
+	}>,
 	reply: FastifyReply,
 ) {
-	const result = await deleteItemStage(request.userId, request.params.id);
+	const result = await deleteItemStage(
+		request.userId,
+		request.params.id,
+		request.query.reassignStageId,
+	);
 
 	if (!result.ok) {
 		if (result.error === 'no_store') throw AppError.notFound('Store not found');
@@ -64,9 +72,17 @@ export async function handleDeleteItemStage(
 			throw AppError.notFound('Workflow stage not found');
 		if (result.error === 'is_default')
 			throw AppError.conflict('The default stage cannot be deleted.');
-		throw AppError.conflict(
-			'Move existing items out of this stage before deleting.',
-		);
+		if (result.error === 'invalid_reassign')
+			throw AppError.badRequest('Invalid stage to reassign items to.');
+		if (result.error === 'has_items')
+			throw AppError.conflict(
+				'This stage has items in use. Reassign them to another stage to delete it.',
+				{
+					affectedOrders: result.affectedOrders,
+					affectedCount: result.affectedCount,
+					suggestedReassignStageId: result.suggestedReassignStageId,
+				},
+			);
 	}
 
 	return successResponse(reply, { id: request.params.id });

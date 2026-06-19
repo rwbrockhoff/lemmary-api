@@ -27,13 +27,39 @@ type StageSuccess = {
 
 type StageError = {
 	ok: false;
-	error: 'no_store' | 'not_found' | 'has_items' | 'is_default';
+	error: 'no_store' | 'not_found' | 'is_default';
 };
 
 type StageResult = StageSuccess | StageError;
 
 type SimpleSuccess = { ok: true };
 type SimpleResult = SimpleSuccess | StageError;
+
+type AffectedOrder = {
+	orderNumber: string;
+	customerName: string | null;
+};
+
+type DeleteBlocked = {
+	ok: false;
+	error: 'has_items';
+	affectedOrders: AffectedOrder[];
+	affectedCount: number;
+	suggestedReassignStageId: string | null;
+};
+
+type DeleteInvalidReassign = {
+	ok: false;
+	error: 'invalid_reassign';
+};
+
+type DeleteItemStageResult =
+	| SimpleSuccess
+	| StageError
+	| DeleteBlocked
+	| DeleteInvalidReassign;
+
+const AFFECTED_ORDERS_LIMIT = 5;
 
 export async function getItemStages(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -112,16 +138,97 @@ export async function updateItemStage(
 	return { ok: true, stage: updated };
 }
 
+async function getSuggestedReassignStageId(
+	storeId: string,
+	stageId: string,
+	position: number,
+): Promise<string | null> {
+	const previous = await db
+		.selectFrom('order_item_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('archived_at', 'is', null)
+		.where('id', '!=', stageId)
+		.where('position', '<', position)
+		.orderBy('position', 'desc')
+		.limit(1)
+		.executeTakeFirst();
+
+	if (previous) return previous.id;
+
+	const fallback = await db
+		.selectFrom('order_item_workflow_stages')
+		.select('id')
+		.where('store_id', '=', storeId)
+		.where('archived_at', 'is', null)
+		.where('is_default', '=', true)
+		.executeTakeFirst();
+
+	return fallback?.id ?? null;
+}
+
+type AffectedOrderRow = {
+	orderId: string;
+	orderNumber: string;
+	customerName: string | null;
+};
+
+async function getAffectedOrders(
+	storeId: string,
+	stageId: string,
+): Promise<AffectedOrderRow[]> {
+	return db
+		.selectFrom('order_items')
+		.innerJoin('orders', 'orders.id', 'order_items.order_id')
+		.select([
+			'orders.id as orderId',
+			'orders.order_number as orderNumber',
+			'orders.customer_name as customerName',
+		])
+		.where('order_items.workflow_stage_id', '=', stageId)
+		.where('orders.store_id', '=', storeId)
+		.distinct()
+		.orderBy('orders.order_number', 'asc')
+		.execute();
+}
+
+async function buildDeleteBlocked(
+	storeId: string,
+	stageId: string,
+	position: number,
+	affectedOrders: AffectedOrderRow[],
+): Promise<DeleteBlocked> {
+	const suggestedReassignStageId = await getSuggestedReassignStageId(
+		storeId,
+		stageId,
+		position,
+	);
+
+	return {
+		ok: false,
+		error: 'has_items',
+		affectedOrders: affectedOrders
+			.slice(0, AFFECTED_ORDERS_LIMIT)
+			.map((order) => ({
+				orderNumber: order.orderNumber,
+				customerName: order.customerName,
+			})),
+		affectedCount: affectedOrders.length,
+		suggestedReassignStageId,
+	};
+}
+
 export async function deleteItemStage(
 	userId: string,
 	stageId: string,
-): Promise<SimpleResult> {
+	reassignStageId?: string,
+): Promise<DeleteItemStageResult> {
 	const store = await getStoreForUser(userId);
 	if (!store) return { ok: false, error: 'no_store' };
 
 	const stage = await db
 		.selectFrom('order_item_workflow_stages')
-		.select(['id', 'is_default'])
+		.select(['id', 'is_default', 'position'])
 		.where('id', '=', stageId)
 		.where('store_id', '=', store.id)
 		.where('archived_at', 'is', null)
@@ -130,21 +237,56 @@ export async function deleteItemStage(
 	if (!stage) return { ok: false, error: 'not_found' };
 	if (stage.is_default) return { ok: false, error: 'is_default' };
 
-	const itemUsing = await db
-		.selectFrom('order_items')
+	const affectedOrders = await getAffectedOrders(store.id, stageId);
+
+	if (affectedOrders.length === 0) {
+		await db
+			.updateTable('order_item_workflow_stages')
+			.set({ archived_at: sql`NOW()`, updated_at: sql`NOW()` })
+			.where('id', '=', stageId)
+			.where('store_id', '=', store.id)
+			.execute();
+
+		return { ok: true };
+	}
+
+	if (!reassignStageId) {
+		return buildDeleteBlocked(
+			store.id,
+			stageId,
+			stage.position,
+			affectedOrders,
+		);
+	}
+
+	if (reassignStageId === stageId) {
+		return { ok: false, error: 'invalid_reassign' };
+	}
+
+	const target = await db
+		.selectFrom('order_item_workflow_stages')
 		.select('id')
-		.where('workflow_stage_id', '=', stageId)
-		.limit(1)
+		.where('id', '=', reassignStageId)
+		.where('store_id', '=', store.id)
+		.where('archived_at', 'is', null)
 		.executeTakeFirst();
 
-	if (itemUsing) return { ok: false, error: 'has_items' };
+	if (!target) return { ok: false, error: 'invalid_reassign' };
 
-	await db
-		.updateTable('order_item_workflow_stages')
-		.set({ archived_at: sql`NOW()`, updated_at: sql`NOW()` })
-		.where('id', '=', stageId)
-		.where('store_id', '=', store.id)
-		.execute();
+	await db.transaction().execute(async (trx) => {
+		await trx
+			.updateTable('order_items')
+			.set({ workflow_stage_id: reassignStageId, updated_at: sql`NOW()` })
+			.where('workflow_stage_id', '=', stageId)
+			.execute();
+
+		await trx
+			.updateTable('order_item_workflow_stages')
+			.set({ archived_at: sql`NOW()`, updated_at: sql`NOW()` })
+			.where('id', '=', stageId)
+			.where('store_id', '=', store.id)
+			.execute();
+	});
 
 	return { ok: true };
 }

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
-import { NON_APP_USER_ID } from '../../tests/test-constants.js';
+import { TEST_STORE_ID, NON_APP_USER_ID } from '../../tests/test-constants.js';
+import { db } from '../../db/connection.js';
 
 describe('Workflow Stages API', () => {
 	let app: FastifyInstance;
@@ -209,5 +210,89 @@ describe('Workflow Stages API', () => {
 		);
 
 		expect(response.statusCode).toBe(404);
+	});
+
+	async function createItemStageWithItem() {
+		const createResponse = await app.inject(
+			withAuth('POST', '/workflow/item-stages', {
+				payload: { name: 'Doomed', color: 'coral' },
+			}),
+		);
+		const stageId = createResponse.json().data.id;
+
+		const item = await db
+			.selectFrom('order_items')
+			.innerJoin('orders', 'orders.id', 'order_items.order_id')
+			.select([
+				'order_items.id as itemId',
+				'orders.order_number as orderNumber',
+			])
+			.where('orders.store_id', '=', TEST_STORE_ID)
+			.executeTakeFirstOrThrow();
+
+		await db
+			.updateTable('order_items')
+			.set({ workflow_stage_id: stageId })
+			.where('id', '=', item.itemId)
+			.execute();
+
+		return { stageId, itemId: item.itemId, orderNumber: item.orderNumber };
+	}
+
+	it('DELETE /workflow/item-stages/:id returns 409 with affected orders when in use', async () => {
+		const { stageId, orderNumber } = await createItemStageWithItem();
+
+		const response = await app.inject(
+			withAuth('DELETE', `/workflow/item-stages/${stageId}`),
+		);
+
+		expect(response.statusCode).toBe(409);
+		const { details } = response.json().error;
+		expect(details.affectedCount).toBeGreaterThanOrEqual(1);
+		expect(
+			details.affectedOrders.some(
+				(order: { orderNumber: string }) => order.orderNumber === orderNumber,
+			),
+		).toBe(true);
+		expect(details.suggestedReassignStageId).toBeTruthy();
+	});
+
+	it('DELETE /workflow/item-stages/:id returns 400 for an invalid reassign target', async () => {
+		const { stageId } = await createItemStageWithItem();
+
+		const response = await app.inject(
+			withAuth(
+				'DELETE',
+				`/workflow/item-stages/${stageId}?reassignStageId=${NON_APP_USER_ID}`,
+			),
+		);
+
+		expect(response.statusCode).toBe(400);
+	});
+
+	it('DELETE /workflow/item-stages/:id reassigns items then deletes with reassignStageId', async () => {
+		const { stageId, itemId } = await createItemStageWithItem();
+
+		const blocked = await app.inject(
+			withAuth('DELETE', `/workflow/item-stages/${stageId}`),
+		);
+		const reassignStageId =
+			blocked.json().error.details.suggestedReassignStageId;
+
+		const response = await app.inject(
+			withAuth(
+				'DELETE',
+				`/workflow/item-stages/${stageId}?reassignStageId=${reassignStageId}`,
+			),
+		);
+
+		expect(response.statusCode).toBe(200);
+
+		const item = await db
+			.selectFrom('order_items')
+			.select('workflow_stage_id')
+			.where('id', '=', itemId)
+			.executeTakeFirstOrThrow();
+		expect(item.workflow_stage_id).toBe(reassignStageId);
 	});
 });

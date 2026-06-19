@@ -61,3 +61,7 @@ export const ReorderWorkflowStagesResponseSchema = z.object({
 export const DeleteWorkflowStageResponseSchema = z.object({
 	id: z.string(),
 });
+
+export const DeleteItemStageQuerySchema = z.object({
+	reassignStageId: z.uuid().optional(),
+});
