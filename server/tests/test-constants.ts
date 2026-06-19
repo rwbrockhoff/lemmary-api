@@ -3,3 +3,6 @@ export const TEST_STORE_ID = '47ecc05c-a929-4394-81ce-afb18a023ffe';
 
 // A valid-looking UUID that doesn't exist in our seeded data,
 export const NON_APP_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+// A throwaway user for tests that create + clean up their own store
+export const ONBOARDING_USER_ID = '11111111-1111-1111-1111-111111111111';

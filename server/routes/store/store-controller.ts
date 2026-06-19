@@ -1,8 +1,36 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { successResponse } from '../../utils/api-responses.js';
+import { successResponse, createdSuccess } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
-import type { UpdateStoreRequest } from './contract/types.js';
-import { updateStore } from './store-service.js';
+import type {
+	UpdateStoreRequest,
+	CreateStoreRequest,
+} from './contract/types.js';
+import { getStore, createStore, updateStore } from './store-service.js';
+
+export async function handleGetStore(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const store = await getStore(request.userId);
+	return successResponse(reply, store);
+}
+
+export async function handleCreateStore(
+	request: FastifyRequest<{ Body: CreateStoreRequest }>,
+	reply: FastifyReply,
+) {
+	const result = await createStore(request.userId, request.body);
+
+	if (!result.ok) {
+		if (result.error === 'store_exists')
+			throw AppError.conflict('A store is already connected.');
+		throw AppError.badRequest(
+			'Unable to connect to the store with the provided access token',
+		);
+	}
+
+	return createdSuccess(reply, result.store);
+}
 
 export async function handleUpdateStore(
 	request: FastifyRequest<{ Body: UpdateStoreRequest }>,

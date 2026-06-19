@@ -1,13 +1,22 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
 import {
 	TEST_USER_ID,
 	TEST_STORE_ID,
 	NON_APP_USER_ID,
+	ONBOARDING_USER_ID,
 } from '../../tests/test-constants.js';
 import { db } from '../../db/connection.js';
 import { createDefaultStages } from './store-service.js';
+
+// Squarespace Mock
+vi.mock('../orders/platforms/squarespace.js', async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import('../orders/platforms/squarespace.js')
+	>()),
+	testSquarespaceConnection: vi.fn().mockResolvedValue(true),
+}));
 
 describe('Store API', () => {
 	let app: FastifyInstance;
@@ -77,6 +86,99 @@ describe('Store API', () => {
 		);
 
 		expect(response.statusCode).toBe(404);
+	});
+
+	it('GET /store returns the connected store', async () => {
+		const response = await app.inject(withAuth('GET', '/store'));
+
+		expect(response.statusCode).toBe(200);
+		const data = response.json().data;
+		expect(data.connected).toBe(true);
+		expect(data.storeName).toBeTruthy();
+		expect(data.timezone).toBeTruthy();
+	});
+
+	it('GET /store returns connected false when the user has no store', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/store', { userId: NON_APP_USER_ID }),
+		);
+
+		expect(response.statusCode).toBe(200);
+		const data = response.json().data;
+		expect(data.connected).toBe(false);
+		expect(data.storeName).toBeNull();
+	});
+
+	it('POST /store creates the store with default stages', async () => {
+		await db
+			.insertInto('users')
+			.values({
+				id: ONBOARDING_USER_ID,
+				email: 'onboarding-test@example.com',
+				first_name: 'Onboarding',
+				last_name: 'Test',
+			})
+			.execute();
+
+		try {
+			const response = await app.inject(
+				withAuth('POST', '/store', {
+					userId: ONBOARDING_USER_ID,
+					payload: {
+						storeName: 'Fresh Store',
+						accessToken: 'test-token',
+						timezone: 'America/Denver',
+					},
+				}),
+			);
+
+			expect(response.statusCode).toBe(201);
+			const data = response.json().data;
+			expect(data.connected).toBe(true);
+			expect(data.storeName).toBe('Fresh Store');
+
+			const store = await db
+				.selectFrom('stores')
+				.select('id')
+				.where('user_id', '=', ONBOARDING_USER_ID)
+				.executeTakeFirstOrThrow();
+			const orderStages = await db
+				.selectFrom('order_workflow_stages')
+				.select('id')
+				.where('store_id', '=', store.id)
+				.execute();
+			const itemStages = await db
+				.selectFrom('order_item_workflow_stages')
+				.select('id')
+				.where('store_id', '=', store.id)
+				.execute();
+
+			expect(orderStages.length).toBe(4);
+			expect(itemStages.length).toBe(3);
+		} finally {
+			await db
+				.deleteFrom('stores')
+				.where('user_id', '=', ONBOARDING_USER_ID)
+				.execute();
+			await db
+				.deleteFrom('users')
+				.where('id', '=', ONBOARDING_USER_ID)
+				.execute();
+		}
+	});
+
+	it('POST /store returns 409 when a store already exists', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/store', {
+				payload: {
+					storeName: 'Duplicate Store',
+					accessToken: 'test-token',
+					timezone: 'America/Denver',
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(409);
 	});
 
 	it('createDefaultStages seeds the default order and item stages', async () => {
