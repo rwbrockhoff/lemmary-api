@@ -3,6 +3,7 @@ import type {
 	CreateWorkflowStageRequestSchema,
 	UpdateWorkflowStageRequestSchema,
 	ReorderWorkflowStagesRequestSchema,
+	DeleteItemStageQuerySchema,
 } from './schemas.js';
 
 export type CreateWorkflowStageRequest = z.infer<
@@ -14,3 +15,4 @@ export type UpdateWorkflowStageRequest = z.infer<
 export type ReorderWorkflowStagesRequest = z.infer<
 	typeof ReorderWorkflowStagesRequestSchema
 >;
+export type DeleteItemStageQuery = z.infer<typeof DeleteItemStageQuerySchema>;

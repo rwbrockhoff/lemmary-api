@@ -43,6 +43,7 @@ export interface StoreTable {
 	store_access_token: Buffer;
 	platform_config: Record<string, unknown> | null;
 	lead_time_days: number | null;
+	timezone: Generated<string>;
 	last_synced_at: Date | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

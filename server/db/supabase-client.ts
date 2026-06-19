@@ -18,3 +18,12 @@ export const supabaseAdmin = createClient(
 		},
 	},
 );
+
+export function createUserClient() {
+	return createClient(env.SUPABASE_CLIENT, env.SUPABASE_KEY, {
+		auth: {
+			autoRefreshToken: false,
+			persistSession: false,
+		},
+	});
+}

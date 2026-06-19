@@ -1,47 +1,45 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import {
-	successResponse,
-	createdSuccess,
-} from '../../utils/api-responses.js';
+import { successResponse, createdSuccess } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
 import type {
 	CreateWorkflowStageRequest,
 	UpdateWorkflowStageRequest,
 	ReorderWorkflowStagesRequest,
+	DeleteItemStageQuery,
 } from './contract/types.js';
 import {
-	getWorkflowStages,
-	createWorkflowStage,
-	updateWorkflowStage,
-	deleteWorkflowStage,
-	reorderWorkflowStages,
-} from './workflow-service.js';
+	getItemStages,
+	createItemStage,
+	updateItemStage,
+	deleteItemStage,
+	reorderItemStages,
+} from './item-stages-service.js';
 
-export async function handleGetWorkflowStages(
+export async function handleGetItemStages(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	const stages = await getWorkflowStages(request.userId);
+	const stages = await getItemStages(request.userId);
 	return successResponse(reply, stages);
 }
 
-export async function handleCreateWorkflowStage(
+export async function handleCreateItemStage(
 	request: FastifyRequest<{ Body: CreateWorkflowStageRequest }>,
 	reply: FastifyReply,
 ) {
-	const result = await createWorkflowStage(request.userId, request.body);
+	const result = await createItemStage(request.userId, request.body);
 	if (!result.ok) throw AppError.notFound('Store not found');
 	return createdSuccess(reply, result.stage);
 }
 
-export async function handleUpdateWorkflowStage(
+export async function handleUpdateItemStage(
 	request: FastifyRequest<{
 		Params: { id: string };
 		Body: UpdateWorkflowStageRequest;
 	}>,
 	reply: FastifyReply,
 ) {
-	const result = await updateWorkflowStage(
+	const result = await updateItemStage(
 		request.userId,
 		request.params.id,
 		request.body,
@@ -55,11 +53,18 @@ export async function handleUpdateWorkflowStage(
 	return successResponse(reply, result.stage);
 }
 
-export async function handleDeleteWorkflowStage(
-	request: FastifyRequest<{ Params: { id: string } }>,
+export async function handleDeleteItemStage(
+	request: FastifyRequest<{
+		Params: { id: string };
+		Querystring: DeleteItemStageQuery;
+	}>,
 	reply: FastifyReply,
 ) {
-	const result = await deleteWorkflowStage(request.userId, request.params.id);
+	const result = await deleteItemStage(
+		request.userId,
+		request.params.id,
+		request.query.reassignStageId,
+	);
 
 	if (!result.ok) {
 		if (result.error === 'no_store') throw AppError.notFound('Store not found');
@@ -67,19 +72,27 @@ export async function handleDeleteWorkflowStage(
 			throw AppError.notFound('Workflow stage not found');
 		if (result.error === 'is_default')
 			throw AppError.conflict('The default stage cannot be deleted.');
-		throw AppError.conflict(
-			'Move existing orders out of this stage before deleting.',
-		);
+		if (result.error === 'invalid_reassign')
+			throw AppError.badRequest('Invalid stage to reassign items to.');
+		if (result.error === 'has_items')
+			throw AppError.conflict(
+				'This stage has items in use. Reassign them to another stage to delete it.',
+				{
+					affectedOrders: result.affectedOrders,
+					affectedCount: result.affectedCount,
+					suggestedReassignStageId: result.suggestedReassignStageId,
+				},
+			);
 	}
 
 	return successResponse(reply, { id: request.params.id });
 }
 
-export async function handleReorderWorkflowStages(
+export async function handleReorderItemStages(
 	request: FastifyRequest<{ Body: ReorderWorkflowStagesRequest }>,
 	reply: FastifyReply,
 ) {
-	const result = await reorderWorkflowStages(request.userId, request.body);
+	const result = await reorderItemStages(request.userId, request.body);
 	if (!result.ok) throw AppError.notFound('Store not found');
 	return successResponse(reply, { ok: true });
 }

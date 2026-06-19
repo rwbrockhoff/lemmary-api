@@ -5,6 +5,7 @@ export const StoreSettingsResponseSchema = z.object({
 	platform: z.enum(['squarespace', 'shopify', 'etsy']).nullable(),
 	leadTimeDays: z.number().nullable(),
 	storeUrl: z.string().nullable(),
+	timezone: z.string().nullable(),
 });
 
 export const UpdateLeadTimeRequestSchema = z.object({

@@ -48,10 +48,7 @@ export const WorkflowStageRowSchema = z.object({
 	updated_at: z.date(),
 });
 
-export const GetWorkflowStagesResponseSchema = z.object({
-	orderStages: z.array(WorkflowStageRowSchema),
-	itemStages: z.array(WorkflowStageRowSchema),
-});
+export const WorkflowStageListResponseSchema = z.array(WorkflowStageRowSchema);
 
 export const StageIdParamSchema = z.object({
 	id: z.uuid(),
@@ -63,4 +60,8 @@ export const ReorderWorkflowStagesResponseSchema = z.object({
 
 export const DeleteWorkflowStageResponseSchema = z.object({
 	id: z.string(),
+});
+
+export const DeleteItemStageQuerySchema = z.object({
+	reassignStageId: z.uuid().optional(),
 });

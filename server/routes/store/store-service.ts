@@ -45,6 +45,10 @@ export async function updateStore(
 		set.lead_time_days = updates.leadTimeDays;
 	}
 
+	if (updates.timezone !== undefined) {
+		set.timezone = updates.timezone;
+	}
+
 	if (updates.accessToken) {
 		set.store_access_token = sql<Buffer>`pgp_sym_encrypt(${updates.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
 	}

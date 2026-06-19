@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import { startOfDayUtc } from '../../../utils/timezone.js';
 import { netRevenueSum } from '../../../utils/revenue.js';
 import type { OperationsData } from './contract/types.js';
 
@@ -38,6 +39,8 @@ export async function getOperations(
 	const dayMs = 24 * 60 * 60 * 1000;
 	const periodStart = new Date(now.getTime() - range * dayMs);
 	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
+
+	const todayUtc = startOfDayUtc(now, store.timezone).getTime();
 
 	const currentPeriodFilter = sql`order_date >= ${periodStart}`;
 	const previousPeriodFilter = sql`order_date >= ${previousPeriodStart} and order_date < ${periodStart}`;
@@ -170,11 +173,6 @@ export async function getOperations(
 		if (dueDate) {
 			const [y, m, d] = dueDate.split('-').map(Number);
 			const dueUtc = Date.UTC(y, m - 1, d);
-			const todayUtc = Date.UTC(
-				now.getUTCFullYear(),
-				now.getUTCMonth(),
-				now.getUTCDate(),
-			);
 			daysUntilDue = Math.round((dueUtc - todayUtc) / dayMs);
 		}
 		return {
@@ -195,10 +193,11 @@ export async function getOperations(
 	});
 
 	const bucketLit = sql.lit(bucket);
+	const tzLit = sql.lit(store.timezone);
 	const ordersTrendRaw = await db
 		.selectFrom('orders')
 		.select([
-			sql<string>`to_char(date_trunc(${bucketLit}, order_date), 'YYYY-MM-DD')`.as(
+			sql<string>`to_char(date_trunc(${bucketLit}, order_date AT TIME ZONE ${tzLit}), 'YYYY-MM-DD')`.as(
 				'date',
 			),
 			sql<number>`count(*)`.as('count'),
@@ -207,7 +206,7 @@ export async function getOperations(
 		])
 		.where('store_id', '=', store.id)
 		.where('order_date', '>=', periodStart)
-		.groupBy(sql`date_trunc(${bucketLit}, order_date)`)
+		.groupBy(sql`date_trunc(${bucketLit}, order_date AT TIME ZONE ${tzLit})`)
 		.orderBy('date', 'asc')
 		.execute();
 

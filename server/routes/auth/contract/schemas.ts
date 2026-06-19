@@ -44,6 +44,27 @@ export const ResetPasswordRequestSchema = z
 	})
 	.strict();
 
+export const ChangePasswordRequestSchema = z
+	.object({
+		currentPassword: z.string().min(1),
+		newPassword: z.string().min(8),
+	})
+	.strict();
+
+export const ChangeEmailRequestSchema = z
+	.object({
+		currentPassword: z.string().min(1),
+		newEmail: z.string().trim().toLowerCase().pipe(z.email()),
+	})
+	.strict();
+
+export const IdentityResponseSchema = z
+	.object({
+		hasPassword: z.boolean(),
+		providers: z.array(z.string()),
+	})
+	.strict();
+
 export const AuthUserSchema = z
 	.object({
 		userId: z.uuid(),

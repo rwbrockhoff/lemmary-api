@@ -35,30 +35,20 @@ type StageResult = StageSuccess | StageError;
 type SimpleSuccess = { ok: true };
 type SimpleResult = SimpleSuccess | StageError;
 
-export async function getWorkflowStages(userId: string) {
+export async function getOrderStages(userId: string) {
 	const store = await getStoreForUser(userId);
-	if (!store) return { orderStages: [], itemStages: [] };
+	if (!store) return [];
 
-	const orderStages = await db
+	return db
 		.selectFrom('order_workflow_stages')
 		.selectAll()
 		.where('store_id', '=', store.id)
 		.where('archived_at', 'is', null)
 		.orderBy('position', 'asc')
 		.execute();
-
-	const itemStages = await db
-		.selectFrom('order_item_workflow_stages')
-		.selectAll()
-		.where('store_id', '=', store.id)
-		.where('archived_at', 'is', null)
-		.orderBy('position', 'asc')
-		.execute();
-
-	return { orderStages, itemStages };
 }
 
-export async function createWorkflowStage(
+export async function createOrderStage(
 	userId: string,
 	input: CreateInput,
 ): Promise<StageResult> {
@@ -90,7 +80,7 @@ export async function createWorkflowStage(
 	return { ok: true, stage: inserted };
 }
 
-export async function updateWorkflowStage(
+export async function updateOrderStage(
 	userId: string,
 	stageId: string,
 	updates: UpdateInput,
@@ -122,7 +112,7 @@ export async function updateWorkflowStage(
 	return { ok: true, stage: updated };
 }
 
-export async function deleteWorkflowStage(
+export async function deleteOrderStage(
 	userId: string,
 	stageId: string,
 ): Promise<SimpleResult> {
@@ -159,7 +149,7 @@ export async function deleteWorkflowStage(
 	return { ok: true };
 }
 
-export async function reorderWorkflowStages(
+export async function reorderOrderStages(
 	userId: string,
 	input: ReorderInput,
 ): Promise<SimpleResult> {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidTimeZone } from '../../../utils/timezone.js';
 
 export const UpdateStoreRequestSchema = z
 	.object({
@@ -6,6 +7,10 @@ export const UpdateStoreRequestSchema = z
 		leadTimeDays: z.number().int().min(0).nullable().optional(),
 		accessToken: z.string().min(1).optional(),
 		storeUrl: z.url().nullable().optional(),
+		timezone: z
+			.string()
+			.refine(isValidTimeZone, { message: 'Invalid timezone' })
+			.optional(),
 		applyLeadTimeToOpenOrders: z.boolean().optional(),
 	})
 	.strict();

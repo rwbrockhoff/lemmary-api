@@ -1,8 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import {
-	successResponse,
-	createdSuccess,
-} from '../../utils/api-responses.js';
+import { successResponse, createdSuccess } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
 import {
 	REFRESH_TOKEN_COOKIE,
@@ -18,6 +15,8 @@ import type {
 	LoginRequest,
 	ForgotPasswordRequest,
 	ResetPasswordRequest,
+	ChangePasswordRequest,
+	ChangeEmailRequest,
 	OauthSessionRequest,
 } from './contract/types.js';
 import {
@@ -25,6 +24,9 @@ import {
 	loginUser,
 	requestPasswordReset,
 	resetPassword,
+	changePassword,
+	changeEmail,
+	getUserIdentity,
 	exchangeOauthSession,
 	getCurrentUser,
 } from './auth-service.js';
@@ -116,8 +118,23 @@ export async function handleStatus(
 	return successResponse(reply, { isAuthenticated: true, user });
 }
 
-// Intentionally swallows errors and always returns the same message so we don't
-// leak whether an account exists for the given email.
+export async function handleGetIdentity(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const result = await getUserIdentity(request.userId);
+
+	if (!result.success) {
+		throw AppError.unauthorized(result.error);
+	}
+
+	return successResponse(reply, {
+		hasPassword: result.hasPassword,
+		providers: result.providers,
+	});
+}
+
+// Same response either way so we don't reveal which emails have accounts
 export async function handleForgotPassword(
 	request: FastifyRequest<{ Body: ForgotPasswordRequest }>,
 	reply: FastifyReply,
@@ -167,4 +184,46 @@ export async function handleResetPassword(
 	}
 
 	return successResponse(reply, null, 'Password updated successfully');
+}
+
+export async function handleChangePassword(
+	request: FastifyRequest<{ Body: ChangePasswordRequest }>,
+	reply: FastifyReply,
+) {
+	const { currentPassword, newPassword } = request.body;
+	const result = await changePassword({
+		userId: request.userId,
+		currentPassword,
+		newPassword,
+	});
+
+	if (!result.success) {
+		if (result.statusCode === 401) throw AppError.unauthorized(result.error);
+		throw AppError.badRequest(result.error);
+	}
+
+	return successResponse(reply, null, 'Password updated successfully');
+}
+
+export async function handleChangeEmail(
+	request: FastifyRequest<{ Body: ChangeEmailRequest }>,
+	reply: FastifyReply,
+) {
+	const { currentPassword, newEmail } = request.body;
+	const result = await changeEmail({
+		userId: request.userId,
+		currentPassword,
+		newEmail,
+	});
+
+	if (!result.success) {
+		if (result.statusCode === 401) throw AppError.unauthorized(result.error);
+		throw AppError.badRequest(result.error);
+	}
+
+	return successResponse(
+		reply,
+		null,
+		'Check your inbox to confirm your new email address.',
+	);
 }
