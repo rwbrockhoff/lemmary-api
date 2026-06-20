@@ -7,16 +7,28 @@ import {
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
 import { getDefaultStageIds } from './utils/default-stages.js';
-import {
-	fetchSquarespaceOrders,
-	type NormalizedOrder,
-} from './platforms/squarespace.js';
+import { fetchSquarespaceOrders } from './platforms/squarespace.js';
+import { fetchShopifyOrders } from './platforms/shopify.js';
+import type { NormalizedOrder } from './platforms/order-types.js';
+
+function getShopDomain(store: StoreWithAccessToken): string {
+	const config = store.platform_config as { store_url?: string } | null;
+	return (config?.store_url ?? '').replace(/^https?:\/\//, '');
+}
 
 async function fetchOrdersFromPlatform(
 	store: StoreWithAccessToken,
 ): Promise<NormalizedOrder[]> {
 	if (store.platform === 'squarespace') {
 		return fetchSquarespaceOrders(store.access_token, store.last_synced_at);
+	}
+
+	if (store.platform === 'shopify') {
+		return fetchShopifyOrders(
+			getShopDomain(store),
+			store.access_token,
+			store.last_synced_at,
+		);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
