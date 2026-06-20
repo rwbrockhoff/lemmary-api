@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { ApiTags } from '../../openapi/tags.js';
 import { successSchema } from '../../openapi/schemas.js';
+import { SYNC_RATE_LIMIT } from '../../config/rate-limit.js';
 import {
 	GetOrdersQuerySchema,
 	GetOrdersResponseSchema,
@@ -46,6 +47,7 @@ export async function ordersRoutes(app: FastifyInstance) {
 	r.post(
 		'/orders/sync',
 		{
+			config: { rateLimit: SYNC_RATE_LIMIT },
 			schema: {
 				tags: [ApiTags.ORDERS],
 				summary: 'Sync orders from the connected platform',

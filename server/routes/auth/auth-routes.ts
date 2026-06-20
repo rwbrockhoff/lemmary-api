@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { ApiTags } from '../../openapi/tags.js';
 import { successSchema } from '../../openapi/schemas.js';
+import { AUTH_RATE_LIMIT } from '../../config/rate-limit.js';
 import {
 	RegisterRequestSchema,
 	RegisterResponseSchema,
@@ -38,6 +39,7 @@ export async function authRoutes(app: FastifyInstance) {
 	r.post(
 		'/auth/register',
 		{
+			config: { rateLimit: AUTH_RATE_LIMIT },
 			schema: {
 				tags: [ApiTags.AUTH],
 				summary: 'Register a new account',
@@ -54,6 +56,7 @@ export async function authRoutes(app: FastifyInstance) {
 	r.post(
 		'/auth/login',
 		{
+			config: { rateLimit: AUTH_RATE_LIMIT },
 			schema: {
 				tags: [ApiTags.AUTH],
 				summary: 'Log in with email and password',
@@ -100,6 +103,7 @@ export async function authRoutes(app: FastifyInstance) {
 	r.post(
 		'/auth/forgot-password',
 		{
+			config: { rateLimit: AUTH_RATE_LIMIT },
 			schema: {
 				tags: [ApiTags.AUTH],
 				summary: 'Request a password reset email',
@@ -116,6 +120,7 @@ export async function authRoutes(app: FastifyInstance) {
 	r.post(
 		'/auth/reset-password',
 		{
+			config: { rateLimit: AUTH_RATE_LIMIT },
 			schema: {
 				tags: [ApiTags.AUTH],
 				summary: 'Reset password with a reset token',

@@ -1,7 +1,10 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import rateLimit from '@fastify/rate-limit';
 import { env } from './config/environment.js';
+import { GLOBAL_RATE_LIMIT, skipRateLimit } from './config/rate-limit.js';
+import { ErrorCode } from './utils/api-responses.js';
 import { authMiddleware } from './middleware/auth-middleware.js';
 import { registerOpenApi } from './openapi/openapi.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -36,7 +39,8 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	const loggerConfig =
 		logger && env.NODE_ENV === 'development' ? devLoggerConfig : logger;
 
-	const app = Fastify({ logger: loggerConfig });
+	// Use real client IP for rate limiting when behind Railway's proxy
+	const app = Fastify({ logger: loggerConfig, trustProxy: true });
 
 	app.register(cors, {
 		origin: env.FRONTEND_URL,
@@ -47,6 +51,22 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(cookie, {
 		secret: env.COOKIE_SECRET,
 	});
+
+	// Global rate limit: auth + sync routes set stricter limits
+	// Health checks and Shopify webhooks are skipped
+	if (env.NODE_ENV !== 'test') {
+		app.register(rateLimit, {
+			...GLOBAL_RATE_LIMIT,
+			allowList: skipRateLimit,
+			errorResponseBuilder: (_req, context) => ({
+				success: false,
+				error: {
+					message: `Too many requests, retry after ${context.after}`,
+					code: ErrorCode.RATE_LIMIT,
+				},
+			}),
+		});
+	}
 
 	registerOpenApi(app);
 
