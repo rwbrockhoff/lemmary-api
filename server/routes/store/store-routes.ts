@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { ApiTags } from '../../openapi/tags.js';
-import { successSchema } from '../../openapi/schemas.js';
+import { successSchema, emptySuccessSchema } from '../../openapi/schemas.js';
 import {
 	UpdateStoreRequestSchema,
 	UpdateStoreResponseSchema,
@@ -12,6 +12,7 @@ import {
 	handleGetStore,
 	handleCreateStore,
 	handleUpdateStore,
+	handleDeleteStore,
 } from './store-controller.js';
 
 export async function storeRoutes(app: FastifyInstance) {
@@ -59,5 +60,19 @@ export async function storeRoutes(app: FastifyInstance) {
 			},
 		},
 		handleUpdateStore,
+	);
+
+	r.delete(
+		'/store',
+		{
+			schema: {
+				tags: [ApiTags.STORE],
+				summary: 'Remove the store and all of its data',
+				response: {
+					200: emptySuccessSchema,
+				},
+			},
+		},
+		handleDeleteStore,
 	);
 }

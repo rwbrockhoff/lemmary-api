@@ -2,7 +2,7 @@ import { sql, type UpdateObject, type Kysely } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
-import { getStoreForUser } from '../../utils/store.js';
+import { getStoreForUser, getShopDomain } from '../../utils/store.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
 import {
 	DEFAULT_ORDER_STAGES,
@@ -43,6 +43,8 @@ type UpdateStoreError = {
 };
 
 type UpdateStoreResult = UpdateStoreSuccess | UpdateStoreError;
+
+type DeleteStoreResult = { ok: true } | { ok: false; error: 'no_store' };
 
 export async function createDefaultStages(
 	storeId: string,
@@ -134,12 +136,28 @@ export async function createShopifyStore(
 	shop: string,
 	accessToken: string,
 ): Promise<CreateStoreResult> {
-	const existing = await getStoreForUser(userId);
-	if (existing) return { ok: false, error: 'store_exists' };
-
 	// Token already came from the OAuth exchange, so no connection test needed
-	const platformConfig = { store_url: `https://${shop}` };
 	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+
+	const existing = await getStoreForUser(userId);
+	if (existing) {
+		// Reconnecting the same Shopify store just refreshes the token in place so
+		// the merchant keeps all their orders and BOM data. A different store still
+		// has to be removed first.
+		const isSameShopifyStore =
+			existing.platform === 'shopify' && getShopDomain(existing) === shop;
+		if (!isSameShopifyStore) return { ok: false, error: 'store_exists' };
+
+		await db
+			.updateTable('stores')
+			.set({ store_access_token: encryptedToken, updated_at: new Date() })
+			.where('id', '=', existing.id)
+			.execute();
+
+		return { ok: true, store: await getStore(userId) };
+	}
+
+	const platformConfig = { store_url: `https://${shop}` };
 
 	await db.transaction().execute(async (trx) => {
 		const store = await trx
@@ -234,4 +252,20 @@ export async function updateStore(
 		platform: updated.platform,
 		leadTimeDays: updated.lead_time_days,
 	};
+}
+
+export async function deleteStore(
+	userId: string,
+): Promise<DeleteStoreResult> {
+	const store = await getStoreForUser(userId);
+	if (!store) return { ok: false, error: 'no_store' };
+
+	// Cascades to orders, items, BOM, materials, workflow stages, and batches
+	await db
+		.deleteFrom('stores')
+		.where('id', '=', store.id)
+		.where('user_id', '=', userId)
+		.execute();
+
+	return { ok: true };
 }
