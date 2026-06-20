@@ -42,6 +42,8 @@ export interface StoreTable {
 	platform: 'squarespace' | 'shopify' | 'etsy';
 	store_name: string;
 	store_access_token: Buffer;
+	store_refresh_token: Buffer | null;
+	access_token_expires_at: Date | null;
 	platform_config: Record<string, unknown> | null;
 	lead_time_days: number | null;
 	timezone: Generated<string>;

@@ -19,6 +19,12 @@ vi.mock('../orders/platforms/squarespace.js', async (importOriginal) => ({
 	testSquarespaceConnection: vi.fn().mockResolvedValue(true),
 }));
 
+// Don't call to Shopify for TZ during tests
+vi.mock('../shopify/shopify-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../shopify/shopify-service.js')>()),
+	fetchShopTimezone: vi.fn().mockResolvedValue(null),
+}));
+
 describe('Store API', () => {
 	let app: FastifyInstance;
 
@@ -243,16 +249,20 @@ describe('Store API', () => {
 			.execute();
 
 		try {
-			const first = await createShopifyStore(ONBOARDING_USER_ID, shop, 'token-1');
+			const first = await createShopifyStore(ONBOARDING_USER_ID, shop, {
+				accessToken: 'token-1',
+				refreshToken: 'refresh-1',
+				expiresIn: 3600,
+			});
 			expect(first.ok).toBe(true);
 			const original = await getStoreForUser(ONBOARDING_USER_ID);
 
 			// Reconnecting the same store should update the existing row, not error
-			const reconnect = await createShopifyStore(
-				ONBOARDING_USER_ID,
-				shop,
-				'token-2',
-			);
+			const reconnect = await createShopifyStore(ONBOARDING_USER_ID, shop, {
+				accessToken: 'token-2',
+				refreshToken: 'refresh-2',
+				expiresIn: 3600,
+			});
 			expect(reconnect.ok).toBe(true);
 
 			const after = await getStoreWithAccessToken(ONBOARDING_USER_ID);
@@ -263,7 +273,7 @@ describe('Store API', () => {
 			const other = await createShopifyStore(
 				ONBOARDING_USER_ID,
 				'other-store.myshopify.com',
-				'token-3',
+				{ accessToken: 'token-3', refreshToken: 'refresh-3', expiresIn: 3600 },
 			);
 			expect(other).toEqual({ ok: false, error: 'store_exists' });
 		} finally {

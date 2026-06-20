@@ -83,13 +83,13 @@ export async function handleShopifyCallback(
 	// Confirm the request actually came from Shopify and wasn't tampered
 	if (!verifyHmac(rawQuery)) return fail('hmac check failed');
 
-	// Swap the temp code for a real access token we can use to read their store
-	const token = await exchangeCodeForToken(shop, code);
-	if (!token) return fail('token exchange failed');
+	// Swap the temp code for the access + refresh tokens we use to read store
+	const tokens = await exchangeCodeForToken(shop, code);
+	if (!tokens) return fail('token exchange failed');
 
-	// Create store with the token (and seed default workflow stages).
-	const result = await createShopifyStore(parsed.userId, shop, token);
+	// Create store with the tokens (and seed default workflow stages)
+	const result = await createShopifyStore(parsed.userId, shop, tokens);
 	if (!result.ok) return fail(`store creation failed (${result.error})`);
 
-	return reply.redirect(`${env.FRONTEND_URL}/`);
+	return reply.redirect(`${env.FRONTEND_URL}/?connected=shopify`);
 }

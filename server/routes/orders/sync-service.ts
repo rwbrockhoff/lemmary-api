@@ -9,6 +9,7 @@ import {
 import { toJsonb } from '../../utils/json.js';
 import { recordAuditEvent } from '../../utils/audit-logger.js';
 import { AuditAction } from '../../db/enums.js';
+import { ensureFreshShopifyToken } from '../shopify/shopify-token.js';
 import { getDefaultStageIds } from './utils/default-stages.js';
 import { fetchSquarespaceOrders } from './platforms/squarespace.js';
 import { fetchShopifyOrders } from './platforms/shopify.js';
@@ -22,9 +23,10 @@ async function fetchOrdersFromPlatform(
 	}
 
 	if (store.platform === 'shopify') {
+		const token = await ensureFreshShopifyToken(store);
 		return fetchShopifyOrders(
 			getShopDomain(store),
-			store.access_token,
+			token,
 			store.last_synced_at,
 		);
 	}

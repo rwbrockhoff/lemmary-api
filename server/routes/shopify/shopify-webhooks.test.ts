@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createHmac } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp } from '../../tests/test-helpers.js';
@@ -8,6 +8,12 @@ import { SHOPIFY_USER_ID } from '../../tests/test-constants.js';
 import { createShopifyStore } from '../store/store-service.js';
 import { getStoreByShopDomain } from '../../utils/store.js';
 import { SHOPIFY_WEBHOOK_PATHS } from './shopify-config.js';
+
+// Don't call to Shopify for the TZ during tests
+vi.mock('./shopify-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('./shopify-service.js')>()),
+	fetchShopTimezone: vi.fn().mockResolvedValue(null),
+}));
 
 const sign = (body: string) =>
 	createHmac('sha256', env.SHOPIFY_CLIENT_SECRET ?? '')
@@ -83,7 +89,11 @@ describe('Shopify Compliance Webhooks', () => {
 		let storeId: string | undefined;
 
 		try {
-			await createShopifyStore(SHOPIFY_USER_ID, shop, 'token');
+			await createShopifyStore(SHOPIFY_USER_ID, shop, {
+				accessToken: 'token',
+				refreshToken: 'refresh',
+				expiresIn: 3600,
+			});
 			storeId = (await getStoreByShopDomain(shop))!.id;
 
 			const response = await postWebhook(
@@ -117,7 +127,11 @@ describe('Shopify Compliance Webhooks', () => {
 		let storeId: string | undefined;
 
 		try {
-			await createShopifyStore(SHOPIFY_USER_ID, shop, 'token');
+			await createShopifyStore(SHOPIFY_USER_ID, shop, {
+				accessToken: 'token',
+				refreshToken: 'refresh',
+				expiresIn: 3600,
+			});
 			storeId = (await getStoreByShopDomain(shop))!.id;
 
 			await db

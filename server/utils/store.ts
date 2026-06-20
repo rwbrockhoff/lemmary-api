@@ -11,13 +11,20 @@ const storeSummaryColumns = [
 	'platform_config',
 	'lead_time_days',
 	'timezone',
+	'access_token_expires_at',
 	'last_synced_at',
 	'created_at',
 	'updated_at',
 ] as const;
 
-export type StoreSummary = Omit<Store, 'store_access_token'>;
-export type StoreWithAccessToken = StoreSummary & { access_token: string };
+export type StoreSummary = Omit<
+	Store,
+	'store_access_token' | 'store_refresh_token'
+>;
+export type StoreWithAccessToken = StoreSummary & {
+	access_token: string;
+	refresh_token: string | null;
+};
 
 // Shopify's shop domain (e.g. my-store.myshopify.com)
 // is kept in platform_config.store_url
@@ -62,6 +69,11 @@ export async function getStoreWithAccessToken(
 			...storeSummaryColumns,
 			sql<string>`pgp_sym_decrypt(store_access_token, ${env.STORE_ENCRYPTION_KEY})`.as(
 				'access_token',
+			),
+			sql<
+				string | null
+			>`pgp_sym_decrypt(store_refresh_token, ${env.STORE_ENCRYPTION_KEY})`.as(
+				'refresh_token',
 			),
 		])
 		.where('user_id', '=', userId)

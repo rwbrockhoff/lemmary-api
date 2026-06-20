@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { env } from '../../config/environment.js';
 import { SHOPIFY_SCOPES, SHOPIFY_CALLBACK_PATH } from './shopify-config.js';
+import { shopifyGraphql } from './shopify-graphql.js';
 
 export function buildAuthorizeUrl(shop: string, state: string): string {
 	const params = new URLSearchParams({
@@ -44,12 +45,35 @@ export function verifyHmac(rawQuery: string): boolean {
 	);
 }
 
-// Trade the temp code Shopify handed us for a long-lived access token
-// This token is what lets us pull the orders and products from here on
+export type ShopifyTokens = {
+	accessToken: string;
+	refreshToken: string;
+	expiresIn: number;
+};
+
+type TokenResponse = {
+	access_token?: string;
+	refresh_token?: string;
+	expires_in?: number;
+};
+
+function parseTokens(data: TokenResponse): ShopifyTokens | null {
+	if (!data.access_token || !data.refresh_token || data.expires_in == null) {
+		return null;
+	}
+	return {
+		accessToken: data.access_token,
+		refreshToken: data.refresh_token,
+		expiresIn: data.expires_in,
+	};
+}
+
+// Trade the temp code from Shopify for access token
+// expiring: 1 asks for the expiring token + refresh token
 export async function exchangeCodeForToken(
 	shop: string,
 	code: string,
-): Promise<string | null> {
+): Promise<ShopifyTokens | null> {
 	const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -57,11 +81,51 @@ export async function exchangeCodeForToken(
 			client_id: env.SHOPIFY_CLIENT_ID,
 			client_secret: env.SHOPIFY_CLIENT_SECRET,
 			code,
+			expiring: 1,
 		}),
 	});
 
 	if (!response.ok) return null;
 
-	const data = (await response.json()) as { access_token?: string };
-	return data.access_token ?? null;
+	return parseTokens((await response.json()) as TokenResponse);
+}
+
+// Swap refresh token for fresh access token (and new refresh token)
+export async function refreshShopifyToken(
+	shop: string,
+	refreshToken: string,
+): Promise<ShopifyTokens | null> {
+	const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			client_id: env.SHOPIFY_CLIENT_ID,
+			client_secret: env.SHOPIFY_CLIENT_SECRET,
+			grant_type: 'refresh_token',
+			refresh_token: refreshToken,
+		}),
+	});
+
+	if (!response.ok) return null;
+
+	return parseTokens((await response.json()) as TokenResponse);
+}
+
+const SHOP_TIMEZONE_QUERY = `query { shop { ianaTimezone } }`;
+
+export async function fetchShopTimezone(
+	shop: string,
+	token: string,
+): Promise<string | null> {
+	try {
+		const data = await shopifyGraphql<{ shop: { ianaTimezone: string } }>(
+			shop,
+			token,
+			SHOP_TIMEZONE_QUERY,
+			{},
+		);
+		return data.shop.ianaTimezone ?? null;
+	} catch {
+		return null;
+	}
 }

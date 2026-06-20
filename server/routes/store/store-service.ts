@@ -1,4 +1,4 @@
-import { sql, type UpdateObject, type Kysely } from 'kysely';
+import { sql, type UpdateObject, type InsertObject, type Kysely } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
@@ -9,7 +9,12 @@ import {
 } from '../../utils/store.js';
 import { recordAuditEvent } from '../../utils/audit-logger.js';
 import { AuditAction } from '../../db/enums.js';
+import { isValidTimeZone } from '../../utils/timezone.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
+import {
+	fetchShopTimezone,
+	type ShopifyTokens,
+} from '../shopify/shopify-service.js';
 import {
 	DEFAULT_ORDER_STAGES,
 	DEFAULT_ITEM_STAGES,
@@ -140,10 +145,12 @@ export async function createStore(
 export async function createShopifyStore(
 	userId: string,
 	shop: string,
-	accessToken: string,
+	tokens: ShopifyTokens,
 ): Promise<CreateStoreResult> {
-	// Token already came from the OAuth exchange, so no connection test needed
-	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	// Tokens already came from the OAuth exchange, so no connection test needed
+	const encryptedAccess = sql<Buffer>`pgp_sym_encrypt(${tokens.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	const encryptedRefresh = sql<Buffer>`pgp_sym_encrypt(${tokens.refreshToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	const expiresAt = new Date(Date.now() + tokens.expiresIn * 1000);
 
 	const existing = await getStoreForUser(userId);
 	if (existing) {
@@ -156,7 +163,12 @@ export async function createShopifyStore(
 
 		await db
 			.updateTable('stores')
-			.set({ store_access_token: encryptedToken, updated_at: new Date() })
+			.set({
+				store_access_token: encryptedAccess,
+				store_refresh_token: encryptedRefresh,
+				access_token_expires_at: expiresAt,
+				updated_at: new Date(),
+			})
 			.where('id', '=', existing.id)
 			.execute();
 
@@ -164,18 +176,26 @@ export async function createShopifyStore(
 	}
 
 	const platformConfig = { store_url: `https://${shop}` };
+	const shopTimezone = await fetchShopTimezone(shop, tokens.accessToken);
+
+	const values: InsertObject<Database, 'stores'> = {
+		user_id: userId,
+		platform: 'shopify',
+		store_name: shop,
+		store_access_token: encryptedAccess,
+		store_refresh_token: encryptedRefresh,
+		access_token_expires_at: expiresAt,
+		platform_config: platformConfig,
+		lead_time_days: null,
+	};
+	if (shopTimezone && isValidTimeZone(shopTimezone)) {
+		values.timezone = shopTimezone;
+	}
 
 	await db.transaction().execute(async (trx) => {
 		const store = await trx
 			.insertInto('stores')
-			.values({
-				user_id: userId,
-				platform: 'shopify',
-				store_name: shop,
-				store_access_token: encryptedToken,
-				platform_config: platformConfig,
-				lead_time_days: null,
-			})
+			.values(values)
 			.returning('id')
 			.executeTakeFirstOrThrow();
 
