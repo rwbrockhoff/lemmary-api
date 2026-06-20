@@ -48,18 +48,18 @@ export async function handleCustomersDataRequest(
 ) {
 	const { shop_domain, customer, data_request } = request.body;
 
+	// Reference customer by Shopify's id, never by email
 	const context = {
 		shop: shop_domain,
 		customerId: customer.id,
-		customerEmail: customer.email,
 		requestId: data_request?.id,
 	};
 
 	request.log.warn(context, 'Shopify customers/data_request received');
 
 	Sentry.captureMessage('Shopify customer data request received', {
-		level: 'warning',
-		tags: { shop: shop_domain },
+		level: 'error',
+		tags: { shop: shop_domain, topic: 'data_request' },
 		extra: context,
 	});
 
