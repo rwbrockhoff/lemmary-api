@@ -3,6 +3,7 @@ import { db } from '../../db/connection.js';
 import type { Database } from '../../db/database-types.js';
 import {
 	getStoreWithAccessToken,
+	getShopDomain,
 	type StoreWithAccessToken,
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
@@ -10,11 +11,6 @@ import { getDefaultStageIds } from './utils/default-stages.js';
 import { fetchSquarespaceOrders } from './platforms/squarespace.js';
 import { fetchShopifyOrders } from './platforms/shopify.js';
 import type { NormalizedOrder } from './platforms/order-types.js';
-
-function getShopDomain(store: StoreWithAccessToken): string {
-	const config = store.platform_config as { store_url?: string } | null;
-	return (config?.store_url ?? '').replace(/^https?:\/\//, '');
-}
 
 async function fetchOrdersFromPlatform(
 	store: StoreWithAccessToken,

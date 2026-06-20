@@ -1,13 +1,13 @@
 import type { NewOrder, NewOrderItem } from '../../../db/database-types.js';
-import { SHOPIFY_API_VERSION } from '../../shopify/shopify-config.js';
+import {
+	shopifyGraphql,
+	type MoneySet,
+	type Connection,
+	type PageInfo,
+} from '../../shopify/shopify-graphql.js';
 import type { NormalizedOrder } from './order-types.js';
 
-// Shopify wraps every money value like { shopMoney: { amount, currencyCode } },
-// and every list as a connection of { edges: [{ node }] }. The types below mirror
-// exactly the fields we ask for in ORDERS_QUERY.
-type Money = { amount: string; currencyCode: string };
-type MoneySet = { shopMoney: Money };
-
+// The types below mirror exactly the fields we ask for in ORDERS_QUERY
 type ShopifyLineItem = {
 	id: string;
 	sku: string | null;
@@ -40,14 +40,11 @@ type ShopifyOrder = {
 			company: string | null;
 		}[];
 	}[];
-	lineItems: { edges: { node: ShopifyLineItem }[] };
+	lineItems: Connection<ShopifyLineItem>;
 };
 
 type OrdersResponse = {
-	orders: {
-		edges: { node: ShopifyOrder }[];
-		pageInfo: { hasNextPage: boolean; endCursor: string | null };
-	};
+	orders: Connection<ShopifyOrder> & { pageInfo: PageInfo };
 };
 
 // We only ask for the fields we map below (GraphQL)
@@ -92,41 +89,6 @@ const ORDERS_QUERY = `
 		}
 	}
 `;
-
-async function graphqlRequest(
-	shop: string,
-	token: string,
-	variables: { cursor: string | null; query: string | null },
-): Promise<OrdersResponse> {
-	const response = await fetch(
-		`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
-		{
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-Shopify-Access-Token': token,
-			},
-			body: JSON.stringify({ query: ORDERS_QUERY, variables }),
-		},
-	);
-
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Shopify API error ${response.status}: ${text}`);
-	}
-
-	// GraphQL returns HTTP 200 even when the query fails
-	// real errors live in an `errors` array in the body
-	const body = (await response.json()) as {
-		data?: OrdersResponse;
-		errors?: unknown;
-	};
-	if (body.errors || !body.data) {
-		throw new Error(`Shopify GraphQL error: ${JSON.stringify(body.errors)}`);
-	}
-
-	return body.data;
-}
 
 function normalizeOrder(node: ShopifyOrder): NormalizedOrder {
 	const customerName = [node.customer?.firstName, node.customer?.lastName]
@@ -195,7 +157,12 @@ export async function fetchShopifyOrders(
 	let cursor: string | null = null;
 
 	do {
-		const data = await graphqlRequest(shop, token, { cursor, query });
+		const data: OrdersResponse = await shopifyGraphql(
+			shop,
+			token,
+			ORDERS_QUERY,
+			{ cursor, query },
+		);
 
 		for (const edge of data.orders.edges) {
 			allOrders.push(normalizeOrder(edge.node));

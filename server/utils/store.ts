@@ -19,6 +19,13 @@ const storeSummaryColumns = [
 export type StoreSummary = Omit<Store, 'store_access_token'>;
 export type StoreWithAccessToken = StoreSummary & { access_token: string };
 
+// Shopify's shop domain (e.g. my-store.myshopify.com)
+// is kept in platform_config.store_url
+export function getShopDomain(store: StoreSummary): string {
+	const config = store.platform_config as { store_url?: string } | null;
+	return (config?.store_url ?? '').replace(/^https?:\/\//, '');
+}
+
 export async function getStoreForUser(
 	userId: string,
 ): Promise<StoreSummary | null> {
