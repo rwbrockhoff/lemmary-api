@@ -7,6 +7,8 @@ import {
 	type StoreWithAccessToken,
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
+import { recordAuditEvent } from '../../utils/audit-logger.js';
+import { AuditAction } from '../../db/enums.js';
 import { getDefaultStageIds } from './utils/default-stages.js';
 import { fetchSquarespaceOrders } from './platforms/squarespace.js';
 import { fetchShopifyOrders } from './platforms/shopify.js';
@@ -213,6 +215,17 @@ export async function syncOrders(userId: string) {
 		.set({ last_synced_at: syncStartedAt })
 		.where('id', '=', store.id)
 		.execute();
+
+	// Record in audit log
+	if (synced > 0) {
+		await recordAuditEvent({
+			action: AuditAction.PiiSynced,
+			platform: store.platform,
+			storeId: store.id,
+			userId: store.user_id,
+			metadata: { orders: synced },
+		});
+	}
 
 	return { synced, storeId: store.id };
 }

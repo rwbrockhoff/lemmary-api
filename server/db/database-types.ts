@@ -1,5 +1,5 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
-import type { OrderType } from './enums.js';
+import type { OrderType, AuditAction } from './enums.js';
 
 export interface Database {
 	users: UserTable;
@@ -19,6 +19,7 @@ export interface Database {
 	products: ProductTable;
 	product_variants: ProductVariantTable;
 	order_stage_history: OrderStageHistoryTable;
+	audit_log: AuditLogTable;
 }
 
 export interface UserTable {
@@ -317,3 +318,18 @@ export interface ProductVariantTable {
 export type ProductVariant = Selectable<ProductVariantTable>;
 export type NewProductVariant = Insertable<ProductVariantTable>;
 export type ProductVariantUpdate = Updateable<ProductVariantTable>;
+
+export interface AuditLogTable {
+	id: Generated<string>;
+	store_id: string;
+	user_id: string | null;
+	action: AuditAction;
+	platform: 'squarespace' | 'shopify' | 'etsy';
+	resource_type: string | null;
+	resource_id: string | null;
+	metadata: Record<string, unknown> | null;
+	created_at: Generated<Date>;
+}
+
+export type AuditLog = Selectable<AuditLogTable>;
+export type NewAuditLog = Insertable<AuditLogTable>;

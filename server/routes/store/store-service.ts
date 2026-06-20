@@ -7,6 +7,8 @@ import {
 	getShopDomain,
 	getStoreByShopDomain,
 } from '../../utils/store.js';
+import { recordAuditEvent } from '../../utils/audit-logger.js';
+import { AuditAction } from '../../db/enums.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
 import {
 	DEFAULT_ORDER_STAGES,
@@ -263,11 +265,24 @@ export async function deleteStore(userId: string): Promise<DeleteStoreResult> {
 	if (!store) return { ok: false, error: 'no_store' };
 
 	// Cascades to orders, items, BOM, materials, workflow stages, and batches
-	await db
-		.deleteFrom('stores')
-		.where('id', '=', store.id)
-		.where('user_id', '=', userId)
-		.execute();
+	await db.transaction().execute(async (trx) => {
+		await trx
+			.deleteFrom('stores')
+			.where('id', '=', store.id)
+			.where('user_id', '=', userId)
+			.execute();
+
+		// Save to audit log
+		await recordAuditEvent(
+			{
+				action: AuditAction.StoreRemoved,
+				platform: store.platform,
+				storeId: store.id,
+				userId,
+			},
+			trx,
+		);
+	});
 
 	return { ok: true };
 }
@@ -277,7 +292,18 @@ export async function deleteStoreByShopDomain(shop: string): Promise<boolean> {
 	const store = await getStoreByShopDomain(shop);
 	if (!store) return false;
 
-	await db.deleteFrom('stores').where('id', '=', store.id).execute();
+	await db.transaction().execute(async (trx) => {
+		await trx.deleteFrom('stores').where('id', '=', store.id).execute();
+
+		await recordAuditEvent(
+			{
+				action: AuditAction.StoreRemoved,
+				platform: store.platform,
+				storeId: store.id,
+			},
+			trx,
+		);
+	});
 
 	return true;
 }

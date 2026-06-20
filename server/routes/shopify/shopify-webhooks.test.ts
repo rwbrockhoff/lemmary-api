@@ -43,7 +43,10 @@ const seedUser = () =>
 		})
 		.execute();
 
-const cleanup = async () => {
+const cleanup = async (storeId?: string) => {
+	if (storeId) {
+		await db.deleteFrom('audit_log').where('store_id', '=', storeId).execute();
+	}
 	await db
 		.deleteFrom('stores')
 		.where('user_id', '=', SHOPIFY_USER_ID)
@@ -74,12 +77,14 @@ describe('Shopify Compliance Webhooks', () => {
 		expect(response.statusCode).toBe(401);
 	});
 
-	it('shop/redact removes the store and its data', async () => {
+	it('shop/redact removes the store and writes a surviving audit row', async () => {
 		const shop = 'redact-shop-test.myshopify.com';
 		await seedUser();
+		let storeId: string | undefined;
 
 		try {
 			await createShopifyStore(SHOPIFY_USER_ID, shop, 'token');
+			storeId = (await getStoreByShopDomain(shop))!.id;
 
 			const response = await postWebhook(
 				app,
@@ -92,23 +97,33 @@ describe('Shopify Compliance Webhooks', () => {
 
 			expect(response.statusCode).toBe(200);
 			expect(await getStoreByShopDomain(shop)).toBeNull();
+
+			// The store is gone but audit row remains (no FK)
+			const audit = await db
+				.selectFrom('audit_log')
+				.select('action')
+				.where('store_id', '=', storeId)
+				.where('action', '=', 'store_removed')
+				.executeTakeFirst();
+			expect(audit).toBeTruthy();
 		} finally {
-			await cleanup();
+			await cleanup(storeId);
 		}
 	});
 
-	it('customers/redact scrubs the customer PII on matching orders', async () => {
+	it('customers/redact clears the customer PII and logs the customer by id', async () => {
 		const shop = 'redact-customer-test.myshopify.com';
 		await seedUser();
+		let storeId: string | undefined;
 
 		try {
 			await createShopifyStore(SHOPIFY_USER_ID, shop, 'token');
-			const store = await getStoreByShopDomain(shop);
+			storeId = (await getStoreByShopDomain(shop))!.id;
 
 			await db
 				.insertInto('orders')
 				.values({
-					store_id: store!.id,
+					store_id: storeId,
 					platform_order_id: 'wh-order-1',
 					order_number: '#WH1',
 					customer_name: 'Jane Doe',
@@ -128,13 +143,26 @@ describe('Shopify Compliance Webhooks', () => {
 			const order = await db
 				.selectFrom('orders')
 				.select(['customer_name', 'customer_email'])
-				.where('store_id', '=', store!.id)
+				.where('store_id', '=', storeId)
 				.executeTakeFirstOrThrow();
 
 			expect(order.customer_name).toBe('[redacted]');
 			expect(order.customer_email).toBeNull();
+
+			const audit = await db
+				.selectFrom('audit_log')
+				.select(['resource_type', 'resource_id', 'metadata'])
+				.where('store_id', '=', storeId)
+				.where('action', '=', 'customer_redacted')
+				.executeTakeFirstOrThrow();
+
+			expect(audit.resource_type).toBe('customer');
+			expect(audit.resource_id).toBe('99');
+			expect(audit.metadata).toMatchObject({ orders: 1 });
+			// The audit row shouldn't have PII we cleared
+			expect(JSON.stringify(audit)).not.toContain('jane@example.com');
 		} finally {
-			await cleanup();
+			await cleanup(storeId);
 		}
 	});
 

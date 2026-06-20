@@ -29,7 +29,7 @@ export async function handleCustomersRedact(
 ) {
 	const { shop_domain, customer } = request.body;
 	const redacted = customer.email
-		? await redactCustomerData(shop_domain, customer.email)
+		? await redactCustomerData(shop_domain, customer.email, customer.id)
 		: 0;
 
 	request.log.info(

@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
 import { getStoreByShopDomain } from '../../utils/store.js';
+import { recordAuditEvent } from '../../utils/audit-logger.js';
+import { AuditAction } from '../../db/enums.js';
 
 // Shopify signs webhook with HMAC over the raw request body using our app secret
 // Separate from the OAuth flow (signs query params as hex)
@@ -42,26 +44,44 @@ export type CustomerDataRequestPayload = {
 	data_request?: { id?: number };
 };
 
-// Scrubs personal info we store on a customer's orders (name + email)
+// Clears personal info we store on a customer's orders (name + email)
 // order_items hold no customer data, so only affects orders
 export async function redactCustomerData(
 	shop: string,
 	email: string,
+	customerId?: number,
 ): Promise<number> {
 	const store = await getStoreByShopDomain(shop);
 	if (!store) return 0;
 
-	const result = await db
-		.updateTable('orders')
-		.set({
-			customer_name: '[redacted]',
-			customer_email: null,
-			updated_at: new Date(),
-		})
-		.where('store_id', '=', store.id)
-		.where('customer_email', '=', email)
-		.executeTakeFirst();
+	return db.transaction().execute(async (trx) => {
+		const result = await trx
+			.updateTable('orders')
+			.set({
+				customer_name: '[redacted]',
+				customer_email: null,
+				updated_at: new Date(),
+			})
+			.where('store_id', '=', store.id)
+			.where('customer_email', '=', email)
+			.executeTakeFirst();
 
-	// Returns # of redacted orders
-	return Number(result.numUpdatedRows);
+		const redacted = Number(result.numUpdatedRows);
+
+		// Save to audit log
+		// Reference customer by Shopify id, never email we just cleared
+		await recordAuditEvent(
+			{
+				action: AuditAction.CustomerRedacted,
+				platform: store.platform,
+				storeId: store.id,
+				resourceType: 'customer',
+				resourceId: customerId != null ? String(customerId) : null,
+				metadata: { orders: redacted },
+			},
+			trx,
+		);
+
+		return redacted;
+	});
 }
