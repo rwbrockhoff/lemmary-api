@@ -6,3 +6,6 @@ export const NON_APP_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 // A throwaway user for tests that create + clean up their own store
 export const ONBOARDING_USER_ID = '11111111-1111-1111-1111-111111111111';
+
+// A throwaway user for the Shopify webhook tests that connect + clean up a store
+export const SHOPIFY_USER_ID = '22222222-2222-2222-2222-222222222222';

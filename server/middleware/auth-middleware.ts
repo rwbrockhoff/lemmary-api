@@ -25,7 +25,7 @@ const PUBLIC_ROUTES = [
 	'/health',
 ];
 
-const PUBLIC_ROUTE_PREFIXES = ['/api-docs', '/docs'];
+const PUBLIC_ROUTE_PREFIXES = ['/api-docs', '/docs', '/webhooks/shopify'];
 
 const DEMO_WRITE_ALLOWLIST = ['/auth/logout'];
 

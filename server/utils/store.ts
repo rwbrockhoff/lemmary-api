@@ -1,4 +1,4 @@
-import { sql } from 'kysely';
+import { sql, type SqlBool } from 'kysely';
 import { db } from '../db/connection.js';
 import { env } from '../config/environment.js';
 import type { Store } from '../db/database-types.js';
@@ -33,6 +33,21 @@ export async function getStoreForUser(
 		.selectFrom('stores')
 		.select(storeSummaryColumns)
 		.where('user_id', '=', userId)
+		.executeTakeFirst();
+
+	return store ?? null;
+}
+
+// Shopify webhooks identify a store by its shop domain
+// use store_url we saved at connect: stored as https://{shop}
+export async function getStoreByShopDomain(
+	shop: string,
+): Promise<StoreSummary | null> {
+	const store = await db
+		.selectFrom('stores')
+		.select(storeSummaryColumns)
+		.where('platform', '=', 'shopify')
+		.where(sql<SqlBool>`platform_config->>'store_url' = ${`https://${shop}`}`)
 		.executeTakeFirst();
 
 	return store ?? null;

@@ -2,7 +2,11 @@ import { sql, type UpdateObject, type Kysely } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
-import { getStoreForUser, getShopDomain } from '../../utils/store.js';
+import {
+	getStoreForUser,
+	getShopDomain,
+	getStoreByShopDomain,
+} from '../../utils/store.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
 import {
 	DEFAULT_ORDER_STAGES,
@@ -254,9 +258,7 @@ export async function updateStore(
 	};
 }
 
-export async function deleteStore(
-	userId: string,
-): Promise<DeleteStoreResult> {
+export async function deleteStore(userId: string): Promise<DeleteStoreResult> {
 	const store = await getStoreForUser(userId);
 	if (!store) return { ok: false, error: 'no_store' };
 
@@ -268,4 +270,14 @@ export async function deleteStore(
 		.execute();
 
 	return { ok: true };
+}
+
+// Used by Shopify shop/redact webhook, which only knows the shop domain
+export async function deleteStoreByShopDomain(shop: string): Promise<boolean> {
+	const store = await getStoreByShopDomain(shop);
+	if (!store) return false;
+
+	await db.deleteFrom('stores').where('id', '=', store.id).execute();
+
+	return true;
 }
