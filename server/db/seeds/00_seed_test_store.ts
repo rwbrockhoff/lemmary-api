@@ -23,6 +23,7 @@ const FULFILLED_RATE = 0.6;
 
 const daysAgo = (n: number) => {
 	const d = new Date();
+	d.setUTCHours(12, 0, 0, 0); // stable noon UTC so ::date casts can't flip the day
 	d.setDate(d.getDate() - n);
 	return d;
 };
