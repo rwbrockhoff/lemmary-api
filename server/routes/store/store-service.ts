@@ -129,6 +129,38 @@ export async function createStore(
 	return { ok: true, store: await getStore(userId) };
 }
 
+export async function createShopifyStore(
+	userId: string,
+	shop: string,
+	accessToken: string,
+): Promise<CreateStoreResult> {
+	const existing = await getStoreForUser(userId);
+	if (existing) return { ok: false, error: 'store_exists' };
+
+	// Token already came from the OAuth exchange, so no connection test needed
+	const platformConfig = { store_url: `https://${shop}` };
+	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+
+	await db.transaction().execute(async (trx) => {
+		const store = await trx
+			.insertInto('stores')
+			.values({
+				user_id: userId,
+				platform: 'shopify',
+				store_name: shop,
+				store_access_token: encryptedToken,
+				platform_config: platformConfig,
+				lead_time_days: null,
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		await createDefaultStages(store.id, trx);
+	});
+
+	return { ok: true, store: await getStore(userId) };
+}
+
 export async function updateStore(
 	userId: string,
 	updates: UpdateStoreInput,
