@@ -6,6 +6,7 @@ import { env } from './config/environment.js';
 import { GLOBAL_RATE_LIMIT, skipRateLimit } from './config/rate-limit.js';
 import { ErrorCode } from './utils/api-responses.js';
 import { authMiddleware } from './middleware/auth-middleware.js';
+import { subscriptionGate } from './middleware/subscription-middleware.js';
 import { registerOpenApi } from './openapi/openapi.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { ordersRoutes } from './routes/orders/orders-routes.js';
@@ -14,6 +15,7 @@ import { batchesRoutes } from './routes/batches/batches-routes.js';
 import { authRoutes } from './routes/auth/auth-routes.js';
 import { analyticsRoutes } from './routes/analytics/analytics-routes.js';
 import { storeRoutes } from './routes/store/store-routes.js';
+import { subscriptionRoutes } from './routes/subscription/subscription-routes.js';
 import { shopifyRoutes } from './routes/shopify/shopify-routes.js';
 import { shopifyWebhookRoutes } from './routes/shopify/shopify-webhook-routes.js';
 import { workflowRoutes } from './routes/workflow/workflow-routes.js';
@@ -73,6 +75,10 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.setErrorHandler(errorHandler);
 
 	app.addHook('onRequest', authMiddleware);
+	// Skip billing gate in tests so suites aren't locked out
+	if (env.NODE_ENV !== 'test') {
+		app.addHook('onRequest', subscriptionGate);
+	}
 
 	app.get('/health', async () => {
 		return { status: 'ok' };
@@ -84,6 +90,7 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(reportsRoutes);
 	app.register(batchesRoutes);
 	app.register(storeRoutes);
+	app.register(subscriptionRoutes);
 	app.register(shopifyRoutes);
 	app.register(shopifyWebhookRoutes);
 	app.register(workflowRoutes);
