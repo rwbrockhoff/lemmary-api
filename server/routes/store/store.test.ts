@@ -8,7 +8,8 @@ import {
 	ONBOARDING_USER_ID,
 } from '../../tests/test-constants.js';
 import { db } from '../../db/connection.js';
-import { createDefaultStages } from './store-service.js';
+import { createDefaultStages, createShopifyStore } from './store-service.js';
+import { getStoreForUser, getStoreWithAccessToken } from '../../utils/store.js';
 
 // Squarespace Mock
 vi.mock('../orders/platforms/squarespace.js', async (importOriginal) => ({
@@ -16,6 +17,12 @@ vi.mock('../orders/platforms/squarespace.js', async (importOriginal) => ({
 		typeof import('../orders/platforms/squarespace.js')
 	>()),
 	testSquarespaceConnection: vi.fn().mockResolvedValue(true),
+}));
+
+// Don't call to Shopify for TZ during tests
+vi.mock('../shopify/shopify-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../shopify/shopify-service.js')>()),
+	fetchShopTimezone: vi.fn().mockResolvedValue(null),
 }));
 
 describe('Store API', () => {
@@ -179,6 +186,106 @@ describe('Store API', () => {
 		);
 
 		expect(response.statusCode).toBe(409);
+	});
+
+	it('DELETE /store removes the store and its data', async () => {
+		await db
+			.insertInto('users')
+			.values({
+				id: ONBOARDING_USER_ID,
+				email: 'delete-test@example.com',
+				first_name: 'Delete',
+				last_name: 'Test',
+			})
+			.execute();
+
+		try {
+			await app.inject(
+				withAuth('POST', '/store', {
+					userId: ONBOARDING_USER_ID,
+					payload: {
+						storeName: 'Disposable Store',
+						accessToken: 'test-token',
+						timezone: 'America/Denver',
+					},
+				}),
+			);
+
+			const response = await app.inject(
+				withAuth('DELETE', '/store', { userId: ONBOARDING_USER_ID }),
+			);
+
+			expect(response.statusCode).toBe(200);
+
+			const store = await getStoreForUser(ONBOARDING_USER_ID);
+			expect(store).toBeNull();
+		} finally {
+			await db
+				.deleteFrom('users')
+				.where('id', '=', ONBOARDING_USER_ID)
+				.execute();
+		}
+	});
+
+	it('DELETE /store returns 404 when the user has no store', async () => {
+		const response = await app.inject(
+			withAuth('DELETE', '/store', { userId: NON_APP_USER_ID }),
+		);
+
+		expect(response.statusCode).toBe(404);
+	});
+
+	it('createShopifyStore refreshes the token in place when reconnecting', async () => {
+		const shop = 'reconnect-test.myshopify.com';
+
+		await db
+			.insertInto('users')
+			.values({
+				id: ONBOARDING_USER_ID,
+				email: 'reconnect-test@example.com',
+				first_name: 'Reconnect',
+				last_name: 'Test',
+			})
+			.execute();
+
+		try {
+			const first = await createShopifyStore(ONBOARDING_USER_ID, shop, {
+				accessToken: 'token-1',
+				refreshToken: 'refresh-1',
+				expiresIn: 3600,
+			});
+			expect(first.ok).toBe(true);
+			const original = await getStoreForUser(ONBOARDING_USER_ID);
+
+			// Reconnecting the same store should update the existing row, not error
+			const reconnect = await createShopifyStore(ONBOARDING_USER_ID, shop, {
+				accessToken: 'token-2',
+				refreshToken: 'refresh-2',
+				expiresIn: 3600,
+			});
+			expect(reconnect.ok).toBe(true);
+
+			const after = await getStoreWithAccessToken(ONBOARDING_USER_ID);
+			expect(after?.id).toBe(original?.id);
+			expect(after?.access_token).toBe('token-2');
+
+			// A different shop while one is connected still has to be removed first
+			const other = await createShopifyStore(
+				ONBOARDING_USER_ID,
+				'other-store.myshopify.com',
+				{ accessToken: 'token-3', refreshToken: 'refresh-3', expiresIn: 3600 },
+			);
+			expect(other).toEqual({ ok: false, error: 'store_exists' });
+		} finally {
+			await db
+				.deleteFrom('stores')
+				.where('user_id', '=', ONBOARDING_USER_ID)
+				.execute();
+			await db
+				.deleteFrom('users')
+				.where('id', '=', ONBOARDING_USER_ID)
+				.execute();
+		}
 	});
 
 	it('createDefaultStages seeds the default order and item stages', async () => {

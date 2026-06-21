@@ -1,9 +1,20 @@
-import { sql, type UpdateObject, type Kysely } from 'kysely';
+import { sql, type UpdateObject, type InsertObject, type Kysely } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { env } from '../../config/environment.js';
-import { getStoreForUser } from '../../utils/store.js';
+import {
+	getStoreForUser,
+	getShopDomain,
+	getStoreByShopDomain,
+} from '../../utils/store.js';
+import { recordAuditEvent } from '../../utils/audit-logger.js';
+import { AuditAction } from '../../db/enums.js';
+import { isValidTimeZone } from '../../utils/timezone.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
+import {
+	fetchShopTimezone,
+	type ShopifyTokens,
+} from '../shopify/shopify-service.js';
 import {
 	DEFAULT_ORDER_STAGES,
 	DEFAULT_ITEM_STAGES,
@@ -43,6 +54,8 @@ type UpdateStoreError = {
 };
 
 type UpdateStoreResult = UpdateStoreSuccess | UpdateStoreError;
+
+type DeleteStoreResult = { ok: true } | { ok: false; error: 'no_store' };
 
 export async function createDefaultStages(
 	storeId: string,
@@ -129,6 +142,69 @@ export async function createStore(
 	return { ok: true, store: await getStore(userId) };
 }
 
+export async function createShopifyStore(
+	userId: string,
+	shop: string,
+	tokens: ShopifyTokens,
+): Promise<CreateStoreResult> {
+	// Tokens already came from the OAuth exchange, so no connection test needed
+	const encryptedAccess = sql<Buffer>`pgp_sym_encrypt(${tokens.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	const encryptedRefresh = sql<Buffer>`pgp_sym_encrypt(${tokens.refreshToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	const expiresAt = new Date(Date.now() + tokens.expiresIn * 1000);
+
+	const existing = await getStoreForUser(userId);
+	if (existing) {
+		// Reconnecting the same Shopify store just refreshes the token in place so
+		// the merchant keeps all their orders and BOM data. A different store still
+		// has to be removed first.
+		const isSameShopifyStore =
+			existing.platform === 'shopify' && getShopDomain(existing) === shop;
+		if (!isSameShopifyStore) return { ok: false, error: 'store_exists' };
+
+		await db
+			.updateTable('stores')
+			.set({
+				store_access_token: encryptedAccess,
+				store_refresh_token: encryptedRefresh,
+				access_token_expires_at: expiresAt,
+				updated_at: new Date(),
+			})
+			.where('id', '=', existing.id)
+			.execute();
+
+		return { ok: true, store: await getStore(userId) };
+	}
+
+	const platformConfig = { store_url: `https://${shop}` };
+	const shopTimezone = await fetchShopTimezone(shop, tokens.accessToken);
+
+	const values: InsertObject<Database, 'stores'> = {
+		user_id: userId,
+		platform: 'shopify',
+		store_name: shop,
+		store_access_token: encryptedAccess,
+		store_refresh_token: encryptedRefresh,
+		access_token_expires_at: expiresAt,
+		platform_config: platformConfig,
+		lead_time_days: null,
+	};
+	if (shopTimezone && isValidTimeZone(shopTimezone)) {
+		values.timezone = shopTimezone;
+	}
+
+	await db.transaction().execute(async (trx) => {
+		const store = await trx
+			.insertInto('stores')
+			.values(values)
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		await createDefaultStages(store.id, trx);
+	});
+
+	return { ok: true, store: await getStore(userId) };
+}
+
 export async function updateStore(
 	userId: string,
 	updates: UpdateStoreInput,
@@ -202,4 +278,52 @@ export async function updateStore(
 		platform: updated.platform,
 		leadTimeDays: updated.lead_time_days,
 	};
+}
+
+export async function deleteStore(userId: string): Promise<DeleteStoreResult> {
+	const store = await getStoreForUser(userId);
+	if (!store) return { ok: false, error: 'no_store' };
+
+	// Cascades to orders, items, BOM, materials, workflow stages, and batches
+	await db.transaction().execute(async (trx) => {
+		await trx
+			.deleteFrom('stores')
+			.where('id', '=', store.id)
+			.where('user_id', '=', userId)
+			.execute();
+
+		// Save to audit log
+		await recordAuditEvent(
+			{
+				action: AuditAction.StoreRemoved,
+				platform: store.platform,
+				storeId: store.id,
+				userId,
+			},
+			trx,
+		);
+	});
+
+	return { ok: true };
+}
+
+// Used by Shopify shop/redact webhook, which only knows the shop domain
+export async function deleteStoreByShopDomain(shop: string): Promise<boolean> {
+	const store = await getStoreByShopDomain(shop);
+	if (!store) return false;
+
+	await db.transaction().execute(async (trx) => {
+		await trx.deleteFrom('stores').where('id', '=', store.id).execute();
+
+		await recordAuditEvent(
+			{
+				action: AuditAction.StoreRemoved,
+				platform: store.platform,
+				storeId: store.id,
+			},
+			trx,
+		);
+	});
+
+	return true;
 }

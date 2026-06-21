@@ -3,18 +3,24 @@ import { db } from '../../db/connection.js';
 import {
 	getStoreForUser,
 	getStoreWithAccessToken,
+	getShopDomain,
 	type StoreWithAccessToken,
 } from '../../utils/store.js';
-import {
-	fetchSquarespaceProducts,
-	type NormalizedProduct,
-} from './platforms/squarespace.js';
+import { fetchSquarespaceProducts } from './platforms/squarespace.js';
+import { fetchShopifyProducts } from './platforms/shopify.js';
+import { ensureFreshShopifyToken } from '../shopify/shopify-token.js';
+import type { NormalizedProduct } from './platforms/product-types.js';
 
 async function fetchProductsFromPlatform(
 	store: StoreWithAccessToken,
 ): Promise<NormalizedProduct[]> {
 	if (store.platform === 'squarespace') {
 		return fetchSquarespaceProducts(store.access_token);
+	}
+
+	if (store.platform === 'shopify') {
+		const token = await ensureFreshShopifyToken(store);
+		return fetchShopifyProducts(getShopDomain(store), token);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);

@@ -5,7 +5,12 @@ import type {
 	UpdateStoreRequest,
 	CreateStoreRequest,
 } from './contract/types.js';
-import { getStore, createStore, updateStore } from './store-service.js';
+import {
+	getStore,
+	createStore,
+	updateStore,
+	deleteStore,
+} from './store-service.js';
 
 export async function handleGetStore(
 	request: FastifyRequest,
@@ -50,4 +55,15 @@ export async function handleUpdateStore(
 		platform: result.platform,
 		leadTimeDays: result.leadTimeDays,
 	});
+}
+
+export async function handleDeleteStore(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const result = await deleteStore(request.userId);
+
+	if (!result.ok) throw AppError.notFound('Store not found');
+
+	return successResponse(reply);
 }

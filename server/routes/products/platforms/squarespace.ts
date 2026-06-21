@@ -1,4 +1,8 @@
-import type { NewProduct, NewProductVariant } from '../../../db/database-types.js';
+import type {
+	NewProduct,
+	NewProductVariant,
+} from '../../../db/database-types.js';
+import type { NormalizedProduct } from './product-types.js';
 
 const BASE_URL = 'https://api.squarespace.com/1.0/commerce/products';
 
@@ -47,11 +51,6 @@ type SquarespaceProductsResponse = {
 	};
 };
 
-export type NormalizedProduct = {
-	product: Omit<NewProduct, 'store_id'>;
-	variants: Omit<NewProductVariant, 'product_id'>[];
-};
-
 function buildVariantName(attributes: SquarespaceVariantAttribute): string {
 	const values = Object.values(attributes);
 	return values.length > 0 ? values.join(' / ') : 'Default';
@@ -78,7 +77,9 @@ async function fetchPage(
 
 	if (!response.ok) {
 		const text = await response.text();
-		throw new Error(`Squarespace Products API error ${response.status}: ${text}`);
+		throw new Error(
+			`Squarespace Products API error ${response.status}: ${text}`,
+		);
 	}
 
 	return response.json() as Promise<SquarespaceProductsResponse>;
@@ -103,7 +104,7 @@ function normalizeProduct(raw: SquarespaceProduct): NormalizedProduct {
 			price: v.pricing?.basePrice?.value ?? null,
 			sale_price: v.pricing?.salePrice?.value ?? null,
 			on_sale: v.pricing?.onSale ?? false,
-			stock_quantity: v.stock?.unlimited ? null : v.stock?.quantity ?? null,
+			stock_quantity: v.stock?.unlimited ? null : (v.stock?.quantity ?? null),
 			stock_unlimited: v.stock?.unlimited ?? false,
 			image_url: v.image?.url ?? null,
 		}),

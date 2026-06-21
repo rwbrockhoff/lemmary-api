@@ -1,5 +1,5 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
-import type { OrderType } from './enums.js';
+import type { OrderType, AuditAction, SubscriptionStatus } from './enums.js';
 
 export interface Database {
 	users: UserTable;
@@ -19,6 +19,9 @@ export interface Database {
 	products: ProductTable;
 	product_variants: ProductVariantTable;
 	order_stage_history: OrderStageHistoryTable;
+	audit_log: AuditLogTable;
+	subscriptions: SubscriptionTable;
+	account_grants: AccountGrantTable;
 }
 
 export interface UserTable {
@@ -41,6 +44,8 @@ export interface StoreTable {
 	platform: 'squarespace' | 'shopify' | 'etsy';
 	store_name: string;
 	store_access_token: Buffer;
+	store_refresh_token: Buffer | null;
+	access_token_expires_at: Date | null;
 	platform_config: Record<string, unknown> | null;
 	lead_time_days: number | null;
 	timezone: Generated<string>;
@@ -317,3 +322,51 @@ export interface ProductVariantTable {
 export type ProductVariant = Selectable<ProductVariantTable>;
 export type NewProductVariant = Insertable<ProductVariantTable>;
 export type ProductVariantUpdate = Updateable<ProductVariantTable>;
+
+export interface AuditLogTable {
+	id: Generated<string>;
+	store_id: string;
+	user_id: string | null;
+	action: AuditAction;
+	platform: 'squarespace' | 'shopify' | 'etsy';
+	resource_type: string | null;
+	resource_id: string | null;
+	metadata: Record<string, unknown> | null;
+	created_at: Generated<Date>;
+}
+
+export type AuditLog = Selectable<AuditLogTable>;
+export type NewAuditLog = Insertable<AuditLogTable>;
+
+export interface SubscriptionTable {
+	id: Generated<string>;
+	store_id: string;
+	provider: 'shopify' | 'stripe';
+	provider_subscription_id: string | null;
+	provider_customer_id: string | null;
+	status: SubscriptionStatus;
+	plan_name: string;
+	price: string;
+	currency: Generated<string>;
+	trial_ends_at: Date | null;
+	current_period_end: Date | null;
+	cancel_at_period_end: Generated<boolean>;
+	metadata: Record<string, unknown> | null;
+	created_at: Generated<Date>;
+	updated_at: Generated<Date>;
+}
+
+export type Subscription = Selectable<SubscriptionTable>;
+export type NewSubscription = Insertable<SubscriptionTable>;
+export type SubscriptionUpdate = Updateable<SubscriptionTable>;
+
+export interface AccountGrantTable {
+	id: Generated<string>;
+	user_id: string;
+	note: string | null;
+	expires_at: Date | null;
+	created_at: Generated<Date>;
+}
+
+export type AccountGrant = Selectable<AccountGrantTable>;
+export type NewAccountGrant = Insertable<AccountGrantTable>;

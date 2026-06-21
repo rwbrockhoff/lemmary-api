@@ -3,3 +3,25 @@
 export const ORDER_TYPE_VALUES = ['platform', 'custom', 'work'] as const;
 
 export type OrderType = (typeof ORDER_TYPE_VALUES)[number];
+
+// Audit trail event types
+// Referenced as AuditAction.PiiSynced
+export const AuditAction = {
+	PiiSynced: 'pii_synced',
+	CustomerRedacted: 'customer_redacted',
+	StoreRemoved: 'store_removed',
+} as const;
+
+export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
+
+// Subscription statuses, normalized across providers
+export const SUBSCRIPTION_STATUS_VALUES = [
+	'pending',
+	'active',
+	'declined',
+	'expired',
+	'frozen',
+	'cancelled',
+] as const;
+
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUS_VALUES)[number];

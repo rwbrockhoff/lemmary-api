@@ -3,20 +3,32 @@ import { db } from '../../db/connection.js';
 import type { Database } from '../../db/database-types.js';
 import {
 	getStoreWithAccessToken,
+	getShopDomain,
 	type StoreWithAccessToken,
 } from '../../utils/store.js';
 import { toJsonb } from '../../utils/json.js';
+import { recordAuditEvent } from '../../utils/audit-logger.js';
+import { AuditAction } from '../../db/enums.js';
+import { ensureFreshShopifyToken } from '../shopify/shopify-token.js';
 import { getDefaultStageIds } from './utils/default-stages.js';
-import {
-	fetchSquarespaceOrders,
-	type NormalizedOrder,
-} from './platforms/squarespace.js';
+import { fetchSquarespaceOrders } from './platforms/squarespace.js';
+import { fetchShopifyOrders } from './platforms/shopify.js';
+import type { NormalizedOrder } from './platforms/order-types.js';
 
 async function fetchOrdersFromPlatform(
 	store: StoreWithAccessToken,
 ): Promise<NormalizedOrder[]> {
 	if (store.platform === 'squarespace') {
 		return fetchSquarespaceOrders(store.access_token, store.last_synced_at);
+	}
+
+	if (store.platform === 'shopify') {
+		const token = await ensureFreshShopifyToken(store);
+		return fetchShopifyOrders(
+			getShopDomain(store),
+			token,
+			store.last_synced_at,
+		);
 	}
 
 	throw new Error(`Unsupported platform: ${store.platform}`);
@@ -205,6 +217,17 @@ export async function syncOrders(userId: string) {
 		.set({ last_synced_at: syncStartedAt })
 		.where('id', '=', store.id)
 		.execute();
+
+	// Record in audit log
+	if (synced > 0) {
+		await recordAuditEvent({
+			action: AuditAction.PiiSynced,
+			platform: store.platform,
+			storeId: store.id,
+			userId: store.user_id,
+			metadata: { orders: synced },
+		});
+	}
 
 	return { synced, storeId: store.id };
 }

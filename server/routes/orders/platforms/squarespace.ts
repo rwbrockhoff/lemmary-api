@@ -1,5 +1,6 @@
 import type { NewOrder, NewOrderItem } from '../../../db/database-types.js';
 import { applyOrNull } from '../../../utils/nullable.js';
+import type { NormalizedOrder } from './order-types.js';
 
 const BASE_URL = 'https://api.squarespace.com/1.0/commerce/orders';
 
@@ -75,11 +76,6 @@ type SquarespaceResponse = {
 		nextPageCursor: string | null;
 		nextPageUrl: string | null;
 	};
-};
-
-export type NormalizedOrder = {
-	order: Omit<NewOrder, 'store_id'>;
-	items: Omit<NewOrderItem, 'order_id'>[];
 };
 
 async function fetchPage(

@@ -7,6 +7,7 @@ export enum ErrorCode {
 	NOT_FOUND = 'NOT_FOUND',
 	CONFLICT = 'CONFLICT',
 	RATE_LIMIT = 'RATE_LIMIT',
+	SUBSCRIPTION_REQUIRED = 'SUBSCRIPTION_REQUIRED',
 	INTERNAL_ERROR = 'INTERNAL_ERROR',
 }
 
@@ -16,6 +17,7 @@ export const HTTP_STATUS = {
 	NO_CONTENT: 204,
 	BAD_REQUEST: 400,
 	UNAUTHORIZED: 401,
+	PAYMENT_REQUIRED: 402,
 	FORBIDDEN: 403,
 	NOT_FOUND: 404,
 	CONFLICT: 409,
@@ -109,16 +111,22 @@ export const forbidden = (
 		ErrorCode.AUTHORIZATION_ERROR,
 	);
 
+export const paymentRequired = (
+	reply: FastifyReply,
+	message = 'An active subscription is required',
+): FastifyReply =>
+	errorResponse(
+		reply,
+		HTTP_STATUS.PAYMENT_REQUIRED,
+		message,
+		ErrorCode.SUBSCRIPTION_REQUIRED,
+	);
+
 export const notFound = (
 	reply: FastifyReply,
 	message = 'Resource not found',
 ): FastifyReply =>
-	errorResponse(
-		reply,
-		HTTP_STATUS.NOT_FOUND,
-		message,
-		ErrorCode.NOT_FOUND,
-	);
+	errorResponse(reply, HTTP_STATUS.NOT_FOUND, message, ErrorCode.NOT_FOUND);
 
 export const conflict = (
 	reply: FastifyReply,

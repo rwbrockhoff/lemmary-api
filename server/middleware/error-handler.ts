@@ -36,8 +36,9 @@ export function errorHandler(
 	// Real bug → log, report to Sentry, return a generic 500
 	request.log.error(error, 'Unhandled request error');
 
+	// Drop query string so codes/tokens in URL don't reach Sentry
 	Sentry.captureException(error, {
-		tags: { method: request.method, url: request.url },
+		tags: { method: request.method, url: request.url.split('?')[0] },
 	});
 
 	return internalError(reply);

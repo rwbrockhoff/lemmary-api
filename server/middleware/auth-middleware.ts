@@ -21,10 +21,11 @@ const PUBLIC_ROUTES = [
 	'/auth/reset-password',
 	'/auth/oauth/session',
 	'/auth/status',
+	'/auth/shopify/callback',
 	'/health',
 ];
 
-const PUBLIC_ROUTE_PREFIXES = ['/api-docs', '/docs'];
+const PUBLIC_ROUTE_PREFIXES = ['/api-docs', '/docs', '/webhooks/shopify'];
 
 const DEMO_WRITE_ALLOWLIST = ['/auth/logout'];
 
@@ -70,9 +71,11 @@ export async function authMiddleware(
 	// 	request.userId = DEV_USER_ID;
 	// }
 
-	if (PUBLIC_ROUTES.includes(request.url)) return;
+	const pathname = request.url.split('?')[0];
 
-	if (PUBLIC_ROUTE_PREFIXES.some((prefix) => request.url.startsWith(prefix))) {
+	if (PUBLIC_ROUTES.includes(pathname)) return;
+
+	if (PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
 		return;
 	}
 
