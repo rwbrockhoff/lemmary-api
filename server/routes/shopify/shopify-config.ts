@@ -10,9 +10,11 @@ export const SHOPIFY_CALLBACK_PATH = '/auth/shopify/callback';
 // Shopify signs webhooks with this header
 export const SHOPIFY_WEBHOOK_HMAC_HEADER = 'x-shopify-hmac-sha256';
 
-// Compliance webhook endpoints (setup in the app settings)
+// Shopify webhook endpoints, subscribed via shopify.app.toml
 export const SHOPIFY_WEBHOOK_PATHS = {
 	shopRedact: '/webhooks/shopify/shop/redact',
 	customersRedact: '/webhooks/shopify/customers/redact',
 	customersDataRequest: '/webhooks/shopify/customers/data-request',
+	appSubscriptionsUpdate: '/webhooks/shopify/app-subscriptions/update',
+	appUninstalled: '/webhooks/shopify/app/uninstalled',
 } as const;

@@ -9,6 +9,8 @@ import {
 	handleShopRedact,
 	handleCustomersRedact,
 	handleCustomersDataRequest,
+	handleAppSubscriptionUpdate,
+	handleAppUninstalled,
 } from './shopify-webhook-controller.js';
 
 export async function shopifyWebhookRoutes(app: FastifyInstance) {
@@ -42,5 +44,15 @@ export async function shopifyWebhookRoutes(app: FastifyInstance) {
 		SHOPIFY_WEBHOOK_PATHS.customersDataRequest,
 		webhookOptions,
 		handleCustomersDataRequest,
+	);
+	app.post(
+		SHOPIFY_WEBHOOK_PATHS.appSubscriptionsUpdate,
+		webhookOptions,
+		handleAppSubscriptionUpdate,
+	);
+	app.post(
+		SHOPIFY_WEBHOOK_PATHS.appUninstalled,
+		webhookOptions,
+		handleAppUninstalled,
 	);
 }

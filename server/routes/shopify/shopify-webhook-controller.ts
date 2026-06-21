@@ -6,7 +6,13 @@ import {
 	type ShopRedactPayload,
 	type CustomerRedactPayload,
 	type CustomerDataRequestPayload,
+	type AppSubscriptionUpdatePayload,
+	type AppUninstalledPayload,
 } from './shopify-webhook-service.js';
+import {
+	syncShopifySubscription,
+	cancelSubscriptionByShop,
+} from '../subscription/subscription-service.js';
 
 export async function handleShopRedact(
 	request: FastifyRequest<{ Body: ShopRedactPayload }>,
@@ -62,6 +68,36 @@ export async function handleCustomersDataRequest(
 		tags: { shop: shop_domain, topic: 'data_request' },
 		extra: context,
 	});
+
+	return reply.code(200).send({ received: true });
+}
+
+export async function handleAppSubscriptionUpdate(
+	request: FastifyRequest<{ Body: AppSubscriptionUpdatePayload }>,
+	reply: FastifyReply,
+) {
+	const { app_subscription } = request.body;
+	await syncShopifySubscription(
+		app_subscription.admin_graphql_api_id,
+		app_subscription.status,
+	);
+
+	request.log.info(
+		{ status: app_subscription.status },
+		'Shopify app_subscriptions/update handled',
+	);
+
+	return reply.code(200).send({ received: true });
+}
+
+export async function handleAppUninstalled(
+	request: FastifyRequest<{ Body: AppUninstalledPayload }>,
+	reply: FastifyReply,
+) {
+	const { myshopify_domain } = request.body;
+	await cancelSubscriptionByShop(myshopify_domain);
+
+	request.log.info({ shop: myshopify_domain }, 'Shopify app/uninstalled handled');
 
 	return reply.code(200).send({ received: true });
 }

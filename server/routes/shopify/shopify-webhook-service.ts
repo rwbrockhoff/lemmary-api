@@ -44,6 +44,14 @@ export type CustomerDataRequestPayload = {
 	data_request?: { id?: number };
 };
 
+export type AppSubscriptionUpdatePayload = {
+	app_subscription: { admin_graphql_api_id: string; status: string };
+};
+
+export type AppUninstalledPayload = {
+	myshopify_domain: string;
+};
+
 // Clears personal info we store on a customer's orders (name + email)
 // order_items hold no customer data, so only affects orders
 export async function redactCustomerData(
