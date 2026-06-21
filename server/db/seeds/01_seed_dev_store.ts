@@ -8,7 +8,12 @@ import { faker } from '@faker-js/faker';
 import { DEMO_CUSTOMERS } from './data/demo/demo-customers.js';
 import { DEV_ORDER_STAGES, DEV_ITEM_STAGES } from './data/dev/dev-workflow.js';
 import type { Database } from '../database-types.js';
-import { DEV_USER_ID, DEV_STORE_ID } from '../../config/constants.js';
+import {
+	DEV_USER_ID,
+	DEV_STORE_ID,
+	SHOPIFY_TEST_USER_ID,
+	SHOPIFY_TEST_EMAIL,
+} from '../../config/constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SEED_DATA = path.join(__dirname, 'data');
@@ -65,6 +70,27 @@ async function seed() {
 				last_name: 'User',
 			}),
 		)
+		.execute();
+
+	// Add Shopify user for dev
+	await db
+		.insertInto('users')
+		.values({
+			id: SHOPIFY_TEST_USER_ID,
+			email: SHOPIFY_TEST_EMAIL,
+			first_name: 'Shopify',
+			last_name: 'Test',
+		})
+		.onConflict((oc) =>
+			oc.column('id').doUpdateSet({ email: SHOPIFY_TEST_EMAIL }),
+		)
+		.execute();
+
+	// Free access so the billing gate doesn't lock dev out
+	await db
+		.insertInto('account_grants')
+		.values({ user_id: DEV_USER_ID, note: 'dev' })
+		.onConflict((oc) => oc.column('user_id').doNothing())
 		.execute();
 
 	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${process.env.SQUARESPACE_API_KEY ?? ''}, ${process.env.STORE_ENCRYPTION_KEY})`;
