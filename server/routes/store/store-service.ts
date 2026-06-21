@@ -8,6 +8,8 @@ import {
 	getStoreByShopDomain,
 } from '../../utils/store.js';
 import { recordAuditEvent } from '../../utils/audit-logger.js';
+import { cancelSubscription } from '../subscription/subscription-service.js';
+import { Sentry } from '../../config/sentry.js';
 import { AuditAction } from '../../db/enums.js';
 import { isValidTimeZone } from '../../utils/timezone.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
@@ -283,6 +285,18 @@ export async function updateStore(
 export async function deleteStore(userId: string): Promise<DeleteStoreResult> {
 	const store = await getStoreForUser(userId);
 	if (!store) return { ok: false, error: 'no_store' };
+
+	// Cancel Shopify subscription while we have token
+	if (store.platform === 'shopify') {
+		try {
+			await cancelSubscription(userId);
+		} catch (err) {
+			Sentry.captureException(err, {
+				tags: { operation: 'cancel_subscription_on_store_removal' },
+				extra: { storeId: store.id, userId },
+			});
+		}
+	}
 
 	// Cascades to orders, items, BOM, materials, workflow stages, and batches
 	await db.transaction().execute(async (trx) => {
