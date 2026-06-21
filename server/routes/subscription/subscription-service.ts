@@ -14,6 +14,7 @@ import {
 	getActiveSubscription,
 	cancelAppSubscription,
 } from '../shopify/shopify-billing.js';
+import { isDevelopmentStore } from '../shopify/shopify-service.js';
 import type { SubscriptionStatus } from '../../db/enums.js';
 
 const DAY_MS = 86_400_000;
@@ -107,13 +108,18 @@ export async function createSubscription(
 	if (store.platform !== 'shopify') return { ok: false, error: 'not_shopify' };
 
 	const token = await ensureFreshShopifyToken(store);
+	const shop = getShopDomain(store);
+
+	// Dev stores only accept test charges, real stores get a real one
+	const test =
+		env.NODE_ENV !== 'production' || (await isDevelopmentStore(shop, token));
+
 	const created = await createAppSubscription(
-		getShopDomain(store),
+		shop,
 		token,
 		SHOPIFY_PLAN,
 		`${env.API_URL}/subscription/callback`,
-		// Test charges in dev so no real money moves
-		env.NODE_ENV !== 'production',
+		test,
 	);
 	if (!created) return { ok: false, error: 'create_failed' };
 

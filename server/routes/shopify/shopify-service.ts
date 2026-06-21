@@ -149,3 +149,20 @@ export async function fetchShopEmail(
 		return null;
 	}
 }
+
+const SHOP_PLAN_QUERY = `query { shop { plan { partnerDevelopment } } }`;
+
+// Dev stores only accept test charges
+export async function isDevelopmentStore(
+	shop: string,
+	token: string,
+): Promise<boolean> {
+	try {
+		const data = await shopifyGraphql<{
+			shop: { plan: { partnerDevelopment: boolean } };
+		}>(shop, token, SHOP_PLAN_QUERY, {});
+		return data.shop.plan.partnerDevelopment ?? false;
+	} catch {
+		return false;
+	}
+}
