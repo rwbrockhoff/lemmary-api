@@ -2,15 +2,56 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { AppError } from '../../utils/app-error.js';
 import { env } from '../../config/environment.js';
+import { REFRESH_TOKEN_COOKIE } from '../../config/constants.js';
+import { refreshCookieOptions } from '../../utils/cookies.js';
 import {
 	buildAuthorizeUrl,
 	verifyHmac,
 	exchangeCodeForToken,
+	fetchShopEmail,
 } from './shopify-service.js';
+import {
+	findOrCreateUserByEmail,
+	createSession,
+} from '../auth/auth-service.js';
 import { createShopifyStore } from '../store/store-service.js';
 import { SHOPIFY_STATE_COOKIE } from './shopify-config.js';
 
-export async function handleShopifyConnect(
+// Temp, 30 min
+const STATE_COOKIE_MAX_AGE = 60 * 30;
+
+function stateCookieOptions(maxAge: number) {
+	return {
+		httpOnly: true,
+		secure: env.NODE_ENV === 'production',
+		sameSite: 'lax' as const,
+		signed: true,
+		path: '/',
+		maxAge,
+	};
+}
+
+// Our "Connect Shopify" button sends the user here
+export async function handleShopifyStart(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	if (!env.SHOPIFY_INSTALL_URL) {
+		throw AppError.badRequest('Shopify install is not configured.');
+	}
+
+	// Stash who's connecting so callback can attach store
+	reply.setCookie(
+		SHOPIFY_STATE_COOKIE,
+		JSON.stringify({ userId: request.userId ?? null }),
+		stateCookieOptions(STATE_COOKIE_MAX_AGE),
+	);
+
+	return reply.redirect(env.SHOPIFY_INSTALL_URL);
+}
+
+// Shopify sends merchant here to begin install with shop attached
+export async function handleShopifyInstall(
 	request: FastifyRequest<{ Querystring: { shop: string } }>,
 	reply: FastifyReply,
 ) {
@@ -18,21 +59,31 @@ export async function handleShopifyConnect(
 		throw AppError.badRequest('Shopify is not configured.');
 	}
 
-	const nonce = randomBytes(16).toString('hex');
+	// Make sure request came from Shopify
+	const rawQuery = request.raw.url?.split('?')[1] ?? '';
+	if (!verifyHmac(rawQuery)) {
+		request.log.warn('Shopify install hmac check failed');
+		return reply.redirect(`${env.FRONTEND_URL}/connect-store?error=shopify`);
+	}
 
-	// Carry the user through the redirect via a signed cookie so the callback
-	// doesn't depend on the auth cookie surviving Shopify's redirect
+	// Pick up connecting user if our button stashed one
+	// External/app store installs straight from Shopify won't have one
+	const cookie = request.cookies[SHOPIFY_STATE_COOKIE];
+	const unsigned = cookie ? request.unsignCookie(cookie) : null;
+	let userId: string | null = null;
+	if (unsigned?.valid && unsigned.value) {
+		try {
+			userId = (JSON.parse(unsigned.value).userId as string | null) ?? null;
+		} catch {
+			userId = null;
+		}
+	}
+
+	const nonce = randomBytes(16).toString('hex');
 	reply.setCookie(
 		SHOPIFY_STATE_COOKIE,
-		JSON.stringify({ nonce, userId: request.userId }),
-		{
-			httpOnly: true,
-			secure: env.NODE_ENV === 'production',
-			sameSite: 'lax',
-			signed: true,
-			path: '/',
-			maxAge: 600, // 10 minutes, short-lived for the auth flow duration
-		},
+		JSON.stringify({ nonce, userId }),
+		stateCookieOptions(STATE_COOKIE_MAX_AGE),
 	);
 
 	return reply.redirect(buildAuthorizeUrl(request.query.shop, nonce));
@@ -45,28 +96,25 @@ type ShopifyCallbackQuery = {
 	hmac: string;
 };
 
-// Shopify sends the merchant back here after they approve our app. We make sure
-// the request is authentic, trade the temp code for an access token, and create their store.
-// Any problem along the way just bounces them back to connect with an error.
+// Shopify sends merchant back here after they approve our app
 export async function handleShopifyCallback(
 	request: FastifyRequest<{ Querystring: ShopifyCallbackQuery }>,
 	reply: FastifyReply,
 ) {
-	// On any problem, log why and bounce back to connect with an error flag
+	// Bounce back to connect with an error flag on any failure
 	const fail = (reason: string) => {
 		request.log.warn(`Shopify connect failed: ${reason}`);
 		return reply.redirect(`${env.FRONTEND_URL}/connect-store?error=shopify`);
 	};
 
-	// Read + clear the cookie we set when the connect flow started
-	// It holds the one-time value (nonce) + which user kicked off the connect
+	// Read + clear state we set when the install started
 	const cookie = request.cookies[SHOPIFY_STATE_COOKIE];
 	reply.clearCookie(SHOPIFY_STATE_COOKIE, { path: '/' });
 
 	const unsigned = cookie ? request.unsignCookie(cookie) : null;
 	if (!unsigned?.valid || !unsigned.value) return fail('missing state cookie');
 
-	let parsed: { nonce: string; userId: string };
+	let parsed: { nonce: string; userId: string | null };
 	try {
 		parsed = JSON.parse(unsigned.value);
 	} catch {
@@ -76,20 +124,39 @@ export async function handleShopifyCallback(
 	const { code, shop, state } = request.query;
 	const rawQuery = request.raw.url?.split('?')[1] ?? '';
 
-	// The value Shopify echoes back must match the one in our cookie
-	// otherewise, someone could try to connect a store on a user's behalf (forged attempt)
+	// The value must match our nonce
 	if (state !== parsed.nonce) return fail('state mismatch');
 
-	// Confirm the request actually came from Shopify and wasn't tampered
+	// Confirm it came from Shopify / no tampering
 	if (!verifyHmac(rawQuery)) return fail('hmac check failed');
 
-	// Swap the temp code for the access + refresh tokens we use to read store
+	// Trade temp code for the access + refresh tokens
 	const tokens = await exchangeCodeForToken(shop, code);
 	if (!tokens) return fail('token exchange failed');
 
-	// Create store with the tokens (and seed default workflow stages)
-	const result = await createShopifyStore(parsed.userId, shop, tokens);
+	let userId = parsed.userId;
+	let sessionToken: string | null = null;
+
+	// Externall install: so look up by shop email and sign in
+	if (!userId) {
+		const email = await fetchShopEmail(shop, tokens.accessToken);
+		if (!email) return fail('shop email unavailable');
+		try {
+			userId = await findOrCreateUserByEmail(email);
+			sessionToken = await createSession(email);
+		} catch (err) {
+			request.log.error(err, 'Shopify sign-in failed');
+			return fail('sign-in failed');
+		}
+	}
+
+	const result = await createShopifyStore(userId, shop, tokens);
 	if (!result.ok) return fail(`store creation failed (${result.error})`);
+
+	// New accounts get signed in here - existing users keep session
+	if (sessionToken) {
+		reply.setCookie(REFRESH_TOKEN_COOKIE, sessionToken, refreshCookieOptions);
+	}
 
 	return reply.redirect(`${env.FRONTEND_URL}/?connected=shopify`);
 }

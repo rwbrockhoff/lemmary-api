@@ -129,3 +129,23 @@ export async function fetchShopTimezone(
 		return null;
 	}
 }
+
+const SHOP_EMAIL_QUERY = `query { shop { email } }`;
+
+// Shop contact email for creating an account on a fresh install
+export async function fetchShopEmail(
+	shop: string,
+	token: string,
+): Promise<string | null> {
+	try {
+		const data = await shopifyGraphql<{ shop: { email: string } }>(
+			shop,
+			token,
+			SHOP_EMAIL_QUERY,
+			{},
+		);
+		return data.shop.email ?? null;
+	} catch {
+		return null;
+	}
+}

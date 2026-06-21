@@ -377,6 +377,56 @@ export async function exchangeOauthSession({
 	return { success: true, userId: data.user.id, email };
 }
 
+// Looks up the Lemmary user for a shop email, or creates one for a fresh install
+export async function findOrCreateUserByEmail(email: string): Promise<string> {
+	const existing = await db
+		.selectFrom('users')
+		.select('id')
+		.where('email', '=', email)
+		.executeTakeFirst();
+
+	if (existing) return existing.id;
+
+	const { data, error } = await supabaseAdmin.auth.admin.createUser({
+		email,
+		email_confirm: true,
+	});
+
+	if (error || !data.user) {
+		throw new Error(`Shopify account creation failed: ${error?.message}`);
+	}
+
+	try {
+		await db.insertInto('users').values({ id: data.user.id, email }).execute();
+	} catch (err) {
+		await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+		throw err;
+	}
+
+	return data.user.id;
+}
+
+// Creates a logged-in session for a user without their password
+// Only call after external auth (Shopify OAuth) is verified
+export async function createSession(email: string): Promise<string | null> {
+	const { data: link, error: linkError } =
+		await supabaseAdmin.auth.admin.generateLink({ type: 'magiclink', email });
+
+	if (linkError || !link.properties?.hashed_token) {
+		throw new Error(`Session link failed: ${linkError?.message}`);
+	}
+
+	// generateLink creates the token without sending an email
+	const { data, error } = await supabase.auth.verifyOtp({
+		token_hash: link.properties.hashed_token,
+		type: 'magiclink',
+	});
+
+	if (error) throw new Error(`Session create failed: ${error.message}`);
+
+	return data.session?.refresh_token ?? null;
+}
+
 export async function authenticateRefreshToken(
 	refreshToken: string,
 ): Promise<AuthenticateResult> {

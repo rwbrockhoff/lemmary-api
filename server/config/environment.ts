@@ -18,6 +18,7 @@ const envSchema = z.object({
 	STORE_ENCRYPTION_KEY: z.string().min(32),
 	SHOPIFY_CLIENT_ID: z.string().optional(),
 	SHOPIFY_CLIENT_SECRET: z.string().optional(),
+	SHOPIFY_INSTALL_URL: z.string().optional(),
 	API_URL: z.string().default('http://localhost:3001'),
 	NODE_ENV: z.string().default('development'),
 	COOKIE_SECRET: z.string().min(32),
