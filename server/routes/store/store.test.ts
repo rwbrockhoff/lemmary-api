@@ -10,6 +10,8 @@ import {
 import { db } from '../../db/connection.js';
 import { createDefaultStages, createShopifyStore } from './store-service.js';
 import { getStoreForUser, getStoreWithAccessToken } from '../../utils/store.js';
+import { cancelSubscription } from '../subscription/subscription-service.js';
+import { Sentry } from '../../config/sentry.js';
 
 // Squarespace Mock
 vi.mock('../orders/platforms/squarespace.js', async (importOriginal) => ({
@@ -23,6 +25,20 @@ vi.mock('../orders/platforms/squarespace.js', async (importOriginal) => ({
 vi.mock('../shopify/shopify-service.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('../shopify/shopify-service.js')>()),
 	fetchShopTimezone: vi.fn().mockResolvedValue(null),
+}));
+
+// Mock the billing cancel so DELETE tests don't reach Shopify
+vi.mock('../subscription/subscription-service.js', async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import('../subscription/subscription-service.js')
+	>()),
+	cancelSubscription: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+// Swap Sentry so a failed cancel doesn't actually report
+vi.mock('../../config/sentry.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../../config/sentry.js')>()),
+	Sentry: { captureException: vi.fn() },
 }));
 
 describe('Store API', () => {
@@ -233,6 +249,136 @@ describe('Store API', () => {
 		);
 
 		expect(response.statusCode).toBe(404);
+	});
+
+	it('DELETE /store cancels the Shopify subscription before removing the store', async () => {
+		vi.mocked(cancelSubscription).mockClear();
+
+		await db
+			.insertInto('users')
+			.values({
+				id: ONBOARDING_USER_ID,
+				email: 'shopify-delete@example.com',
+				first_name: 'Shopify',
+				last_name: 'Delete',
+			})
+			.execute();
+
+		try {
+			// Connect a Shopify store, then remove it
+			await createShopifyStore(
+				ONBOARDING_USER_ID,
+				'delete-test.myshopify.com',
+				{
+					accessToken: 'token-1',
+					refreshToken: 'refresh-1',
+					expiresIn: 3600,
+				},
+			);
+
+			const response = await app.inject(
+				withAuth('DELETE', '/store', { userId: ONBOARDING_USER_ID }),
+			);
+
+			// Billing cancelled first, then the store is gone
+			expect(response.statusCode).toBe(200);
+			expect(cancelSubscription).toHaveBeenCalledWith(ONBOARDING_USER_ID);
+			expect(await getStoreForUser(ONBOARDING_USER_ID)).toBeNull();
+		} finally {
+			await db
+				.deleteFrom('users')
+				.where('id', '=', ONBOARDING_USER_ID)
+				.execute();
+		}
+	});
+
+	it('DELETE /store still removes the store when the Shopify cancel fails', async () => {
+		// Force the Shopify cancel to fail
+		vi.mocked(cancelSubscription).mockRejectedValueOnce(
+			new Error('shopify down'),
+		);
+
+		await db
+			.insertInto('users')
+			.values({
+				id: ONBOARDING_USER_ID,
+				email: 'shopify-delete-fail@example.com',
+				first_name: 'Shopify',
+				last_name: 'Fail',
+			})
+			.execute();
+
+		try {
+			// Connect a Shopify store, then remove it
+			await createShopifyStore(
+				ONBOARDING_USER_ID,
+				'delete-fail.myshopify.com',
+				{
+					accessToken: 'token-1',
+					refreshToken: 'refresh-1',
+					expiresIn: 3600,
+				},
+			);
+
+			const response = await app.inject(
+				withAuth('DELETE', '/store', { userId: ONBOARDING_USER_ID }),
+			);
+
+			// Store still removed, the failure just goes to Sentry
+			expect(response.statusCode).toBe(200);
+			expect(await getStoreForUser(ONBOARDING_USER_ID)).toBeNull();
+			expect(Sentry.captureException).toHaveBeenCalled();
+		} finally {
+			await db
+				.deleteFrom('users')
+				.where('id', '=', ONBOARDING_USER_ID)
+				.execute();
+		}
+	});
+
+	it('DELETE /store skips the cancel for a non-Shopify store', async () => {
+		vi.mocked(cancelSubscription).mockClear();
+
+		await db
+			.insertInto('users')
+			.values({
+				id: ONBOARDING_USER_ID,
+				email: 'squarespace-delete@example.com',
+				first_name: 'Square',
+				last_name: 'Delete',
+			})
+			.execute();
+
+		try {
+			// Connect a Squarespace store, then remove it
+			await app.inject(
+				withAuth('POST', '/store', {
+					userId: ONBOARDING_USER_ID,
+					payload: {
+						storeName: 'Squarespace Store',
+						accessToken: 'test-token',
+						timezone: 'America/Denver',
+					},
+				}),
+			);
+
+			const response = await app.inject(
+				withAuth('DELETE', '/store', { userId: ONBOARDING_USER_ID }),
+			);
+
+			// Nothing to cancel on a non Shopify store
+			expect(response.statusCode).toBe(200);
+			expect(cancelSubscription).not.toHaveBeenCalled();
+		} finally {
+			await db
+				.deleteFrom('stores')
+				.where('user_id', '=', ONBOARDING_USER_ID)
+				.execute();
+			await db
+				.deleteFrom('users')
+				.where('id', '=', ONBOARDING_USER_ID)
+				.execute();
+		}
 	});
 
 	it('createShopifyStore refreshes the token in place when reconnecting', async () => {
