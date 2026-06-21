@@ -13,3 +13,15 @@ export const AuditAction = {
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
+
+// Subscription statuses, normalized across providers
+export const SUBSCRIPTION_STATUS_VALUES = [
+	'pending',
+	'active',
+	'declined',
+	'expired',
+	'frozen',
+	'cancelled',
+] as const;
+
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUS_VALUES)[number];
