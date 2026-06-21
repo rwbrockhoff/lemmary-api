@@ -2,7 +2,7 @@
 
 client_id = "64f9f444c1d869eaf16ce88f4028e407"
 name = "Lemmary"
-application_url = "http://localhost:3001/auth/shopify/install"
+application_url = "https://api.lemmary.com/auth/shopify/install"
 embedded = false
 
 [webhooks]
