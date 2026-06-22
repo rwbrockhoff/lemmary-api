@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { gateRows, gateSummary } from '../../../utils/report-gates.js';
-import { PERFORMANCE_MINIMUMS } from './thresholds.js';
+import { PERFORMANCE_MINIMUMS } from '../thresholds.js';
 import type { PerformanceQuerySchema } from './contract/schemas.js';
 
 type PerformanceInput = z.infer<typeof PerformanceQuerySchema>;

@@ -3,6 +3,8 @@ import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { startOfDayUtc } from '../../../utils/timezone.js';
 import { netRevenueSum } from '../../../utils/revenue.js';
+import { gateRows } from '../../../utils/report-gates.js';
+import { OPERATIONS_MINIMUMS } from '../thresholds.js';
 import type { OperationsData } from './contract/types.js';
 
 export const VALID_RANGES = [30, 90, 365] as const;
@@ -210,7 +212,7 @@ export async function getOperations(
 		.orderBy('date', 'asc')
 		.execute();
 
-	const ordersTrend = ordersTrendRaw.map((row) => {
+	const trend = ordersTrendRaw.map((row) => {
 		const revenue = Number(row.revenue);
 		const aov = row.count > 0 ? revenue / row.count : 0;
 		return {
@@ -220,6 +222,9 @@ export async function getOperations(
 			avgOrderValue: aov.toFixed(2),
 		};
 	});
+
+	// Trend only needs enough points to read, no separate data gate
+	const ordersTrend = gateRows(trend, true, OPERATIONS_MINIMUMS.ordersTrend);
 
 	return {
 		range,
