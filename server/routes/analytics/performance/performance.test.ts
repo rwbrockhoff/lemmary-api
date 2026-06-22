@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../../tests/test-helpers.js';
+import { db } from '../../../db/connection.js';
+import { getPerformance } from './performance-service.js';
+import { REPORTING_USER_ID } from '../../../tests/test-constants.js';
 
 describe('GET /analytics/performance', () => {
 	let app: FastifyInstance;
@@ -76,6 +79,48 @@ describe('GET /analytics/performance', () => {
 		for (const material of materials) {
 			expect(material.currentQty).toBeGreaterThan(0);
 			expect(material.priorQty).toBeGreaterThan(0);
+		}
+	});
+
+	it('gates every section when the store is below the minimums', async () => {
+		await db
+			.insertInto('users')
+			.values({
+				id: REPORTING_USER_ID,
+				email: 'reporting-sparse@example.com',
+				first_name: 'Reporting',
+				last_name: 'Sparse',
+			})
+			.execute();
+
+		const store = await db
+			.insertInto('stores')
+			.values({
+				user_id: REPORTING_USER_ID,
+				platform: 'squarespace',
+				store_name: 'Sparse Store',
+				store_access_token: Buffer.from('test-token'),
+				timezone: 'America/Denver',
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		try {
+			const data = await getPerformance(REPORTING_USER_ID, { range: '30' });
+
+			// Aggregates drop to null, lists drop to empty
+			expect(data.customerMix).toBeNull();
+			expect(data.couponUsage).toBeNull();
+			expect(data.onTimeDelivery).toBeNull();
+			expect(data.stageBottleneck.stages).toEqual([]);
+			expect(data.topProducts.products).toEqual([]);
+			expect(data.materialConsumption.materials).toEqual([]);
+		} finally {
+			await db.deleteFrom('stores').where('id', '=', store.id).execute();
+			await db
+				.deleteFrom('users')
+				.where('id', '=', REPORTING_USER_ID)
+				.execute();
 		}
 	});
 });

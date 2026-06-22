@@ -2,6 +2,8 @@ import { sql } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import { gateRows, gateSummary } from '../../../utils/report-gates.js';
+import { PERFORMANCE_MINIMUMS } from './thresholds.js';
 import type { PerformanceQuerySchema } from './contract/schemas.js';
 
 type PerformanceInput = z.infer<typeof PerformanceQuerySchema>;
@@ -335,35 +337,25 @@ async function getStageBottleneck(storeId: string, rangeDays: number) {
 	return { stages };
 }
 
+async function getOrderCount(storeId: string, rangeDays: number) {
+	const rows = await sql<{ count: number }>`
+		SELECT COUNT(*)::int AS count
+		FROM orders
+		WHERE store_id = ${storeId}
+			AND order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+	`.execute(db);
+	return rows.rows[0]?.count ?? 0;
+}
+
 export async function getPerformance(userId: string, input: PerformanceInput) {
 	const store = await getStoreForUser(userId);
 	if (!store) {
 		return {
 			stageBottleneck: { stages: [] },
 			topProducts: { products: [] },
-			customerMix: {
-				newCount: 0,
-				returningCount: 0,
-				totalCount: 0,
-				priorNewCount: 0,
-				priorReturningCount: 0,
-				priorTotalCount: 0,
-			},
-			couponUsage: {
-				withPromoCount: 0,
-				noPromoCount: 0,
-				totalCount: 0,
-				avgDiscount: 0,
-				priorWithPromoCount: 0,
-				priorNoPromoCount: 0,
-				priorTotalCount: 0,
-			},
-			onTimeDelivery: {
-				onTimeCount: 0,
-				totalCount: 0,
-				priorOnTimeCount: 0,
-				priorTotalCount: 0,
-			},
+			customerMix: null,
+			couponUsage: null,
+			onTimeDelivery: null,
 			materialConsumption: { materials: [] },
 		};
 	}
@@ -377,6 +369,7 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		couponUsage,
 		onTimeDelivery,
 		materialConsumption,
+		currentOrders,
 	] = await Promise.all([
 		getStageBottleneck(store.id, rangeDays),
 		getTopProducts(store.id, rangeDays),
@@ -384,14 +377,42 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		getCouponUsage(store.id, rangeDays),
 		getOnTimeDelivery(store.id, rangeDays, store.timezone),
 		getMaterialConsumption(store.id, rangeDays),
+		getOrderCount(store.id, rangeDays),
 	]);
 
+	const min = PERFORMANCE_MINIMUMS;
+	const totalTransitions = stageBottleneck.stages.reduce(
+		(sum, s) => sum + s.transitionCount,
+		0,
+	);
+
 	return {
-		stageBottleneck,
-		topProducts,
-		customerMix,
-		couponUsage,
-		onTimeDelivery,
-		materialConsumption,
+		stageBottleneck: {
+			stages: gateRows(
+				stageBottleneck.stages,
+				totalTransitions >= min.stageBottleneck.transitions,
+				min.stageBottleneck.stages,
+			),
+		},
+		topProducts: {
+			products: gateRows(
+				topProducts.products,
+				currentOrders >= min.topProducts.orders,
+				min.topProducts.products,
+			),
+		},
+		customerMix: gateSummary(customerMix, min.customerMix.customers),
+		couponUsage: gateSummary(couponUsage, min.couponUsage.orders),
+		onTimeDelivery: gateSummary(
+			onTimeDelivery,
+			min.onTimeDelivery.fulfilledOrders,
+		),
+		materialConsumption: {
+			materials: gateRows(
+				materialConsumption.materials,
+				currentOrders >= min.materialConsumption.orders,
+				min.materialConsumption.materials,
+			),
+		},
 	};
 }
