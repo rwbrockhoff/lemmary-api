@@ -6,6 +6,9 @@
 	"private": true,
 	"type": "module",
 	"license": "UNLICENSED",
+	"engines": {
+		"node": ">=24"
+	},
 	"config": {
 		"commitizen": {
 			"path": "./node_modules/cz-conventional-changelog"
