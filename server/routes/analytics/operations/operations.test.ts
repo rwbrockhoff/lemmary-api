@@ -26,6 +26,7 @@ describe('GET /analytics/operations', () => {
 		expect(body.data).toHaveProperty('ordersInProgress');
 		expect(body.data).toHaveProperty('ordersCompletedInPeriod');
 		expect(body.data).toHaveProperty('avgLeadTime');
+		expect(body.data).toHaveProperty('capacity');
 		expect(body.data).toHaveProperty('dueSoon');
 		expect(body.data).toHaveProperty('ordersTrend');
 	});
@@ -64,5 +65,17 @@ describe('GET /analytics/operations', () => {
 		expect(avgLeadTime.days).not.toBeNull();
 		expect(avgLeadTime.days).toBeGreaterThan(0);
 		expect(avgLeadTime.target).toBe(14);
+	});
+
+	it('reports weekly capacity as item counts', async () => {
+		const response = await app.inject(
+			withAuth('GET', '/analytics/operations', { query: { range: '30' } }),
+		);
+
+		const { capacity } = response.json().data;
+		expect(typeof capacity.dueThisWeek).toBe('number');
+		expect(typeof capacity.typicalPerWeek).toBe('number');
+		expect(capacity.dueThisWeek).toBeGreaterThanOrEqual(0);
+		expect(capacity.typicalPerWeek).toBeGreaterThanOrEqual(0);
 	});
 });

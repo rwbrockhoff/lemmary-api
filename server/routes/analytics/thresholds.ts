@@ -12,7 +12,8 @@ export const PERFORMANCE_MINIMUMS = {
 	onTimeDelivery: { fulfilledOrders: 5 },
 } as const;
 
-// Dashboard orders/AOV: minimum points so the line doesn't look empty
 export const OPERATIONS_MINIMUMS = {
-	ordersTrend: 4,
+	ordersTrend: 4, // points before orders/AOV line stops looking incomplete/partial
+	capacityWeeks: 2, // weeks of work before showing usual (avg) pace
+	capacityPeakWeeks: 8, // weeks before showing peak (p90) capacity
 } as const;

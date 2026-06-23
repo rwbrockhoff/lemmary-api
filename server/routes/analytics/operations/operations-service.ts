@@ -11,6 +11,8 @@ export const VALID_RANGES = [30, 90, 365] as const;
 export type OperationsRange = (typeof VALID_RANGES)[number];
 export type OperationsBucket = 'day' | 'week' | 'month';
 
+const CAPACITY_LOOKBACK_WEEKS = 8;
+
 const bucketForRange = (range: OperationsRange): OperationsBucket => {
 	if (range === 30) return 'day';
 	if (range === 90) return 'week';
@@ -25,29 +27,20 @@ const emptyDashboard = (range: OperationsRange): OperationsData => ({
 	ordersInProgress: 0,
 	ordersCompletedInPeriod: 0,
 	avgLeadTime: { days: null, target: null },
+	capacity: { dueThisWeek: 0, typicalPerWeek: 0, peakPerWeek: 0 },
 	dueSoon: [],
 	ordersTrend: [],
 });
 
-export async function getOperations(
-	userId: string,
-	range: OperationsRange,
-): Promise<OperationsData> {
-	const store = await getStoreForUser(userId);
-	if (!store) return emptyDashboard(range);
-
-	const bucket = bucketForRange(range);
-	const now = new Date();
-	const dayMs = 24 * 60 * 60 * 1000;
-	const periodStart = new Date(now.getTime() - range * dayMs);
-	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
-
-	const todayUtc = startOfDayUtc(now, store.timezone).getTime();
-
+async function getRevenue(
+	storeId: string,
+	periodStart: Date,
+	previousPeriodStart: Date,
+) {
 	const currentPeriodFilter = sql`order_date >= ${periodStart}`;
 	const previousPeriodFilter = sql`order_date >= ${previousPeriodStart} and order_date < ${periodStart}`;
 
-	const revenue = await db
+	const row = await db
 		.selectFrom('orders')
 		.select([
 			netRevenueSum(currentPeriodFilter).as('current_period'),
@@ -59,19 +52,19 @@ export async function getOperations(
 				'previous_period_count',
 			),
 		])
-		.where('store_id', '=', store.id)
+		.where('store_id', '=', storeId)
 		.where('order_date', '>=', previousPeriodStart)
 		.executeTakeFirstOrThrow();
 
-	const currentRevenue = Number(revenue.current_period);
-	const previousRevenue = Number(revenue.previous_period);
-	const currentPeriodOrderCount = revenue.current_period_count;
-	const previousPeriodOrderCount = revenue.previous_period_count;
+	const currentRevenue = Number(row.current_period);
+	const previousRevenue = Number(row.previous_period);
 	const avgOrderValue =
-		currentPeriodOrderCount > 0 ? currentRevenue / currentPeriodOrderCount : 0;
+		row.current_period_count > 0
+			? currentRevenue / row.current_period_count
+			: 0;
 	const previousAvgOrderValue =
-		previousPeriodOrderCount > 0
-			? previousRevenue / previousPeriodOrderCount
+		row.previous_period_count > 0
+			? previousRevenue / row.previous_period_count
 			: 0;
 	const avgOrderValueChangePercent =
 		previousAvgOrderValue > 0
@@ -87,21 +80,42 @@ export async function getOperations(
 				) / 10
 			: 0;
 
-	const inProgress = await db
+	return {
+		revenue: {
+			current: row.current_period,
+			previous: row.previous_period,
+			changePercent,
+		},
+		avgOrderValue: {
+			current: avgOrderValue.toFixed(2),
+			previous: previousAvgOrderValue.toFixed(2),
+			changePercent: avgOrderValueChangePercent,
+		},
+	};
+}
+
+async function getInProgress(storeId: string) {
+	const row = await db
 		.selectFrom('orders')
 		.select(db.fn.count<number>('id').as('count'))
-		.where('store_id', '=', store.id)
+		.where('store_id', '=', storeId)
 		.where('fulfillment_status', '=', 'pending')
 		.executeTakeFirstOrThrow();
+	return row.count;
+}
 
-	const completed = await db
+async function getCompleted(storeId: string, periodStart: Date) {
+	const row = await db
 		.selectFrom('orders')
 		.select(db.fn.count<number>('id').as('count'))
-		.where('store_id', '=', store.id)
+		.where('store_id', '=', storeId)
 		.where('fulfilled_at', '>=', periodStart)
 		.executeTakeFirstOrThrow();
+	return row.count;
+}
 
-	const leadTime = await db
+async function getAvgLeadTime(storeId: string, periodStart: Date) {
+	const row = await db
 		.selectFrom('orders')
 		.select(
 			sql<
@@ -110,17 +124,18 @@ export async function getOperations(
 				'avg_days',
 			),
 		)
-		.where('store_id', '=', store.id)
+		.where('store_id', '=', storeId)
 		.where('fulfilled_at', 'is not', null)
 		.where('fulfilled_at', '>=', periodStart)
 		.executeTakeFirstOrThrow();
 
-	const avgLeadTimeDays =
-		leadTime.avg_days !== null
-			? Math.round(Number(leadTime.avg_days) * 10) / 10
-			: null;
+	return row.avg_days !== null
+		? Math.round(Number(row.avg_days) * 10) / 10
+		: null;
+}
 
-	const dueSoonRaw = await db
+async function getDueSoon(storeId: string, todayUtc: number, dayMs: number) {
+	const rows = await db
 		// Per-order item totals and completed-item counts
 		.with('item_counts', (qb) =>
 			qb
@@ -138,7 +153,7 @@ export async function getOperations(
 						'completed',
 					),
 				])
-				.where('o.store_id', '=', store.id)
+				.where('o.store_id', '=', storeId)
 				.groupBy('oi.order_id'),
 		)
 		.selectFrom('orders')
@@ -162,14 +177,14 @@ export async function getOperations(
 			sql<number>`coalesce(item_counts.total, 0)`.as('item_count'),
 			sql<number>`coalesce(item_counts.completed, 0)`.as('items_completed'),
 		])
-		.where('orders.store_id', '=', store.id)
+		.where('orders.store_id', '=', storeId)
 		.where('orders.fulfillment_status', '=', 'pending')
 		.where('orders.due_date', 'is not', null)
 		.orderBy('orders.due_date', 'asc')
 		.limit(5)
 		.execute();
 
-	const dueSoon = dueSoonRaw.map((row) => {
+	return rows.map((row) => {
 		const dueDate = row.due_date;
 		let daysUntilDue: number | null = null;
 		if (dueDate) {
@@ -193,10 +208,18 @@ export async function getOperations(
 			workflowStageColor: row.workflow_stage_color,
 		};
 	});
+}
 
+async function getOrdersTrend(
+	storeId: string,
+	periodStart: Date,
+	bucket: OperationsBucket,
+	timeZone: string,
+) {
 	const bucketLit = sql.lit(bucket);
-	const tzLit = sql.lit(store.timezone);
-	const ordersTrendRaw = await db
+	const tzLit = sql.lit(timeZone);
+
+	const rows = await db
 		.selectFrom('orders')
 		.select([
 			sql<string>`to_char(date_trunc(${bucketLit}, order_date AT TIME ZONE ${tzLit}), 'YYYY-MM-DD')`.as(
@@ -206,13 +229,13 @@ export async function getOperations(
 			// sum on numeric stays as a string to preserve currency precision
 			netRevenueSum().as('revenue'),
 		])
-		.where('store_id', '=', store.id)
+		.where('store_id', '=', storeId)
 		.where('order_date', '>=', periodStart)
 		.groupBy(sql`date_trunc(${bucketLit}, order_date AT TIME ZONE ${tzLit})`)
 		.orderBy('date', 'asc')
 		.execute();
 
-	const trend = ordersTrendRaw.map((row) => {
+	const trend = rows.map((row) => {
 		const revenue = Number(row.revenue);
 		const aov = row.count > 0 ? revenue / row.count : 0;
 		return {
@@ -224,27 +247,113 @@ export async function getOperations(
 	});
 
 	// Trend only needs enough points to read, no separate data gate
-	const ordersTrend = gateRows(trend, true, OPERATIONS_MINIMUMS.ordersTrend);
+	return gateRows(trend, true, OPERATIONS_MINIMUMS.ordersTrend);
+}
+
+type CapacityRow = {
+	due_this_week: number;
+	typical_per_week: number | null;
+	peak_per_week: number | null;
+};
+
+// Items due this week vs the maker's usual (avg) and peak (p90) weekly output
+async function getCapacity(
+	storeId: string,
+	timeZone: string,
+	weekStart: string,
+	weekEnd: string,
+) {
+	const tzLit = sql.lit(timeZone);
+	const minWeeks = OPERATIONS_MINIMUMS.capacityWeeks;
+	const peakWeeks = OPERATIONS_MINIMUMS.capacityPeakWeeks;
+	const result = await sql<CapacityRow>`
+		WITH weekly AS (
+			SELECT count(*) AS items
+			FROM order_items oi
+			INNER JOIN orders o ON o.id = oi.order_id
+			WHERE o.store_id = ${storeId}
+				AND o.fulfilled_at IS NOT NULL
+				AND o.fulfilled_at >= now() - interval '1 week' * ${CAPACITY_LOOKBACK_WEEKS}
+			GROUP BY date_trunc('week', o.fulfilled_at AT TIME ZONE ${tzLit})
+		)
+		SELECT
+			(
+				SELECT count(*)
+				FROM order_items oi
+				INNER JOIN orders o ON o.id = oi.order_id
+				WHERE o.store_id = ${storeId}
+					AND o.fulfillment_status = 'pending'
+					AND o.due_date >= ${weekStart}
+					AND o.due_date <= ${weekEnd}
+			)::int AS due_this_week,
+			(
+				SELECT CASE WHEN count(*) >= ${minWeeks} THEN round(avg(items)) END
+				FROM weekly
+			)::int AS typical_per_week,
+			(
+				SELECT CASE
+					WHEN count(*) >= ${peakWeeks}
+					THEN round(percentile_cont(0.9) WITHIN GROUP (ORDER BY items))
+				END
+				FROM weekly
+			)::int AS peak_per_week
+	`.execute(db);
+
+	const row = result.rows[0];
+	return {
+		dueThisWeek: row?.due_this_week ?? 0,
+		typicalPerWeek: row?.typical_per_week ?? 0,
+		peakPerWeek: row?.peak_per_week ?? 0,
+	};
+}
+
+export async function getOperations(
+	userId: string,
+	range: OperationsRange,
+): Promise<OperationsData> {
+	const store = await getStoreForUser(userId);
+	if (!store) return emptyDashboard(range);
+
+	const bucket = bucketForRange(range);
+	const now = new Date();
+	const dayMs = 24 * 60 * 60 * 1000;
+	const periodStart = new Date(now.getTime() - range * dayMs);
+	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
+
+	const todayUtc = startOfDayUtc(now, store.timezone).getTime();
+	const weekStart = new Date(todayUtc).toISOString().slice(0, 10);
+	const weekEnd = new Date(todayUtc + 6 * dayMs).toISOString().slice(0, 10);
+
+	const [
+		revenue,
+		ordersInProgress,
+		ordersCompletedInPeriod,
+		avgLeadTimeDays,
+		dueSoon,
+		ordersTrend,
+		capacity,
+	] = await Promise.all([
+		getRevenue(store.id, periodStart, previousPeriodStart),
+		getInProgress(store.id),
+		getCompleted(store.id, periodStart),
+		getAvgLeadTime(store.id, periodStart),
+		getDueSoon(store.id, todayUtc, dayMs),
+		getOrdersTrend(store.id, periodStart, bucket, store.timezone),
+		getCapacity(store.id, store.timezone, weekStart, weekEnd),
+	]);
 
 	return {
 		range,
 		bucket,
-		revenue: {
-			current: revenue.current_period,
-			previous: revenue.previous_period,
-			changePercent,
-		},
-		avgOrderValue: {
-			current: avgOrderValue.toFixed(2),
-			previous: previousAvgOrderValue.toFixed(2),
-			changePercent: avgOrderValueChangePercent,
-		},
-		ordersInProgress: inProgress.count,
-		ordersCompletedInPeriod: completed.count,
+		revenue: revenue.revenue,
+		avgOrderValue: revenue.avgOrderValue,
+		ordersInProgress,
+		ordersCompletedInPeriod,
 		avgLeadTime: {
 			days: avgLeadTimeDays,
 			target: store.lead_time_days,
 		},
+		capacity,
 		dueSoon,
 		ordersTrend,
 	};
