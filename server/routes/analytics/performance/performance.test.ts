@@ -60,7 +60,7 @@ describe('GET /analytics/performance', () => {
 
 	it('splits customers into new and returning', async () => {
 		const response = await app.inject(
-			withAuth('GET', '/analytics/performance', { query: { range: '30' } }),
+			withAuth('GET', '/analytics/performance', { query: { range: '365' } }),
 		);
 
 		const { newCount, returningCount, totalCount } =
