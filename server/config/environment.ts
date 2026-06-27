@@ -16,9 +16,6 @@ const envSchema = z.object({
 	SQUARESPACE_API_KEY: z.string().min(1),
 	SQUARESPACE_STORE_URL: z.url().optional(),
 	STORE_ENCRYPTION_KEY: z.string().min(32),
-	SHOPIFY_CLIENT_ID: z.string().optional(),
-	SHOPIFY_CLIENT_SECRET: z.string().optional(),
-	SHOPIFY_INSTALL_URL: z.string().optional(),
 	API_URL: z.string().default('http://localhost:3001'),
 	NODE_ENV: z.string().default('development'),
 	COOKIE_SECRET: z.string().min(32),
@@ -32,6 +29,12 @@ const envSchema = z.object({
 	TEST_USER_ID: z.uuid().optional(),
 	TEST_STORE_ID: z.uuid().optional(),
 	SENTRY_DSN: z.url().optional(),
+	STRIPE_SECRET_KEY: z.string().optional(),
+	STRIPE_WEBHOOK_SECRET: z.string().optional(),
+	STRIPE_MONTHLY_PRICE_ID: z.string().optional(),
+	SHOPIFY_CLIENT_ID: z.string().optional(),
+	SHOPIFY_CLIENT_SECRET: z.string().optional(),
+	SHOPIFY_INSTALL_URL: z.string().optional(),
 });
 
 type Environment = z.infer<typeof envSchema>;

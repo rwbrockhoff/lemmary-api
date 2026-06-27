@@ -5,8 +5,12 @@ import { env } from '../../config/environment.js';
 import {
 	createSubscription,
 	cancelSubscription,
+	resumeSubscription,
 	getSubscription,
 	activateSubscription,
+	getPaymentMethod,
+	startPaymentMethodUpdate,
+	updatePaymentMethod,
 } from './subscription-service.js';
 
 export async function handleGetSubscription(
@@ -27,15 +31,14 @@ export async function handleCreateSubscription(
 		if (result.error === 'no_store') {
 			throw AppError.badRequest('Connect a store before subscribing.');
 		}
-		if (result.error === 'not_shopify') {
-			throw AppError.badRequest(
-				'Billing is only available for Shopify stores.',
-			);
-		}
 		throw new AppError('Could not start the subscription.');
 	}
 
-	return successResponse(reply, { confirmationUrl: result.confirmationUrl });
+	if (result.provider === 'shopify') {
+		return successResponse(reply, { confirmationUrl: result.confirmationUrl });
+	}
+
+	return successResponse(reply, { clientSecret: result.clientSecret });
 }
 
 export async function handleCancelSubscription(
@@ -45,13 +48,67 @@ export async function handleCancelSubscription(
 	const result = await cancelSubscription(request.userId);
 
 	if (!result.ok) {
-		if (result.error === 'no_subscription') {
+		if (result.error === 'no_store' || result.error === 'no_subscription') {
 			throw AppError.badRequest('No subscription to cancel.');
 		}
 		throw new AppError('Could not cancel the subscription.');
 	}
 
 	return successResponse(reply, null, 'Subscription cancelled');
+}
+
+export async function handleResumeSubscription(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const result = await resumeSubscription(request.userId);
+
+	if (!result.ok) {
+		if (result.error === 'not_supported') {
+			throw AppError.badRequest('Resuming is managed in your Shopify admin.');
+		}
+		if (result.error === 'no_store' || result.error === 'no_subscription') {
+			throw AppError.badRequest('No subscription to resume.');
+		}
+		throw new AppError('Could not resume the subscription.');
+	}
+
+	return successResponse(reply, null, 'Subscription resumed');
+}
+
+export async function handleGetPaymentMethod(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const card = await getPaymentMethod(request.userId);
+	return successResponse(reply, { card });
+}
+
+export async function handleStartPaymentMethodUpdate(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const clientSecret = await startPaymentMethodUpdate(request.userId);
+	if (!clientSecret) {
+		throw AppError.badRequest('No subscription to update.');
+	}
+
+	return successResponse(reply, { clientSecret });
+}
+
+export async function handleUpdatePaymentMethod(
+	request: FastifyRequest<{ Body: { paymentMethodId: string } }>,
+	reply: FastifyReply,
+) {
+	const updated = await updatePaymentMethod(
+		request.userId,
+		request.body.paymentMethodId,
+	);
+	if (!updated) {
+		throw AppError.badRequest('No subscription to update.');
+	}
+
+	return successResponse(reply, null, 'Payment method updated');
 }
 
 // Shopify sends the merchant back here after they approve the charge

@@ -18,6 +18,7 @@ import { storeRoutes } from './routes/store/store-routes.js';
 import { subscriptionRoutes } from './routes/subscription/subscription-routes.js';
 import { shopifyRoutes } from './routes/shopify/shopify-routes.js';
 import { shopifyWebhookRoutes } from './routes/shopify/shopify-webhook-routes.js';
+import { stripeWebhookRoutes } from './routes/stripe/stripe-webhook-routes.js';
 import { workflowRoutes } from './routes/workflow/workflow-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
@@ -93,6 +94,7 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(subscriptionRoutes);
 	app.register(shopifyRoutes);
 	app.register(shopifyWebhookRoutes);
+	app.register(stripeWebhookRoutes);
 	app.register(workflowRoutes);
 	app.register(productsRoutes);
 	app.register(bomRoutes);
