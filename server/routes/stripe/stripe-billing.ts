@@ -52,3 +52,20 @@ export async function startSubscription(
 			: null,
 	};
 }
+
+// Keeps access through the paid period, then stops the renewal
+export async function cancelSubscription(
+	subscriptionId: string,
+): Promise<void> {
+	await getStripe().subscriptions.update(subscriptionId, {
+		cancel_at_period_end: true,
+	});
+}
+
+export async function resumeSubscription(
+	subscriptionId: string,
+): Promise<void> {
+	await getStripe().subscriptions.update(subscriptionId, {
+		cancel_at_period_end: false,
+	});
+}

@@ -10,6 +10,7 @@ import {
 	handleGetSubscription,
 	handleCreateSubscription,
 	handleCancelSubscription,
+	handleResumeSubscription,
 	handleSubscriptionCallback,
 } from './subscription-controller.js';
 
@@ -56,6 +57,20 @@ export async function subscriptionRoutes(app: FastifyInstance) {
 			},
 		},
 		handleCancelSubscription,
+	);
+
+	r.put(
+		'/subscription/resume',
+		{
+			schema: {
+				tags: [ApiTags.STORE],
+				summary: 'Resume a subscription set to cancel',
+				response: {
+					200: emptySuccessSchema,
+				},
+			},
+		},
+		handleResumeSubscription,
 	);
 
 	r.get(

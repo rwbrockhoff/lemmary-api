@@ -15,7 +15,12 @@ import {
 	cancelAppSubscription,
 } from '../shopify/shopify-billing.js';
 import { isDevelopmentStore } from '../shopify/shopify-service.js';
-import { createCustomer, startSubscription } from '../stripe/stripe-billing.js';
+import {
+	createCustomer,
+	startSubscription,
+	cancelSubscription as stripeCancel,
+	resumeSubscription as stripeResume,
+} from '../stripe/stripe-billing.js';
 import type { SubscriptionStatus } from '../../db/enums.js';
 
 type SubscriptionProvider = 'shopify' | 'stripe';
@@ -41,6 +46,13 @@ type CreateResult =
 type CancelResult =
 	| { ok: true }
 	| { ok: false; error: 'no_store' | 'no_subscription' | 'cancel_failed' };
+
+type ResumeResult =
+	| { ok: true }
+	| {
+			ok: false;
+			error: 'no_store' | 'no_subscription' | 'not_supported';
+	  };
 
 const NOT_SUBSCRIBED: SubscriptionView = {
 	access: false,
@@ -242,10 +254,19 @@ export async function activateSubscription(userId: string): Promise<boolean> {
 export async function cancelSubscription(
 	userId: string,
 ): Promise<CancelResult> {
+	const store = await getStoreForUser(userId);
+	if (!store) return { ok: false, error: 'no_store' };
+
+	if (store.platform === 'shopify') return cancelShopifySubscription(userId);
+	return cancelStripeSubscription(store.id);
+}
+
+// Shopify cancels right away, there's no resume so they resubscribe instead
+async function cancelShopifySubscription(
+	userId: string,
+): Promise<CancelResult> {
 	const store = await getStoreWithAccessToken(userId);
-	if (!store || store.platform !== 'shopify') {
-		return { ok: false, error: 'no_store' };
-	}
+	if (!store) return { ok: false, error: 'no_store' };
 
 	const sub = await db
 		.selectFrom('subscriptions')
@@ -268,6 +289,61 @@ export async function cancelSubscription(
 	await db
 		.updateTable('subscriptions')
 		.set({ status: normalizeStatus(cancelled.status), updated_at: new Date() })
+		.where('store_id', '=', store.id)
+		.execute();
+
+	return { ok: true };
+}
+
+// Stripe cancels at period end so the user has access until then
+async function cancelStripeSubscription(
+	storeId: string,
+): Promise<CancelResult> {
+	const sub = await db
+		.selectFrom('subscriptions')
+		.select('provider_subscription_id')
+		.where('store_id', '=', storeId)
+		.executeTakeFirst();
+
+	if (!sub?.provider_subscription_id) {
+		return { ok: false, error: 'no_subscription' };
+	}
+
+	await stripeCancel(sub.provider_subscription_id);
+
+	await db
+		.updateTable('subscriptions')
+		.set({ cancel_at_period_end: true, updated_at: new Date() })
+		.where('store_id', '=', storeId)
+		.execute();
+
+	return { ok: true };
+}
+
+// Undo a pending Stripe cancellation before period ends
+export async function resumeSubscription(
+	userId: string,
+): Promise<ResumeResult> {
+	const store = await getStoreForUser(userId);
+	if (!store) return { ok: false, error: 'no_store' };
+	if (store.platform === 'shopify')
+		return { ok: false, error: 'not_supported' };
+
+	const sub = await db
+		.selectFrom('subscriptions')
+		.select('provider_subscription_id')
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!sub?.provider_subscription_id) {
+		return { ok: false, error: 'no_subscription' };
+	}
+
+	await stripeResume(sub.provider_subscription_id);
+
+	await db
+		.updateTable('subscriptions')
+		.set({ cancel_at_period_end: false, updated_at: new Date() })
 		.where('store_id', '=', store.id)
 		.execute();
 
