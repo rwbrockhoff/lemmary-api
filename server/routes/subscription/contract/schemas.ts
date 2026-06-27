@@ -12,5 +12,6 @@ export const SubscriptionResponseSchema = z.object({
 });
 
 export const CreateSubscriptionResponseSchema = z.object({
-	confirmationUrl: z.string(),
+	confirmationUrl: z.string().optional(),
+	clientSecret: z.string().optional(),
 });

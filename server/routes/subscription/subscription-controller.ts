@@ -27,15 +27,14 @@ export async function handleCreateSubscription(
 		if (result.error === 'no_store') {
 			throw AppError.badRequest('Connect a store before subscribing.');
 		}
-		if (result.error === 'not_shopify') {
-			throw AppError.badRequest(
-				'Billing is only available for Shopify stores.',
-			);
-		}
 		throw new AppError('Could not start the subscription.');
 	}
 
-	return successResponse(reply, { confirmationUrl: result.confirmationUrl });
+	if (result.provider === 'shopify') {
+		return successResponse(reply, { confirmationUrl: result.confirmationUrl });
+	}
+
+	return successResponse(reply, { clientSecret: result.clientSecret });
 }
 
 export async function handleCancelSubscription(

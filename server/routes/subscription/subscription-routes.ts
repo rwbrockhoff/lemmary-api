@@ -35,7 +35,7 @@ export async function subscriptionRoutes(app: FastifyInstance) {
 		{
 			schema: {
 				tags: [ApiTags.STORE],
-				summary: 'Start a Shopify subscription',
+				summary: 'Start a subscription',
 				response: {
 					200: successSchema(CreateSubscriptionResponseSchema),
 				},
