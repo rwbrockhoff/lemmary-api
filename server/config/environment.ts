@@ -31,7 +31,7 @@ const envSchema = z.object({
 	SENTRY_DSN: z.url().optional(),
 	STRIPE_SECRET_KEY: z.string().optional(),
 	STRIPE_WEBHOOK_SECRET: z.string().optional(),
-	STRIPE_PRICE_ID: z.string().optional(),
+	STRIPE_MONTHLY_PRICE_ID: z.string().optional(),
 	SHOPIFY_CLIENT_ID: z.string().optional(),
 	SHOPIFY_CLIENT_SECRET: z.string().optional(),
 	SHOPIFY_INSTALL_URL: z.string().optional(),

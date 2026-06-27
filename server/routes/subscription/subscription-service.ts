@@ -181,7 +181,9 @@ async function createStripeSubscription(
 	storeId: string,
 	storeName: string,
 ): Promise<CreateResult> {
-	if (!env.STRIPE_PRICE_ID) return { ok: false, error: 'not_configured' };
+	if (!env.STRIPE_MONTHLY_PRICE_ID) {
+		return { ok: false, error: 'not_configured' };
+	}
 
 	const existing = await db
 		.selectFrom('subscriptions')
@@ -202,7 +204,10 @@ async function createStripeSubscription(
 		existing?.provider_customer_id ??
 		(await createCustomer({ email: user?.email ?? '', name, storeId }));
 
-	const started = await startSubscription(customerId, env.STRIPE_PRICE_ID);
+	const started = await startSubscription(
+		customerId,
+		env.STRIPE_MONTHLY_PRICE_ID,
+	);
 	if (!started) return { ok: false, error: 'create_failed' };
 
 	// Stays pending until webhook confirms card was saved
