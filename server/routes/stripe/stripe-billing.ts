@@ -69,3 +69,45 @@ export async function resumeSubscription(
 		cancel_at_period_end: false,
 	});
 }
+
+export type CardSummary = { brand: string; last4: string };
+
+export async function getDefaultCard(
+	subscriptionId: string,
+): Promise<CardSummary | null> {
+	const subscription = await getStripe().subscriptions.retrieve(
+		subscriptionId,
+		{
+			expand: ['default_payment_method'],
+		},
+	);
+
+	const card = subscription.default_payment_method;
+	if (!card || typeof card === 'string' || !card.card) return null;
+
+	return { brand: card.card.brand, last4: card.card.last4 };
+}
+
+export async function createSetupIntent(
+	customerId: string,
+): Promise<string | null> {
+	const intent = await getStripe().setupIntents.create({
+		customer: customerId,
+		payment_method_types: ['card'],
+		usage: 'off_session',
+	});
+	return intent.client_secret;
+}
+
+export async function setDefaultPaymentMethod(
+	subscriptionId: string,
+	customerId: string,
+	paymentMethodId: string,
+): Promise<void> {
+	await getStripe().subscriptions.update(subscriptionId, {
+		default_payment_method: paymentMethodId,
+	});
+	await getStripe().customers.update(customerId, {
+		invoice_settings: { default_payment_method: paymentMethodId },
+	});
+}

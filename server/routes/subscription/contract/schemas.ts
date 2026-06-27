@@ -15,3 +15,20 @@ export const CreateSubscriptionResponseSchema = z.object({
 	confirmationUrl: z.string().optional(),
 	clientSecret: z.string().optional(),
 });
+
+export const PaymentMethodResponseSchema = z.object({
+	card: z
+		.object({
+			brand: z.string(),
+			last4: z.string(),
+		})
+		.nullable(),
+});
+
+export const SetupIntentResponseSchema = z.object({
+	clientSecret: z.string(),
+});
+
+export const UpdatePaymentMethodSchema = z.object({
+	paymentMethodId: z.string(),
+});

@@ -8,6 +8,9 @@ import {
 	resumeSubscription,
 	getSubscription,
 	activateSubscription,
+	getPaymentMethod,
+	startPaymentMethodUpdate,
+	updatePaymentMethod,
 } from './subscription-service.js';
 
 export async function handleGetSubscription(
@@ -71,6 +74,41 @@ export async function handleResumeSubscription(
 	}
 
 	return successResponse(reply, null, 'Subscription resumed');
+}
+
+export async function handleGetPaymentMethod(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const card = await getPaymentMethod(request.userId);
+	return successResponse(reply, { card });
+}
+
+export async function handleStartPaymentMethodUpdate(
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
+	const clientSecret = await startPaymentMethodUpdate(request.userId);
+	if (!clientSecret) {
+		throw AppError.badRequest('No subscription to update.');
+	}
+
+	return successResponse(reply, { clientSecret });
+}
+
+export async function handleUpdatePaymentMethod(
+	request: FastifyRequest<{ Body: { paymentMethodId: string } }>,
+	reply: FastifyReply,
+) {
+	const updated = await updatePaymentMethod(
+		request.userId,
+		request.body.paymentMethodId,
+	);
+	if (!updated) {
+		throw AppError.badRequest('No subscription to update.');
+	}
+
+	return successResponse(reply, null, 'Payment method updated');
 }
 
 // Shopify sends the merchant back here after they approve the charge

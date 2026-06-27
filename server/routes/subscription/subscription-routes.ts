@@ -5,6 +5,9 @@ import { successSchema, emptySuccessSchema } from '../../openapi/schemas.js';
 import {
 	SubscriptionResponseSchema,
 	CreateSubscriptionResponseSchema,
+	PaymentMethodResponseSchema,
+	SetupIntentResponseSchema,
+	UpdatePaymentMethodSchema,
 } from './contract/schemas.js';
 import {
 	handleGetSubscription,
@@ -12,6 +15,9 @@ import {
 	handleCancelSubscription,
 	handleResumeSubscription,
 	handleSubscriptionCallback,
+	handleGetPaymentMethod,
+	handleStartPaymentMethodUpdate,
+	handleUpdatePaymentMethod,
 } from './subscription-controller.js';
 
 export async function subscriptionRoutes(app: FastifyInstance) {
@@ -71,6 +77,49 @@ export async function subscriptionRoutes(app: FastifyInstance) {
 			},
 		},
 		handleResumeSubscription,
+	);
+
+	r.get(
+		'/subscription/payment-method',
+		{
+			schema: {
+				tags: [ApiTags.STORE],
+				summary: 'Get the saved card',
+				response: {
+					200: successSchema(PaymentMethodResponseSchema),
+				},
+			},
+		},
+		handleGetPaymentMethod,
+	);
+
+	r.post(
+		'/subscription/payment-method',
+		{
+			schema: {
+				tags: [ApiTags.STORE],
+				summary: 'Start updating the saved card',
+				response: {
+					200: successSchema(SetupIntentResponseSchema),
+				},
+			},
+		},
+		handleStartPaymentMethodUpdate,
+	);
+
+	r.put(
+		'/subscription/payment-method',
+		{
+			schema: {
+				tags: [ApiTags.STORE],
+				summary: 'Set the new card as default',
+				body: UpdatePaymentMethodSchema,
+				response: {
+					200: emptySuccessSchema,
+				},
+			},
+		},
+		handleUpdatePaymentMethod,
 	);
 
 	r.get(

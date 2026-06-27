@@ -20,6 +20,10 @@ import {
 	startSubscription,
 	cancelSubscription as stripeCancel,
 	resumeSubscription as stripeResume,
+	getDefaultCard,
+	createSetupIntent,
+	setDefaultPaymentMethod,
+	type CardSummary,
 } from '../stripe/stripe-billing.js';
 import type { SubscriptionStatus } from '../../db/enums.js';
 
@@ -449,4 +453,55 @@ export async function cancelSubscriptionByShop(shop: string): Promise<void> {
 		.set({ status: 'cancelled', updated_at: new Date() })
 		.where('store_id', '=', store.id)
 		.execute();
+}
+
+type StripeSubRow = { subscriptionId: string; customerId: string };
+
+async function getStripeSubRow(userId: string): Promise<StripeSubRow | null> {
+	const store = await getStoreForUser(userId);
+	if (!store || store.platform === 'shopify') return null;
+
+	const sub = await db
+		.selectFrom('subscriptions')
+		.select(['provider_subscription_id', 'provider_customer_id'])
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+
+	if (!sub?.provider_subscription_id || !sub.provider_customer_id) return null;
+
+	return {
+		subscriptionId: sub.provider_subscription_id,
+		customerId: sub.provider_customer_id,
+	};
+}
+
+export async function getPaymentMethod(
+	userId: string,
+): Promise<CardSummary | null> {
+	const row = await getStripeSubRow(userId);
+	if (!row) return null;
+	return getDefaultCard(row.subscriptionId);
+}
+
+// Returns a client secret the frontend uses to collect the new card
+export async function startPaymentMethodUpdate(
+	userId: string,
+): Promise<string | null> {
+	const row = await getStripeSubRow(userId);
+	if (!row) return null;
+	return createSetupIntent(row.customerId);
+}
+
+export async function updatePaymentMethod(
+	userId: string,
+	paymentMethodId: string,
+): Promise<boolean> {
+	const row = await getStripeSubRow(userId);
+	if (!row) return false;
+	await setDefaultPaymentMethod(
+		row.subscriptionId,
+		row.customerId,
+		paymentMethodId,
+	);
+	return true;
 }
