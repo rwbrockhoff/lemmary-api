@@ -54,21 +54,16 @@ const NOT_SUBSCRIBED: SubscriptionView = {
 };
 
 // Shopify status -> our normalized set
+const SHOPIFY_STATUS: Record<string, SubscriptionStatus> = {
+	ACTIVE: 'active',
+	DECLINED: 'declined',
+	EXPIRED: 'expired',
+	FROZEN: 'frozen',
+	CANCELLED: 'cancelled',
+};
+
 function normalizeStatus(shopifyStatus: string): SubscriptionStatus {
-	switch (shopifyStatus) {
-		case 'ACTIVE':
-			return 'active';
-		case 'DECLINED':
-			return 'declined';
-		case 'EXPIRED':
-			return 'expired';
-		case 'FROZEN':
-			return 'frozen';
-		case 'CANCELLED':
-			return 'cancelled';
-		default:
-			return 'pending';
-	}
+	return SHOPIFY_STATUS[shopifyStatus] ?? 'pending';
 }
 
 async function upsertSubscription(args: {
@@ -344,6 +339,27 @@ export async function syncShopifySubscription(
 		.updateTable('subscriptions')
 		.set({ status: normalizeStatus(shopifyStatus), updated_at: new Date() })
 		.where('provider_subscription_id', '=', subscriptionGid)
+		.execute();
+}
+
+// Webhook: sync status when Stripe changes a subscription
+export async function syncStripeSubscription(args: {
+	providerSubscriptionId: string;
+	status: SubscriptionStatus;
+	currentPeriodEnd: Date | null;
+	cancelAtPeriodEnd: boolean;
+	trialEndsAt: Date | null;
+}): Promise<void> {
+	await db
+		.updateTable('subscriptions')
+		.set({
+			status: args.status,
+			current_period_end: args.currentPeriodEnd,
+			cancel_at_period_end: args.cancelAtPeriodEnd,
+			trial_ends_at: args.trialEndsAt,
+			updated_at: new Date(),
+		})
+		.where('provider_subscription_id', '=', args.providerSubscriptionId)
 		.execute();
 }
 

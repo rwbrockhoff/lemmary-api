@@ -9,6 +9,7 @@ const OPEN_PREFIXES = [
 	'/store',
 	'/subscription',
 	'/webhooks/shopify',
+	'/webhooks/stripe',
 ];
 
 function isOpenPath(url: string): boolean {
