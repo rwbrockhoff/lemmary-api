@@ -6,10 +6,19 @@
 	"private": true,
 	"type": "module",
 	"license": "UNLICENSED",
+	"engines": {
+		"node": ">=24"
+	},
 	"config": {
 		"commitizen": {
 			"path": "./node_modules/cz-conventional-changelog"
 		}
+	},
+	"lint-staged": {
+		"*.ts": [
+			"eslint",
+			"prettier --write"
+		]
 	},
 	"scripts": {
 		"commit": "cz",
@@ -27,9 +36,9 @@
 		"seed": "tsx server/db/seeds/01_seed_dev_store.ts",
 		"seed:demo": "tsx server/db/seeds/02_seed_demo_store.ts",
 		"db:reset": "psql -d assemblr_dev -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run migrate:latest && npm run seed",
-		"test": "NODE_ENV=test npm run test:setup && NODE_ENV=test vitest run",
+		"test": "NODE_ENV=test vitest run",
 		"test:watch": "NODE_ENV=test vitest",
-		"test:coverage": "NODE_ENV=test npm run test:setup && NODE_ENV=test vitest run --coverage",
+		"test:coverage": "NODE_ENV=test vitest run --coverage",
 		"test:setup": "NODE_ENV=test npm run test:reset && NODE_ENV=test npm run test:migrate && NODE_ENV=test npm run test:seed",
 		"test:migrate": "NODE_ENV=test tsx server/db/migrate.ts",
 		"test:reset": "NODE_ENV=test tsx server/db/migrate.ts down:all",
@@ -53,19 +62,22 @@
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.39.4",
 		"@faker-js/faker": "^10.4.0",
 		"@types/node": "^25.3.0",
 		"@types/pg": "^8.16.0",
 		"@vitest/coverage-v8": "^4.1.6",
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
-		"eslint": "^10.0.1",
+		"eslint": "^9.39.4",
+		"globals": "^16.5.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.0.4",
 		"pino-pretty": "^13.1.3",
 		"prettier": "^3.8.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
+		"typescript-eslint": "^8.61.1",
 		"vitest": "^4.1.6"
 	}
 }

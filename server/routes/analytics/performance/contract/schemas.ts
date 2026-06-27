@@ -69,9 +69,9 @@ export const PerformanceResponseSchema = z
 	.object({
 		stageBottleneck: StageBottleneckSchema,
 		topProducts: TopProductsSchema,
-		customerMix: CustomerMixSchema,
-		couponUsage: CouponUsageSchema,
-		onTimeDelivery: OnTimeDeliverySchema,
+		customerMix: CustomerMixSchema.nullable(),
+		couponUsage: CouponUsageSchema.nullable(),
+		onTimeDelivery: OnTimeDeliverySchema.nullable(),
 		materialConsumption: MaterialConsumptionSchema,
 	})
 	.strict();

@@ -24,6 +24,11 @@ export const OperationsResponseSchema = z.object({
 		days: z.number().nullable(),
 		target: z.number().nullable(),
 	}),
+	capacity: z.object({
+		dueThisWeek: z.number(),
+		typicalPerWeek: z.number(),
+		peakPerWeek: z.number(),
+	}),
 	dueSoon: z.array(
 		z.object({
 			id: z.string(),
