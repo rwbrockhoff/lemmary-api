@@ -48,6 +48,7 @@ jobs:
           SUPABASE_PRIVATE_KEY: test-supabase-private-key
           SQUARESPACE_API_KEY: test-key
           SHOPIFY_CLIENT_SECRET: test-shopify-secret-must-be-at-least-32-chars
+          STRIPE_MONTHLY_PRICE_ID: price_test_dummy
           DEV_USER_ID: 49a76726-8e35-4010-ba72-e797919dadfa
           DEV_STORE_ID: 1b296fa9-373e-4d5a-82bf-2086d8ddd536
           DEMO_USER_ID: 95664341-758c-4d5e-95ea-b8e3a923fece
