@@ -24,7 +24,9 @@ export function normalizeStripeStatus(
 		case 'trialing':
 		case 'active':
 			return hasPaymentMethod ? 'active' : 'pending';
+		// Grace period: keep access while Stripe retries, it cancels on final failure
 		case 'past_due':
+			return 'active';
 		case 'unpaid':
 		case 'paused':
 			return 'frozen';

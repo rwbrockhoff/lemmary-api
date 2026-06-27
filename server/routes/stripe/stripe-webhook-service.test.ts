@@ -18,8 +18,11 @@ describe('normalizeStripeStatus', () => {
 		expect(normalizeStripeStatus('active', false)).toBe('pending');
 	});
 
-	it('freezes payment problem statuses', () => {
-		expect(normalizeStripeStatus('past_due', true)).toBe('frozen');
+	it('keeps access while a payment is past due so Stripe can retry', () => {
+		expect(normalizeStripeStatus('past_due', true)).toBe('active');
+	});
+
+	it('freezes once retries are exhausted', () => {
 		expect(normalizeStripeStatus('unpaid', true)).toBe('frozen');
 		expect(normalizeStripeStatus('paused', true)).toBe('frozen');
 	});
