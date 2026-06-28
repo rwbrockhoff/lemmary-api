@@ -1,5 +1,10 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
-import type { OrderType, AuditAction, SubscriptionStatus } from './enums.js';
+import type {
+	OrderType,
+	AuditAction,
+	SubscriptionStatus,
+	ProductionType,
+} from './enums.js';
 
 export interface Database {
 	users: UserTable;
@@ -314,6 +319,7 @@ export interface ProductVariantTable {
 	on_sale: Generated<boolean>;
 	stock_quantity: number | null;
 	stock_unlimited: Generated<boolean>;
+	production_type: Generated<ProductionType>;
 	image_url: string | null;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

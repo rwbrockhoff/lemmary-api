@@ -4,6 +4,16 @@ export const ORDER_TYPE_VALUES = ['platform', 'custom', 'work'] as const;
 
 export type OrderType = (typeof ORDER_TYPE_VALUES)[number];
 
+// Whether a variant is built after the order or kept ready-made in stock
+export const PRODUCTION_TYPE_VALUES = [
+	'made_to_order',
+	'ready_made',
+	'dropship',
+	'digital',
+] as const;
+
+export type ProductionType = (typeof PRODUCTION_TYPE_VALUES)[number];
+
 // Audit trail event types
 // Referenced as AuditAction.PiiSynced
 export const AuditAction = {
