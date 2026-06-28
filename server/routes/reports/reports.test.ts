@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
+import { TEST_STORE_ID } from '../../tests/test-constants.js';
 import { db } from '../../db/connection.js';
 
 describe('Reports API', () => {
@@ -48,6 +49,58 @@ describe('Reports API', () => {
 		expect(before).toContain('TW-001');
 		expect(after).not.toContain('TW-001');
 		expect(after).toEqual(before.filter((sku: string) => sku !== 'TW-001'));
+	});
+
+	it('keeps custom order items unless the variant is dropship or digital', async () => {
+		const order = await db
+			.insertInto('orders')
+			.values({
+				store_id: TEST_STORE_ID,
+				order_type: 'custom',
+				order_number: 'C-PROD-TEST',
+				order_date: new Date(),
+				fulfillment_status: 'pending',
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		await db
+			.insertInto('order_items')
+			.values({
+				order_id: order.id,
+				platform_sku: 'TB-001-TAN',
+				product_name: 'Test Bag',
+				quantity: 1,
+			})
+			.execute();
+
+		const skus = async () =>
+			(await app.inject(withAuth('GET', '/reports/production-summary')))
+				.json()
+				.data.map((row: { platform_sku: string }) => row.platform_sku);
+
+		try {
+			expect(await skus()).toContain('TB-001-TAN');
+
+			await db
+				.updateTable('product_variants')
+				.set({ production_type: 'dropship' })
+				.where('platform_sku', '=', 'TB-001-TAN')
+				.execute();
+
+			expect(await skus()).not.toContain('TB-001-TAN');
+		} finally {
+			await db
+				.deleteFrom('order_items')
+				.where('order_id', '=', order.id)
+				.execute();
+			await db.deleteFrom('orders').where('id', '=', order.id).execute();
+			await db
+				.updateTable('product_variants')
+				.set({ production_type: 'ready_made' })
+				.where('platform_sku', '=', 'TB-001-TAN')
+				.execute();
+		}
 	});
 
 	it('GET /reports/materials returns the materials report', async () => {
