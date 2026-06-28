@@ -3,6 +3,7 @@ export const ApiTags = {
 	ORDERS: 'Orders',
 	BATCHES: 'Batches',
 	BOM: 'Bill of Materials',
+	MATERIALS: 'Materials',
 	PRODUCTS: 'Products',
 	REPORTS: 'Reports',
 	ANALYTICS: 'Analytics',
