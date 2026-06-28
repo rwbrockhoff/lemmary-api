@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PRODUCTION_TYPE_VALUES } from '../../../db/enums.js';
 
 const ProductSchema = z.object({
 	id: z.string(),
@@ -25,6 +26,7 @@ const ProductVariantSchema = z.object({
 	on_sale: z.boolean(),
 	stock_quantity: z.number().nullable(),
 	stock_unlimited: z.boolean(),
+	production_type: z.enum(PRODUCTION_TYPE_VALUES),
 	image_url: z.string().nullable(),
 	created_at: z.date(),
 	updated_at: z.date(),
@@ -36,7 +38,9 @@ const ProductSummarySchema = ProductSchema.extend({
 });
 
 export const ProductDetailSchema = ProductSchema.extend({
-	variants: z.array(ProductVariantSchema.extend({ bom_item_count: z.number() })),
+	variants: z.array(
+		ProductVariantSchema.extend({ bom_item_count: z.number() }),
+	),
 });
 
 export const GetProductsResponseSchema = z.object({
@@ -51,4 +55,22 @@ export const SyncProductsResponseSchema = z.object({
 
 export const ProductIdParamSchema = z.object({
 	productId: z.uuid(),
+});
+
+export const VariantParamSchema = z.object({
+	productId: z.uuid(),
+	variantId: z.uuid(),
+});
+
+export const UpdateProductionTypeSchema = z.object({
+	productionType: z.enum(PRODUCTION_TYPE_VALUES),
+});
+
+export const UpdateVariantResponseSchema = z.object({
+	id: z.string(),
+	production_type: z.enum(PRODUCTION_TYPE_VALUES),
+});
+
+export const BulkProductionTypeResponseSchema = z.object({
+	updated: z.number(),
 });

@@ -6,7 +6,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
 		.alterTable('product_variants')
 		.addColumn('production_type', 'text', (col) =>
-			col.defaultTo('made_to_order').notNull(),
+			col.defaultTo('ready_made').notNull(),
 		)
 		.execute();
 

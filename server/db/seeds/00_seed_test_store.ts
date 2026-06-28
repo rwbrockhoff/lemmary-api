@@ -66,6 +66,42 @@ async function seedTest() {
 		})
 		.execute();
 
+	const variantsBySku: Record<string, { sku: string; name: string }[]> = {
+		'TW-001': [{ sku: 'TW-001', name: 'Default' }],
+		'TB-001': [
+			{ sku: 'TB-001-BLK', name: 'Black' },
+			{ sku: 'TB-001-TAN', name: 'Tan' },
+		],
+	};
+
+	for (const product of PRODUCTS) {
+		const inserted = await db
+			.insertInto('products')
+			.values({
+				store_id: TEST_STORE_ID,
+				platform_product_id: `pp-${product.sku}`,
+				name: product.name,
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		const variants = variantsBySku[product.sku] ?? [
+			{ sku: product.sku, name: 'Default' },
+		];
+		await db
+			.insertInto('product_variants')
+			.values(
+				variants.map((v) => ({
+					product_id: inserted.id,
+					platform_variant_id: `pv-${v.sku}`,
+					platform_sku: v.sku,
+					name: v.name,
+					price: product.price.toString(),
+				})),
+			)
+			.execute();
+	}
+
 	const insertedOrderStages = await db
 		.insertInto('order_workflow_stages')
 		.values(ORDER_STAGES.map((s) => ({ ...s, store_id: TEST_STORE_ID })))

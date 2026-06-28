@@ -8,11 +8,17 @@ import {
 	ProductDetailSchema,
 	SyncProductsResponseSchema,
 	ProductIdParamSchema,
+	VariantParamSchema,
+	UpdateProductionTypeSchema,
+	UpdateVariantResponseSchema,
+	BulkProductionTypeResponseSchema,
 } from './contract/schemas.js';
 import {
 	handleSyncProducts,
 	handleGetProducts,
 	handleGetProduct,
+	handleUpdateVariantProductionType,
+	handleUpdateProductProductionType,
 } from './products-controller.js';
 
 export async function productsRoutes(app: FastifyInstance) {
@@ -60,5 +66,37 @@ export async function productsRoutes(app: FastifyInstance) {
 			},
 		},
 		handleGetProduct,
+	);
+
+	r.patch(
+		'/products/:productId/variants/:variantId',
+		{
+			schema: {
+				tags: [ApiTags.PRODUCTS],
+				summary: 'Update a variant production type',
+				params: VariantParamSchema,
+				body: UpdateProductionTypeSchema,
+				response: {
+					200: successSchema(UpdateVariantResponseSchema),
+				},
+			},
+		},
+		handleUpdateVariantProductionType,
+	);
+
+	r.patch(
+		'/products/:productId/variants',
+		{
+			schema: {
+				tags: [ApiTags.PRODUCTS],
+				summary: 'Set production type for all variants of a product',
+				params: ProductIdParamSchema,
+				body: UpdateProductionTypeSchema,
+				response: {
+					200: successSchema(BulkProductionTypeResponseSchema),
+				},
+			},
+		},
+		handleUpdateProductProductionType,
 	);
 }
