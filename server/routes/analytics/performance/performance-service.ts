@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { gateRows, gateSummary } from '../../../utils/report-gates.js';
+import { productionItemFilter } from '../../../utils/production-filter.js';
 import { PERFORMANCE_MINIMUMS } from '../thresholds.js';
 import type { PerformanceQuerySchema } from './contract/schemas.js';
 
@@ -265,11 +266,14 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 				) AS prior_qty
 			FROM order_items oi
 			INNER JOIN orders o ON o.id = oi.order_id
+			LEFT JOIN product_variants pv ON pv.platform_sku = oi.platform_sku
+				AND pv.product_id IN (SELECT id FROM products WHERE store_id = ${storeId})
 			INNER JOIN bom_items b ON b.platform_sku = oi.platform_sku AND b.store_id = ${storeId}
 			INNER JOIN materials m ON m.id = b.material_id
 			INNER JOIN bom_material_types bmt ON bmt.id = m.material_type_id
 			WHERE o.store_id = ${storeId}
 				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+				AND ${productionItemFilter('o', 'pv')}
 			GROUP BY bmt.id, bmt.name, m.color, b.measurement
 		)
 		SELECT

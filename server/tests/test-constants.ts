@@ -12,3 +12,7 @@ export const SHOPIFY_USER_ID = '22222222-2222-2222-2222-222222222222';
 
 // Throwaway user for reporting/dashboard tests (for empty/partial state handling)
 export const REPORTING_USER_ID = '33333333-3333-3333-3333-333333333333';
+
+// A second user + store for cross store isolation tests
+export const OTHER_USER_ID = '44444444-4444-4444-4444-444444444444';
+export const OTHER_STORE_ID = '55555555-5555-5555-5555-555555555555';

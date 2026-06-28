@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import type { OrderUpdate } from '../../../db/database-types.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import { toNoonUtc } from '../../../utils/timezone.js';
 import { getDefaultStageIds } from '../utils/default-stages.js';
 import { generateOrderNumber } from '../utils/order-number.js';
 import { sumLineItems } from '../utils/order-totals.js';
@@ -33,7 +34,7 @@ export async function createCustomOrder(
 				order_number: orderNumber,
 				customer_name: input.customer_name,
 				customer_email: input.customer_email ?? null,
-				order_date: input.order_date ?? new Date(),
+				order_date: input.order_date ? toNoonUtc(input.order_date) : new Date(),
 				due_date: input.due_date ?? null,
 				order_notes: input.order_notes ?? null,
 				workflow_stage_id: orderStageId,
@@ -73,7 +74,9 @@ export async function updateCustomOrder(
 		updates.customer_name = input.customer_name;
 	if (input.customer_email !== undefined)
 		updates.customer_email = input.customer_email;
-	if (input.order_date !== undefined) updates.order_date = input.order_date;
+	if (input.order_date !== undefined) {
+		updates.order_date = toNoonUtc(input.order_date);
+	}
 	if (input.due_date !== undefined) updates.due_date = input.due_date;
 	if (input.order_notes !== undefined) updates.order_notes = input.order_notes;
 	if (input.order_description !== undefined)

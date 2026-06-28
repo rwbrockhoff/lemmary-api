@@ -66,6 +66,57 @@ async function seedTest() {
 		})
 		.execute();
 
+	type SeedVariant = {
+		sku: string;
+		name: string;
+		production_type: 'made_to_order' | 'ready_made' | 'dropship' | 'digital';
+	};
+
+	// Variant SKUs match the order/BOM SKUs so production filter joins cleanly
+	// Order variants are made_to_order so analytics count them
+	const variantsBySku: Record<string, SeedVariant[]> = {
+		'TW-001': [
+			{ sku: 'TW-001', name: 'Default', production_type: 'made_to_order' },
+		],
+		'TB-001': [
+			{ sku: 'TB-001', name: 'Black', production_type: 'made_to_order' },
+			{ sku: 'TB-001-TAN', name: 'Tan', production_type: 'ready_made' },
+		],
+	};
+
+	for (const product of PRODUCTS) {
+		const inserted = await db
+			.insertInto('products')
+			.values({
+				store_id: TEST_STORE_ID,
+				platform_product_id: `pp-${product.sku}`,
+				name: product.name,
+			})
+			.returning('id')
+			.executeTakeFirstOrThrow();
+
+		const variants = variantsBySku[product.sku] ?? [
+			{
+				sku: product.sku,
+				name: 'Default',
+				production_type: 'made_to_order' as const,
+			},
+		];
+		await db
+			.insertInto('product_variants')
+			.values(
+				variants.map((v) => ({
+					product_id: inserted.id,
+					platform_variant_id: `pv-${v.sku}`,
+					platform_sku: v.sku,
+					name: v.name,
+					production_type: v.production_type,
+					price: product.price.toString(),
+				})),
+			)
+			.execute();
+	}
+
 	const insertedOrderStages = await db
 		.insertInto('order_workflow_stages')
 		.values(ORDER_STAGES.map((s) => ({ ...s, store_id: TEST_STORE_ID })))

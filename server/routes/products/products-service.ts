@@ -10,6 +10,7 @@ import { fetchSquarespaceProducts } from './platforms/squarespace.js';
 import { fetchShopifyProducts } from './platforms/shopify.js';
 import { ensureFreshShopifyToken } from '../shopify/shopify-token.js';
 import type { NormalizedProduct } from './platforms/product-types.js';
+import type { ProductionType } from '../../db/enums.js';
 
 async function fetchProductsFromPlatform(
 	store: StoreWithAccessToken,
@@ -61,6 +62,7 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 						})),
 					)
 					.onConflict((oc) =>
+						// production_type is user-set, keep it out of whitelist so syncs don't reset value
 						oc.columns(['product_id', 'platform_variant_id']).doUpdateSet({
 							platform_sku: (eb) => eb.ref('excluded.platform_sku'),
 							name: (eb) => eb.ref('excluded.name'),
@@ -140,6 +142,74 @@ export async function getProducts(userId: string) {
 		}),
 		lastSyncedAt: store.last_synced_at,
 	};
+}
+
+export async function updateVariantProductionType(
+	userId: string,
+	productId: string,
+	variantId: string,
+	productionType: ProductionType,
+) {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const updated = await db
+		.updateTable('product_variants')
+		.set({ production_type: productionType, updated_at: new Date() })
+		.where('id', '=', variantId)
+		.where('product_id', '=', productId)
+		.where('product_id', 'in', (eb) =>
+			eb.selectFrom('products').select('id').where('store_id', '=', store.id),
+		)
+		.returning(['id', 'production_type'])
+		.executeTakeFirst();
+
+	return updated ?? null;
+}
+
+// Applies production_type in bulk to all variants
+export async function updateProductProductionType(
+	userId: string,
+	productId: string,
+	productionType: ProductionType,
+): Promise<number | null> {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const product = await db
+		.selectFrom('products')
+		.select('id')
+		.where('id', '=', productId)
+		.where('store_id', '=', store.id)
+		.executeTakeFirst();
+	if (!product) return null;
+
+	const result = await db
+		.updateTable('product_variants')
+		.set({ production_type: productionType, updated_at: new Date() })
+		.where('product_id', '=', productId)
+		.executeTakeFirst();
+
+	return Number(result.numUpdatedRows);
+}
+
+// Applies production_type to EVERY variant in the store
+export async function updateAllProductionTypes(
+	userId: string,
+	productionType: ProductionType,
+): Promise<number | null> {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const result = await db
+		.updateTable('product_variants')
+		.set({ production_type: productionType, updated_at: new Date() })
+		.where('product_id', 'in', (eb) =>
+			eb.selectFrom('products').select('id').where('store_id', '=', store.id),
+		)
+		.executeTakeFirst();
+
+	return Number(result.numUpdatedRows);
 }
 
 export async function getProduct(userId: string, productId: string) {

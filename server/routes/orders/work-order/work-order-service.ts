@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import type { OrderUpdate } from '../../../db/database-types.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import { toNoonUtc } from '../../../utils/timezone.js';
 import { getDefaultStageIds } from '../utils/default-stages.js';
 import { generateOrderNumber } from '../utils/order-number.js';
 import { getOrderWithItems } from '../orders-service.js';
@@ -29,7 +30,7 @@ export async function createWorkOrder(userId: string, input: CreateWorkOrder) {
 				order_number: orderNumber,
 				order_title: input.order_title,
 				order_description: input.order_description ?? null,
-				order_date: input.order_date ?? new Date(),
+				order_date: input.order_date ? toNoonUtc(input.order_date) : new Date(),
 				due_date: input.due_date ?? null,
 				order_notes: input.order_notes ?? null,
 				workflow_stage_id: orderStageId,
@@ -66,7 +67,9 @@ export async function updateWorkOrder(
 	if (input.order_title !== undefined) updates.order_title = input.order_title;
 	if (input.order_description !== undefined)
 		updates.order_description = input.order_description;
-	if (input.order_date !== undefined) updates.order_date = input.order_date;
+	if (input.order_date !== undefined) {
+		updates.order_date = toNoonUtc(input.order_date);
+	}
 	if (input.due_date !== undefined) updates.due_date = input.due_date;
 	if (input.order_notes !== undefined) updates.order_notes = input.order_notes;
 
