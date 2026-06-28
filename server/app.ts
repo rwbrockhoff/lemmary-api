@@ -22,6 +22,7 @@ import { stripeWebhookRoutes } from './routes/stripe/stripe-webhook-routes.js';
 import { workflowRoutes } from './routes/workflow/workflow-routes.js';
 import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
+import { materialsRoutes } from './routes/materials/materials-routes.js';
 import { customersRoutes } from './routes/customers/customers-routes.js';
 
 type BuildAppOptions = { logger?: boolean };
@@ -98,6 +99,7 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(workflowRoutes);
 	app.register(productsRoutes);
 	app.register(bomRoutes);
+	app.register(materialsRoutes);
 	app.register(customersRoutes);
 
 	return app;
