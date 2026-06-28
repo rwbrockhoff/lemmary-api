@@ -58,6 +58,17 @@ describe('Product production type', () => {
 	});
 
 	afterAll(async () => {
+		// reset so other test files see seed state
+		await db
+			.updateTable('product_variants')
+			.set({ production_type: 'made_to_order' })
+			.where('product_id', 'in', (eb) =>
+				eb
+					.selectFrom('products')
+					.select('id')
+					.where('store_id', '=', TEST_STORE_ID),
+			)
+			.execute();
 		await db.deleteFrom('stores').where('id', '=', OTHER_STORE_ID).execute();
 		await db.deleteFrom('users').where('id', '=', OTHER_USER_ID).execute();
 		await app.close();

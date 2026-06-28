@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
+import { db } from '../../db/connection.js';
 
 describe('Reports API', () => {
 	let app: FastifyInstance;
@@ -21,6 +22,32 @@ describe('Reports API', () => {
 
 		expect(response.statusCode).toBe(200);
 		expect(response.json().success).toBe(true);
+	});
+
+	it('drops ready-made items from the production summary', async () => {
+		const skus = async () =>
+			(await app.inject(withAuth('GET', '/reports/production-summary')))
+				.json()
+				.data.map((row: { platform_sku: string }) => row.platform_sku);
+
+		const before = await skus();
+
+		await db
+			.updateTable('product_variants')
+			.set({ production_type: 'ready_made' })
+			.where('platform_sku', '=', 'TW-001')
+			.execute();
+		const after = await skus();
+
+		await db
+			.updateTable('product_variants')
+			.set({ production_type: 'made_to_order' })
+			.where('platform_sku', '=', 'TW-001')
+			.execute();
+
+		expect(before).toContain('TW-001');
+		expect(after).not.toContain('TW-001');
+		expect(after).toEqual(before.filter((sku: string) => sku !== 'TW-001'));
 	});
 
 	it('GET /reports/materials returns the materials report', async () => {

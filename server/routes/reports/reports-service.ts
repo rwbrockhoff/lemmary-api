@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { applyOrNull } from '../../utils/nullable.js';
+import { productionItemFilter } from '../../utils/production-filter.js';
 
 export async function getProductionSummary(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -10,6 +11,16 @@ export async function getProductionSummary(userId: string) {
 	const summary = await db
 		.selectFrom('order_items')
 		.innerJoin('orders', 'orders.id', 'order_items.order_id')
+		.leftJoin('product_variants', (join) =>
+			join
+				.onRef('product_variants.platform_sku', '=', 'order_items.platform_sku')
+				.on('product_variants.product_id', 'in', (eb) =>
+					eb
+						.selectFrom('products')
+						.select('products.id')
+						.where('products.store_id', '=', store.id),
+				),
+		)
 		.select([
 			'order_items.platform_sku',
 			'order_items.product_name',
@@ -18,6 +29,7 @@ export async function getProductionSummary(userId: string) {
 		.select(sql<number>`sum(order_items.quantity)`.as('total_quantity'))
 		.where('orders.store_id', '=', store.id)
 		.where('orders.fulfillment_status', '=', 'pending')
+		.where(productionItemFilter())
 		.groupBy([
 			'order_items.platform_sku',
 			'order_items.product_name',

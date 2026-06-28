@@ -4,6 +4,7 @@ import { getStoreForUser } from '../../../utils/store.js';
 import { startOfDayUtc } from '../../../utils/timezone.js';
 import { netRevenueSum } from '../../../utils/revenue.js';
 import { gateRows } from '../../../utils/report-gates.js';
+import { productionItemFilter } from '../../../utils/production-filter.js';
 import { OPERATIONS_MINIMUMS } from '../thresholds.js';
 import type { OperationsData } from './contract/types.js';
 
@@ -271,9 +272,12 @@ async function getCapacity(
 			SELECT count(*) AS items
 			FROM order_items oi
 			INNER JOIN orders o ON o.id = oi.order_id
+			LEFT JOIN product_variants pv ON pv.platform_sku = oi.platform_sku
+				AND pv.product_id IN (SELECT id FROM products WHERE store_id = ${storeId})
 			WHERE o.store_id = ${storeId}
 				AND o.fulfilled_at IS NOT NULL
 				AND o.fulfilled_at >= now() - interval '1 week' * ${CAPACITY_LOOKBACK_WEEKS}
+				AND ${productionItemFilter('o', 'pv')}
 			GROUP BY date_trunc('week', o.fulfilled_at AT TIME ZONE ${tzLit})
 		)
 		SELECT
@@ -281,10 +285,13 @@ async function getCapacity(
 				SELECT count(*)
 				FROM order_items oi
 				INNER JOIN orders o ON o.id = oi.order_id
+				LEFT JOIN product_variants pv ON pv.platform_sku = oi.platform_sku
+					AND pv.product_id IN (SELECT id FROM products WHERE store_id = ${storeId})
 				WHERE o.store_id = ${storeId}
 					AND o.fulfillment_status = 'pending'
 					AND o.due_date >= ${weekStart}
 					AND o.due_date <= ${weekEnd}
+					AND ${productionItemFilter('o', 'pv')}
 			)::int AS due_this_week,
 			(
 				SELECT CASE WHEN count(*) >= ${minWeeks} THEN round(avg(items)) END

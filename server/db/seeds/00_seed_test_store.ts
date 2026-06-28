@@ -66,11 +66,21 @@ async function seedTest() {
 		})
 		.execute();
 
-	const variantsBySku: Record<string, { sku: string; name: string }[]> = {
-		'TW-001': [{ sku: 'TW-001', name: 'Default' }],
+	type SeedVariant = {
+		sku: string;
+		name: string;
+		production_type: 'made_to_order' | 'ready_made' | 'dropship' | 'digital';
+	};
+
+	// Variant SKUs match the order/BOM SKUs so production filter joins cleanly
+	// Order variants are made_to_order so analytics count them
+	const variantsBySku: Record<string, SeedVariant[]> = {
+		'TW-001': [
+			{ sku: 'TW-001', name: 'Default', production_type: 'made_to_order' },
+		],
 		'TB-001': [
-			{ sku: 'TB-001-BLK', name: 'Black' },
-			{ sku: 'TB-001-TAN', name: 'Tan' },
+			{ sku: 'TB-001', name: 'Black', production_type: 'made_to_order' },
+			{ sku: 'TB-001-TAN', name: 'Tan', production_type: 'ready_made' },
 		],
 	};
 
@@ -86,7 +96,11 @@ async function seedTest() {
 			.executeTakeFirstOrThrow();
 
 		const variants = variantsBySku[product.sku] ?? [
-			{ sku: product.sku, name: 'Default' },
+			{
+				sku: product.sku,
+				name: 'Default',
+				production_type: 'made_to_order' as const,
+			},
 		];
 		await db
 			.insertInto('product_variants')
@@ -96,6 +110,7 @@ async function seedTest() {
 					platform_variant_id: `pv-${v.sku}`,
 					platform_sku: v.sku,
 					name: v.name,
+					production_type: v.production_type,
 					price: product.price.toString(),
 				})),
 			)
