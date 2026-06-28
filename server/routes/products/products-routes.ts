@@ -19,6 +19,7 @@ import {
 	handleGetProduct,
 	handleUpdateVariantProductionType,
 	handleUpdateProductProductionType,
+	handleUpdateAllProductionTypes,
 } from './products-controller.js';
 
 export async function productsRoutes(app: FastifyInstance) {
@@ -66,6 +67,21 @@ export async function productsRoutes(app: FastifyInstance) {
 			},
 		},
 		handleGetProduct,
+	);
+
+	r.patch(
+		'/products/variants',
+		{
+			schema: {
+				tags: [ApiTags.PRODUCTS],
+				summary: 'Set production type for all variants in the store',
+				body: UpdateProductionTypeSchema,
+				response: {
+					200: successSchema(BulkProductionTypeResponseSchema),
+				},
+			},
+		},
+		handleUpdateAllProductionTypes,
 	);
 
 	r.patch(

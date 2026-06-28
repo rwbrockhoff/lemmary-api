@@ -193,6 +193,25 @@ export async function updateProductProductionType(
 	return Number(result.numUpdatedRows);
 }
 
+// Applies production_type to EVERY variant in the store
+export async function updateAllProductionTypes(
+	userId: string,
+	productionType: ProductionType,
+): Promise<number | null> {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const result = await db
+		.updateTable('product_variants')
+		.set({ production_type: productionType, updated_at: new Date() })
+		.where('product_id', 'in', (eb) =>
+			eb.selectFrom('products').select('id').where('store_id', '=', store.id),
+		)
+		.executeTakeFirst();
+
+	return Number(result.numUpdatedRows);
+}
+
 export async function getProduct(userId: string, productId: string) {
 	const store = await getStoreForUser(userId);
 	if (!store) return null;

@@ -112,4 +112,24 @@ describe('Product production type', () => {
 
 		expect(response.statusCode).toBe(404);
 	});
+
+	it('sets production type for every variant in the store', async () => {
+		const response = await app.inject(
+			withAuth('PATCH', '/products/variants', {
+				payload: { productionType: 'digital' },
+			}),
+		);
+
+		expect(response.statusCode).toBe(200);
+
+		const rows = await db
+			.selectFrom('product_variants')
+			.innerJoin('products', 'products.id', 'product_variants.product_id')
+			.select('product_variants.production_type as production_type')
+			.where('products.store_id', '=', TEST_STORE_ID)
+			.execute();
+
+		expect(rows.length).toBeGreaterThan(0);
+		expect(rows.every((r) => r.production_type === 'digital')).toBe(true);
+	});
 });

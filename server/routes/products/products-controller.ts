@@ -8,6 +8,7 @@ import {
 	getProduct,
 	updateVariantProductionType,
 	updateProductProductionType,
+	updateAllProductionTypes,
 } from './products-service.js';
 
 export async function handleSyncProducts(
@@ -67,5 +68,17 @@ export async function handleUpdateProductProductionType(
 		request.body.productionType,
 	);
 	if (updated === null) throw AppError.notFound('Product not found');
+	return successResponse(reply, { updated });
+}
+
+export async function handleUpdateAllProductionTypes(
+	request: FastifyRequest<{ Body: { productionType: ProductionType } }>,
+	reply: FastifyReply,
+) {
+	const updated = await updateAllProductionTypes(
+		request.userId,
+		request.body.productionType,
+	);
+	if (updated === null) throw AppError.badRequest('Connect a store first.');
 	return successResponse(reply, { updated });
 }
