@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { sql } from 'kysely';
 import { buildTestApp, withAuth } from '../../tests/test-helpers.js';
-import { TEST_STORE_ID } from '../../tests/test-constants.js';
+import {
+	TEST_STORE_ID,
+	OTHER_USER_ID,
+	OTHER_STORE_ID,
+} from '../../tests/test-constants.js';
+import { env } from '../../config/environment.js';
 import { db } from '../../db/connection.js';
 
 const UNKNOWN_ID = '11111111-1111-4111-8111-111111111111';
@@ -28,9 +34,34 @@ describe('Materials API', () => {
 	beforeAll(async () => {
 		app = buildTestApp();
 		await app.ready();
+
+		// A second store with no materials, to prove cross-store isolation
+		await db
+			.insertInto('users')
+			.values({
+				id: OTHER_USER_ID,
+				email: 'other-materials@lemmary.test',
+				first_name: 'Other',
+				last_name: 'User',
+			})
+			.execute();
+
+		await db
+			.insertInto('stores')
+			.values({
+				id: OTHER_STORE_ID,
+				user_id: OTHER_USER_ID,
+				platform: 'squarespace',
+				store_name: 'Other Store',
+				store_access_token: sql<Buffer>`pgp_sym_encrypt('x', ${env.STORE_ENCRYPTION_KEY})`,
+				platform_config: {},
+			})
+			.execute();
 	});
 
 	afterAll(async () => {
+		await db.deleteFrom('stores').where('id', '=', OTHER_STORE_ID).execute();
+		await db.deleteFrom('users').where('id', '=', OTHER_USER_ID).execute();
 		await app.close();
 	});
 
@@ -194,6 +225,38 @@ describe('Materials API', () => {
 		);
 
 		expect(response.statusCode).toBe(409);
+	});
+
+	it("GET does not leak another store's materials", async () => {
+		const response = await app.inject(
+			withAuth('GET', '/materials', { userId: OTHER_USER_ID }),
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(response.json().data).toEqual([]);
+	});
+
+	it("PATCH 404s on another store's material", async () => {
+		const id = await materialIdByColor('Black');
+
+		const response = await app.inject(
+			withAuth('PATCH', `/materials/${id}`, {
+				userId: OTHER_USER_ID,
+				payload: { purchase_url: 'https://example.com/sneaky' },
+			}),
+		);
+
+		expect(response.statusCode).toBe(404);
+	});
+
+	it("DELETE 404s on another store's material", async () => {
+		const id = await materialIdByColor('Black');
+
+		const response = await app.inject(
+			withAuth('DELETE', `/materials/${id}`, { userId: OTHER_USER_ID }),
+		);
+
+		expect(response.statusCode).toBe(404);
 	});
 
 	it('returns 404 for an unknown material', async () => {
