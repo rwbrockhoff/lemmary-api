@@ -2,8 +2,57 @@ import { sql, type SqlBool } from 'kysely';
 import { db } from '../../db/connection.js';
 import type { MaterialUpdate } from '../../db/database-types.js';
 import { getStoreForUser } from '../../utils/store.js';
+import { getOrCreateMaterialType } from '../../utils/material-type.js';
 import { AppError } from '../../utils/app-error.js';
-import type { UpdateMaterialRequest } from './contract/types.js';
+import type {
+	CreateMaterialRequest,
+	UpdateMaterialRequest,
+} from './contract/types.js';
+
+export async function createMaterial(
+	userId: string,
+	input: CreateMaterialRequest,
+) {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const typeId = await getOrCreateMaterialType(store.id, {
+		material_type_id: input.material_type_id,
+		material_type_name: input.material_type_name,
+		measurement: input.measurement ?? 'count',
+	});
+	if (!typeId) throw AppError.badRequest('A material type is required');
+
+	const color = input.color?.trim() || null;
+	const size = input.size?.trim() || null;
+
+	const clash = await db
+		.selectFrom('materials')
+		.select('id')
+		.where('store_id', '=', store.id)
+		.where('material_type_id', '=', typeId)
+		.where(sql<SqlBool>`color is not distinct from ${color}`)
+		.where(sql<SqlBool>`size is not distinct from ${size}`)
+		.executeTakeFirst();
+
+	if (clash) {
+		throw AppError.conflict(
+			'A material with that color and size already exists',
+		);
+	}
+
+	return db
+		.insertInto('materials')
+		.values({
+			store_id: store.id,
+			material_type_id: typeId,
+			color,
+			size,
+			purchase_url: input.purchase_url?.trim() || null,
+		})
+		.returningAll()
+		.executeTakeFirstOrThrow();
+}
 
 export async function getMaterials(userId: string) {
 	const store = await getStoreForUser(userId);

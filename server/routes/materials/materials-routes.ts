@@ -5,12 +5,14 @@ import { ApiTags } from '../../openapi/tags.js';
 import { successSchema } from '../../openapi/schemas.js';
 import {
 	MaterialIdParamSchema,
+	CreateMaterialRequestSchema,
 	UpdateMaterialRequestSchema,
 	MaterialSchema,
 	MaterialsResponseSchema,
 } from './contract/schemas.js';
 import {
 	handleGetMaterials,
+	handleCreateMaterial,
 	handleUpdateMaterial,
 	handleDeleteMaterial,
 } from './materials-controller.js';
@@ -28,6 +30,19 @@ export async function materialsRoutes(app: FastifyInstance) {
 			},
 		},
 		handleGetMaterials,
+	);
+
+	r.post(
+		'/materials',
+		{
+			schema: {
+				tags: [ApiTags.MATERIALS],
+				summary: 'Add a material to the library',
+				body: CreateMaterialRequestSchema,
+				response: { 201: successSchema(MaterialSchema) },
+			},
+		},
+		handleCreateMaterial,
 	);
 
 	r.patch(

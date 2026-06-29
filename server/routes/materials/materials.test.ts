@@ -129,6 +129,73 @@ describe('Materials API', () => {
 		}
 	});
 
+	it('POST creates a material under an existing type', async () => {
+		const type = await db
+			.selectFrom('bom_material_types')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('name', '=', 'Leather')
+			.executeTakeFirstOrThrow();
+
+		const response = await app.inject(
+			withAuth('POST', '/materials', {
+				payload: { material_type_id: type.id, color: 'Forest' },
+			}),
+		);
+
+		expect(response.statusCode).toBe(201);
+		const created = response.json().data;
+		expect(created.color).toBe('Forest');
+
+		await db.deleteFrom('materials').where('id', '=', created.id).execute();
+	});
+
+	it('POST creates the material type when given a name', async () => {
+		const response = await app.inject(
+			withAuth('POST', '/materials', {
+				payload: {
+					material_type_name: 'Webbing',
+					measurement: 'linear',
+					size: '1in',
+				},
+			}),
+		);
+
+		expect(response.statusCode).toBe(201);
+		const created = response.json().data;
+
+		const type = await db
+			.selectFrom('bom_material_types')
+			.select(['id', 'measurement'])
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('name', '=', 'Webbing')
+			.executeTakeFirstOrThrow();
+		expect(type.measurement).toBe('linear');
+
+		await db.deleteFrom('materials').where('id', '=', created.id).execute();
+		await db
+			.deleteFrom('bom_material_types')
+			.where('id', '=', type.id)
+			.execute();
+	});
+
+	it('POST rejects a duplicate material', async () => {
+		const type = await db
+			.selectFrom('bom_material_types')
+			.select('id')
+			.where('store_id', '=', TEST_STORE_ID)
+			.where('name', '=', 'Leather')
+			.executeTakeFirstOrThrow();
+
+		const response = await app.inject(
+			withAuth('POST', '/materials', {
+				payload: { material_type_id: type.id, color: 'Black' },
+			}),
+		);
+
+		expect(response.statusCode).toBe(409);
+	});
+
 	it('returns 404 for an unknown material', async () => {
 		const response = await app.inject(
 			withAuth('DELETE', `/materials/${UNKNOWN_ID}`),

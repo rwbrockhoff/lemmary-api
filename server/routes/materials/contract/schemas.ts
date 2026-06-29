@@ -4,6 +4,15 @@ export const MaterialIdParamSchema = z.object({
 	materialId: z.uuid(),
 });
 
+export const CreateMaterialRequestSchema = z.object({
+	material_type_id: z.uuid().optional(),
+	material_type_name: z.string().optional(),
+	measurement: z.enum(['area', 'linear', 'count']).optional(),
+	color: z.string().nullable().optional(),
+	size: z.string().nullable().optional(),
+	purchase_url: z.string().nullable().optional(),
+});
+
 export const UpdateMaterialRequestSchema = z.object({
 	color: z.string().nullable().optional(),
 	size: z.string().nullable().optional(),

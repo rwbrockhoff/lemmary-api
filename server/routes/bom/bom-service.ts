@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
+import { getOrCreateMaterialType } from '../../utils/material-type.js';
 
 export async function getMaterialTypes(userId: string) {
 	const store = await getStoreForUser(userId);
@@ -114,19 +115,6 @@ type UpdateBomItemInput = {
 	purchase_url: string | null;
 };
 
-const MEASUREMENT_DEFAULTS: Record<
-	string,
-	{
-		unit: 'pieces' | 'inches' | 'sq_ft' | 'yards';
-		tracks_color: boolean;
-		tracks_size: boolean;
-	}
-> = {
-	area: { unit: 'sq_ft', tracks_color: true, tracks_size: false },
-	linear: { unit: 'inches', tracks_color: false, tracks_size: true },
-	count: { unit: 'pieces', tracks_color: false, tracks_size: true },
-};
-
 export async function updateBomItem(
 	userId: string,
 	bomItemId: string,
@@ -137,73 +125,21 @@ export async function updateBomItem(
 
 	let materialId: string | null = null;
 
-	const hasType = input.material_type_id || input.material_type_name;
+	const typeId = await getOrCreateMaterialType(store.id, {
+		material_type_id: input.material_type_id,
+		material_type_name: input.material_type_name,
+		measurement: input.measurement as 'area' | 'linear' | 'count',
+	});
 
-	if (hasType) {
-		let typeId = input.material_type_id;
-
-		if (!typeId && input.material_type_name) {
-			const trimmedName = input.material_type_name.trim();
-
-			const findByName = () =>
-				db
-					.selectFrom('bom_material_types')
-					.select('id')
-					.where('store_id', '=', store.id)
-					.where(sql<boolean>`lower(name) = lower(${trimmedName})`)
-					.where(
-						'measurement',
-						'=',
-						input.measurement as 'area' | 'linear' | 'count',
-					)
-					.executeTakeFirst();
-
-			const existing = await findByName();
-
-			if (existing) {
-				typeId = existing.id;
-			} else {
-				const maxPos = await db
-					.selectFrom('bom_material_types')
-					.select(sql<number>`coalesce(max(position), 0)`.as('max_pos'))
-					.where('store_id', '=', store.id)
-					.executeTakeFirst();
-
-				const defaults =
-					MEASUREMENT_DEFAULTS[input.measurement] ?? MEASUREMENT_DEFAULTS.count;
-
-				const inserted = await db
-					.insertInto('bom_material_types')
-					.values({
-						store_id: store.id,
-						name: trimmedName,
-						measurement: input.measurement as 'area' | 'linear' | 'count',
-						...defaults,
-						position: (maxPos?.max_pos ?? 0) + 1,
-					})
-					.onConflict((oc) => oc.doNothing())
-					.returning('id')
-					.executeTakeFirst();
-
-				if (inserted) {
-					typeId = inserted.id;
-				} else {
-					const raced = await findByName();
-					typeId = raced?.id ?? null;
-				}
-			}
-		}
-
-		if (typeId) {
-			const material = await getOrCreateMaterial(
-				userId,
-				typeId,
-				input.color,
-				input.size,
-				input.purchase_url,
-			);
-			materialId = material?.id ?? null;
-		}
+	if (typeId) {
+		const material = await getOrCreateMaterial(
+			userId,
+			typeId,
+			input.color,
+			input.size,
+			input.purchase_url,
+		);
+		materialId = material?.id ?? null;
 	}
 
 	const result = await db

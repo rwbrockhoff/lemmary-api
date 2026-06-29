@@ -1,12 +1,25 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { successResponse } from '../../utils/api-responses.js';
+import { successResponse, createdSuccess } from '../../utils/api-responses.js';
 import { AppError } from '../../utils/app-error.js';
-import type { UpdateMaterialRequest } from './contract/types.js';
+import type {
+	CreateMaterialRequest,
+	UpdateMaterialRequest,
+} from './contract/types.js';
 import {
+	createMaterial,
 	getMaterials,
 	updateMaterial,
 	deleteMaterial,
 } from './materials-service.js';
+
+export async function handleCreateMaterial(
+	request: FastifyRequest<{ Body: CreateMaterialRequest }>,
+	reply: FastifyReply,
+) {
+	const material = await createMaterial(request.userId, request.body);
+	if (!material) throw AppError.badRequest('Connect a store first');
+	return createdSuccess(reply, material, 'Material created');
+}
 
 export async function handleGetMaterials(
 	request: FastifyRequest,
