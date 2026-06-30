@@ -139,6 +139,7 @@ async function upsertOrders(
 				.insertInto('orders')
 				.values({
 					...order,
+					shipping_address: toJsonb(order.shipping_address),
 					store_id: storeId,
 					workflow_stage_id: orderStageId,
 					due_date: dueDate,
@@ -160,6 +161,7 @@ async function upsertOrders(
 							tracking_number: order.tracking_number,
 							tracking_url: order.tracking_url,
 							carrier_name: order.carrier_name,
+							shipping_address: toJsonb(order.shipping_address),
 							promo_code: order.promo_code,
 							discount_total: order.discount_total,
 							workflow_stage_id: sql`COALESCE(orders.workflow_stage_id, EXCLUDED.workflow_stage_id)`,
