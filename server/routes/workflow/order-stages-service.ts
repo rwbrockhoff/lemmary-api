@@ -2,6 +2,7 @@ import { sql, type UpdateObject } from 'kysely';
 import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
+import { setColumn } from '../../utils/update.js';
 import type { Database } from '../../db/database-types.js';
 import type {
 	CreateWorkflowStageRequestSchema,
@@ -92,13 +93,8 @@ export async function updateOrderStage(
 		updated_at: sql`NOW()`,
 	};
 
-	if (updates.name !== undefined) {
-		set.name = updates.name;
-	}
-
-	if (updates.color !== undefined) {
-		set.color = updates.color;
-	}
+	setColumn(set, 'name', updates.name);
+	setColumn(set, 'color', updates.color);
 
 	const updated = await db
 		.updateTable('order_workflow_stages')

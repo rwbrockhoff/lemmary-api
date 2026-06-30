@@ -3,6 +3,7 @@ import { db } from '../../../db/connection.js';
 import type { OrderUpdate } from '../../../db/database-types.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { toNoonUtc } from '../../../utils/timezone.js';
+import { setColumn } from '../../../utils/update.js';
 import { getDefaultStageIds } from '../utils/default-stages.js';
 import { generateOrderNumber } from '../utils/order-number.js';
 import { sumLineItems } from '../utils/order-totals.js';
@@ -70,17 +71,15 @@ export async function updateCustomOrder(
 	if (!existing || existing.order_type !== 'custom') return null;
 
 	const updates: OrderUpdate = {};
-	if (input.customer_name !== undefined)
-		updates.customer_name = input.customer_name;
-	if (input.customer_email !== undefined)
-		updates.customer_email = input.customer_email;
+	setColumn(updates, 'customer_name', input.customer_name);
+	setColumn(updates, 'customer_email', input.customer_email);
+	setColumn(updates, 'due_date', input.due_date);
+	setColumn(updates, 'order_notes', input.order_notes);
+	setColumn(updates, 'order_description', input.order_description);
+
 	if (input.order_date !== undefined) {
 		updates.order_date = toNoonUtc(input.order_date);
 	}
-	if (input.due_date !== undefined) updates.due_date = input.due_date;
-	if (input.order_notes !== undefined) updates.order_notes = input.order_notes;
-	if (input.order_description !== undefined)
-		updates.order_description = input.order_description;
 
 	if (input.items) {
 		const subtotal = sumLineItems(input.items);

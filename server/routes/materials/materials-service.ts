@@ -4,6 +4,7 @@ import type { MaterialUpdate } from '../../db/database-types.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { getOrCreateMaterialType } from '../../utils/material-type.js';
 import { AppError } from '../../utils/app-error.js';
+import { setColumn } from '../../utils/update.js';
 import type {
 	CreateMaterialRequest,
 	UpdateMaterialRequest,
@@ -124,10 +125,9 @@ export async function updateMaterial(
 	}
 
 	const updates: MaterialUpdate = {};
-	if (input.color !== undefined) updates.color = input.color;
-	if (input.size !== undefined) updates.size = input.size;
-	if (input.purchase_url !== undefined)
-		updates.purchase_url = input.purchase_url;
+	setColumn(updates, 'color', input.color);
+	setColumn(updates, 'size', input.size);
+	setColumn(updates, 'purchase_url', input.purchase_url);
 
 	const result = await db
 		.updateTable('materials')

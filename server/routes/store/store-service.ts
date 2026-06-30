@@ -12,6 +12,7 @@ import { cancelSubscription } from '../subscription/subscription-service.js';
 import { Sentry } from '../../config/sentry.js';
 import { AuditAction, type ProductionType } from '../../db/enums.js';
 import { isValidTimeZone } from '../../utils/timezone.js';
+import { setColumn } from '../../utils/update.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
 import {
 	fetchShopTimezone,
@@ -239,6 +240,8 @@ export async function createShopifyStore(
 	return { ok: true, store: await getStore(userId) };
 }
 
+type StoreUpdateSet = UpdateObject<Database, 'stores'>;
+
 export async function updateStore(
 	userId: string,
 	updates: UpdateStoreInput,
@@ -251,39 +254,16 @@ export async function updateStore(
 		if (!valid) return { ok: false, error: 'invalid_token' };
 	}
 
-	const set: UpdateObject<Database, 'stores'> = { updated_at: new Date() };
+	const set: StoreUpdateSet = { updated_at: new Date() };
 
-	if (updates.storeName !== undefined) {
-		set.store_name = updates.storeName;
-	}
-
-	if (updates.leadTimeDays !== undefined) {
-		set.lead_time_days = updates.leadTimeDays;
-	}
-
-	if (updates.timezone !== undefined) {
-		set.timezone = updates.timezone;
-	}
-
-	if (updates.logoUrl !== undefined) {
-		set.logo_url = updates.logoUrl;
-	}
-
-	if (updates.tagline !== undefined) {
-		set.tagline = updates.tagline;
-	}
-
-	if (updates.websiteUrl !== undefined) {
-		set.website_url = updates.websiteUrl;
-	}
-
-	if (updates.contactEmail !== undefined) {
-		set.contact_email = updates.contactEmail;
-	}
-
-	if (updates.defaultProductionType !== undefined) {
-		set.default_production_type = updates.defaultProductionType;
-	}
+	setColumn(set, 'store_name', updates.storeName);
+	setColumn(set, 'lead_time_days', updates.leadTimeDays);
+	setColumn(set, 'timezone', updates.timezone);
+	setColumn(set, 'logo_url', updates.logoUrl);
+	setColumn(set, 'tagline', updates.tagline);
+	setColumn(set, 'website_url', updates.websiteUrl);
+	setColumn(set, 'contact_email', updates.contactEmail);
+	setColumn(set, 'default_production_type', updates.defaultProductionType);
 
 	if (updates.accessToken) {
 		set.store_access_token = sql<Buffer>`pgp_sym_encrypt(${updates.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
