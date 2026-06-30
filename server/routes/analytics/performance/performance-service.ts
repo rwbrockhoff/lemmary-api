@@ -1,13 +1,13 @@
 import { sql } from 'kysely';
-import { z } from 'zod';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
+import {
+	resolveDateRange,
+	type ResolvedRange,
+} from '../../../utils/date-range.js';
 import { gateRows, gateSummary } from '../../../utils/report-gates.js';
 import { productionItemFilter } from '../../../utils/production-filter.js';
 import { PERFORMANCE_MINIMUMS } from '../thresholds.js';
-import type { PerformanceQuerySchema } from './contract/schemas.js';
-
-type PerformanceInput = z.infer<typeof PerformanceQuerySchema>;
 
 type StageBottleneckRow = {
 	stage_id: string;
@@ -25,7 +25,7 @@ type TopProductRow = {
 	order_count: number;
 };
 
-async function getTopProducts(storeId: string, rangeDays: number) {
+async function getTopProducts(storeId: string, range: ResolvedRange) {
 	const rows = await sql<TopProductRow>`
 		SELECT
 			oi.product_name,
@@ -35,7 +35,8 @@ async function getTopProducts(storeId: string, rangeDays: number) {
 		FROM order_items oi
 		INNER JOIN orders o ON o.id = oi.order_id
 		WHERE o.store_id = ${storeId}
-			AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+			AND o.order_date >= ${range.start}
+			AND o.order_date < ${range.end}
 		GROUP BY oi.product_name
 		ORDER BY SUM(oi.quantity * COALESCE(oi.unit_price::numeric, 0)) DESC
 		LIMIT 5
@@ -60,7 +61,7 @@ type CustomerMixRow = {
 	prior_total: number;
 };
 
-async function getCustomerMix(storeId: string, rangeDays: number) {
+async function getCustomerMix(storeId: string, range: ResolvedRange) {
 	const rows = await sql<CustomerMixRow>`
 		WITH customer_first_order AS (
 			SELECT
@@ -75,7 +76,8 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			SELECT DISTINCT customer_email
 			FROM orders
 			WHERE store_id = ${storeId}
-				AND order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+				AND order_date >= ${range.start}
+				AND order_date < ${range.end}
 				AND customer_email IS NOT NULL
 		),
 		current_repeat AS (
@@ -83,7 +85,8 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			FROM orders o
 			INNER JOIN customer_first_order cfo USING (customer_email)
 			WHERE o.store_id = ${storeId}
-				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+				AND o.order_date >= ${range.start}
+				AND o.order_date < ${range.end}
 				AND o.order_date > cfo.first_order_date
 				AND o.customer_email IS NOT NULL
 		),
@@ -91,8 +94,8 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			SELECT DISTINCT customer_email
 			FROM orders
 			WHERE store_id = ${storeId}
-				AND order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-				AND order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
+				AND order_date >= ${range.priorStart}
+				AND order_date < ${range.priorEnd}
 				AND customer_email IS NOT NULL
 		),
 		prior_repeat AS (
@@ -100,8 +103,8 @@ async function getCustomerMix(storeId: string, rangeDays: number) {
 			FROM orders o
 			INNER JOIN customer_first_order cfo USING (customer_email)
 			WHERE o.store_id = ${storeId}
-				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-				AND o.order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
+				AND o.order_date >= ${range.priorStart}
+				AND o.order_date < ${range.priorEnd}
 				AND o.order_date > cfo.first_order_date
 				AND o.customer_email IS NOT NULL
 		)
@@ -134,28 +137,26 @@ type CouponUsageRow = {
 	prior_total: number;
 };
 
-async function getCouponUsage(storeId: string, rangeDays: number) {
+async function getCouponUsage(storeId: string, range: ResolvedRange) {
 	const rows = await sql<CouponUsageRow>`
 		SELECT
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+				WHERE order_date >= ${range.start} AND order_date < ${range.end}
 					AND promo_code IS NOT NULL
 			) AS current_with_promo,
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+				WHERE order_date >= ${range.start} AND order_date < ${range.end}
 			) AS current_total,
 			AVG(discount_total::numeric) FILTER (
-				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+				WHERE order_date >= ${range.start} AND order_date < ${range.end}
 					AND promo_code IS NOT NULL
 			)::text AS avg_discount,
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-					AND order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
+				WHERE order_date >= ${range.priorStart} AND order_date < ${range.priorEnd}
 					AND promo_code IS NOT NULL
 			) AS prior_with_promo,
 			COUNT(*) FILTER (
-				WHERE order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-					AND order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
+				WHERE order_date >= ${range.priorStart} AND order_date < ${range.priorEnd}
 			) AS prior_total
 		FROM orders
 		WHERE store_id = ${storeId}
@@ -187,7 +188,7 @@ type OnTimeDeliveryRow = {
 
 async function getOnTimeDelivery(
 	storeId: string,
-	rangeDays: number,
+	range: ResolvedRange,
 	timeZone: string,
 ) {
 	const rows = await sql<OnTimeDeliveryRow>`
@@ -195,26 +196,24 @@ async function getOnTimeDelivery(
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at >= ${range.start} AND fulfilled_at < ${range.end}
 					AND (fulfilled_at AT TIME ZONE ${timeZone})::date <= due_date
 			) AS current_on_time,
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at >= ${range.start} AND fulfilled_at < ${range.end}
 			) AS current_total,
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-					AND fulfilled_at < NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at >= ${range.priorStart} AND fulfilled_at < ${range.priorEnd}
 					AND (fulfilled_at AT TIME ZONE ${timeZone})::date <= due_date
 			) AS prior_on_time,
 			COUNT(*) FILTER (
 				WHERE fulfilled_at IS NOT NULL
 					AND due_date IS NOT NULL
-					AND fulfilled_at >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-					AND fulfilled_at < NOW() - INTERVAL '1 day' * ${rangeDays}
+					AND fulfilled_at >= ${range.priorStart} AND fulfilled_at < ${range.priorEnd}
 			) AS prior_total
 		FROM orders
 		WHERE store_id = ${storeId}
@@ -237,7 +236,7 @@ type MaterialConsumptionRow = {
 	prior_qty: string;
 };
 
-async function getMaterialConsumption(storeId: string, rangeDays: number) {
+async function getMaterialConsumption(storeId: string, range: ResolvedRange) {
 	const rows = await sql<MaterialConsumptionRow>`
 		WITH consumption AS (
 			SELECT
@@ -252,7 +251,7 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 						ELSE b.quantity * oi.quantity
 					END
 				) FILTER (
-					WHERE o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+					WHERE o.order_date >= ${range.start} AND o.order_date < ${range.end}
 				) AS current_qty,
 				SUM(
 					CASE
@@ -261,8 +260,7 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 						ELSE b.quantity * oi.quantity
 					END
 				) FILTER (
-					WHERE o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
-						AND o.order_date < NOW() - INTERVAL '1 day' * ${rangeDays}
+					WHERE o.order_date >= ${range.priorStart} AND o.order_date < ${range.priorEnd}
 				) AS prior_qty
 			FROM order_items oi
 			INNER JOIN orders o ON o.id = oi.order_id
@@ -272,7 +270,8 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 			INNER JOIN materials m ON m.id = b.material_id
 			INNER JOIN bom_material_types bmt ON bmt.id = m.material_type_id
 			WHERE o.store_id = ${storeId}
-				AND o.order_date >= NOW() - INTERVAL '1 day' * ${rangeDays * 2}
+				AND o.order_date >= ${range.priorStart}
+				AND o.order_date < ${range.end}
 				AND ${productionItemFilter('o', 'pv')}
 			GROUP BY bmt.id, bmt.name, m.color, b.measurement
 		)
@@ -301,7 +300,7 @@ async function getMaterialConsumption(storeId: string, rangeDays: number) {
 	return { materials };
 }
 
-async function getStageBottleneck(storeId: string, rangeDays: number) {
+async function getStageBottleneck(storeId: string, range: ResolvedRange) {
 	const rows = await sql<StageBottleneckRow>`
 		WITH transitions AS (
 			SELECT
@@ -324,7 +323,8 @@ async function getStageBottleneck(storeId: string, rangeDays: number) {
 		FROM transitions t
 		INNER JOIN order_workflow_stages s ON s.id = t.to_stage_id
 		WHERE t.next_transition_at IS NOT NULL
-			AND t.transitioned_at >= NOW() - INTERVAL '1 day' * ${rangeDays}
+			AND t.transitioned_at >= ${range.start}
+			AND t.transitioned_at < ${range.end}
 			AND s.is_complete = false
 		GROUP BY s.id, s.name, s.color, s.position
 		ORDER BY s.position ASC
@@ -341,17 +341,22 @@ async function getStageBottleneck(storeId: string, rangeDays: number) {
 	return { stages };
 }
 
-async function getOrderCount(storeId: string, rangeDays: number) {
+async function getOrderCount(storeId: string, range: ResolvedRange) {
 	const rows = await sql<{ count: number }>`
 		SELECT COUNT(*)::int AS count
 		FROM orders
 		WHERE store_id = ${storeId}
-			AND order_date >= NOW() - INTERVAL '1 day' * ${rangeDays}
+			AND order_date >= ${range.start}
+			AND order_date < ${range.end}
 	`.execute(db);
 	return rows.rows[0]?.count ?? 0;
 }
 
-export async function getPerformance(userId: string, input: PerformanceInput) {
+export async function getPerformance(
+	userId: string,
+	startDate: string,
+	endDate: string,
+) {
 	const store = await getStoreForUser(userId);
 	if (!store) {
 		return {
@@ -364,7 +369,7 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		};
 	}
 
-	const rangeDays = Number(input.range);
+	const range = resolveDateRange(startDate, endDate, store.timezone);
 
 	const [
 		stageBottleneck,
@@ -375,13 +380,13 @@ export async function getPerformance(userId: string, input: PerformanceInput) {
 		materialConsumption,
 		currentOrders,
 	] = await Promise.all([
-		getStageBottleneck(store.id, rangeDays),
-		getTopProducts(store.id, rangeDays),
-		getCustomerMix(store.id, rangeDays),
-		getCouponUsage(store.id, rangeDays),
-		getOnTimeDelivery(store.id, rangeDays, store.timezone),
-		getMaterialConsumption(store.id, rangeDays),
-		getOrderCount(store.id, rangeDays),
+		getStageBottleneck(store.id, range),
+		getTopProducts(store.id, range),
+		getCustomerMix(store.id, range),
+		getCouponUsage(store.id, range),
+		getOnTimeDelivery(store.id, range, store.timezone),
+		getMaterialConsumption(store.id, range),
+		getOrderCount(store.id, range),
 	]);
 
 	const min = PERFORMANCE_MINIMUMS;
