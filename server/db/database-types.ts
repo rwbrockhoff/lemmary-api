@@ -53,6 +53,11 @@ export interface StoreTable {
 	access_token_expires_at: Date | null;
 	platform_config: Record<string, unknown> | null;
 	lead_time_days: number | null;
+	logo_url: string | null;
+	tagline: string | null;
+	website_url: string | null;
+	contact_email: string | null;
+	default_production_type: Generated<ProductionType>;
 	timezone: Generated<string>;
 	last_synced_at: Date | null;
 	created_at: Generated<Date>;

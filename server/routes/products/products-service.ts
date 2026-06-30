@@ -27,7 +27,11 @@ async function fetchProductsFromPlatform(
 	throw new Error(`Unsupported platform: ${store.platform}`);
 }
 
-async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
+async function upsertProducts(
+	storeId: string,
+	products: NormalizedProduct[],
+	defaultProductionType: ProductionType,
+) {
 	return db.transaction().execute(async (trx) => {
 		let synced = 0;
 
@@ -58,6 +62,7 @@ async function upsertProducts(storeId: string, products: NormalizedProduct[]) {
 					.values(
 						variants.map((variant) => ({
 							...variant,
+							production_type: defaultProductionType,
 							product_id: result.id,
 						})),
 					)
@@ -89,7 +94,11 @@ export async function syncProducts(userId: string) {
 	const store = await getStoreWithAccessToken(userId);
 	if (!store) return null;
 	const products = await fetchProductsFromPlatform(store);
-	const synced = await upsertProducts(store.id, products);
+	const synced = await upsertProducts(
+		store.id,
+		products,
+		store.default_production_type,
+	);
 
 	await db
 		.updateTable('stores')

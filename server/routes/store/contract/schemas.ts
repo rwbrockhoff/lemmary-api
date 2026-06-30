@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isValidTimeZone } from '../../../utils/timezone.js';
+import { PRODUCTION_TYPE_VALUES } from '../../../db/enums.js';
 
 export const UpdateStoreRequestSchema = z
 	.object({
@@ -7,6 +8,11 @@ export const UpdateStoreRequestSchema = z
 		leadTimeDays: z.number().int().min(0).nullable().optional(),
 		accessToken: z.string().min(1).optional(),
 		storeUrl: z.url().nullable().optional(),
+		logoUrl: z.url().nullable().optional(),
+		tagline: z.string().trim().max(120).nullable().optional(),
+		websiteUrl: z.url().nullable().optional(),
+		contactEmail: z.email().nullable().optional(),
+		defaultProductionType: z.enum(PRODUCTION_TYPE_VALUES).optional(),
 		timezone: z
 			.string()
 			.refine(isValidTimeZone, { message: 'Invalid timezone' })
@@ -41,6 +47,11 @@ export const StoreResponseSchema = z.object({
 	platform: z.enum(['squarespace', 'shopify', 'etsy']).nullable(),
 	leadTimeDays: z.number().nullable(),
 	storeUrl: z.string().nullable(),
+	logoUrl: z.string().nullable(),
+	tagline: z.string().nullable(),
+	websiteUrl: z.string().nullable(),
+	contactEmail: z.string().nullable(),
+	defaultProductionType: z.enum(PRODUCTION_TYPE_VALUES).nullable(),
 	timezone: z.string().nullable(),
 	lastSyncedAt: z.date().nullable(),
 });
