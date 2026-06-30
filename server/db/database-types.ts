@@ -106,6 +106,18 @@ export interface OrderStageHistoryTable {
 export type OrderStageHistory = Selectable<OrderStageHistoryTable>;
 export type NewOrderStageHistory = Insertable<OrderStageHistoryTable>;
 
+export type ShippingAddress = {
+	first_name: string | null;
+	last_name: string | null;
+	address1: string | null;
+	address2: string | null;
+	city: string | null;
+	state: string | null;
+	postal_code: string | null;
+	country_code: string | null;
+	phone: string | null;
+};
+
 export interface OrderTable {
 	id: Generated<string>;
 	store_id: string;
@@ -131,6 +143,7 @@ export interface OrderTable {
 	tracking_number: string | null;
 	tracking_url: string | null;
 	carrier_name: string | null;
+	shipping_address: ShippingAddress | null;
 	currency: Generated<string>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

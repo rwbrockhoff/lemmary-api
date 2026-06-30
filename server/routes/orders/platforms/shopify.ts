@@ -1,4 +1,8 @@
-import type { NewOrder, NewOrderItem } from '../../../db/database-types.js';
+import type {
+	NewOrder,
+	NewOrderItem,
+	ShippingAddress,
+} from '../../../db/database-types.js';
 import {
 	shopifyGraphql,
 	type MoneySet,
@@ -6,6 +10,7 @@ import {
 	type PageInfo,
 } from '../../shopify/shopify-graphql.js';
 import type { NormalizedOrder } from './order-types.js';
+import { emptyToNull } from '../../../utils/nullable.js';
 
 // The types below mirror exactly the fields we ask for in ORDERS_QUERY
 type ShopifyLineItem = {
@@ -32,6 +37,17 @@ type ShopifyOrder = {
 	totalPriceSet: MoneySet;
 	discountCodes: string[];
 	shippingLine: { title: string } | null;
+	shippingAddress: {
+		firstName: string | null;
+		lastName: string | null;
+		address1: string | null;
+		address2: string | null;
+		city: string | null;
+		provinceCode: string | null;
+		zip: string | null;
+		countryCodeV2: string | null;
+		phone: string | null;
+	} | null;
 	fulfillments: {
 		createdAt: string;
 		trackingInfo: {
@@ -66,6 +82,7 @@ const ORDERS_QUERY = `
 					totalPriceSet { shopMoney { amount currencyCode } }
 					discountCodes
 					shippingLine { title }
+					shippingAddress { firstName lastName address1 address2 city provinceCode zip countryCodeV2 phone }
 					fulfillments(first: 1) {
 						createdAt
 						trackingInfo(first: 1) { number url company }
@@ -101,6 +118,21 @@ function normalizeOrder(node: ShopifyOrder): NormalizedOrder {
 	const fulfillment = node.fulfillments[0];
 	const tracking = fulfillment?.trackingInfo[0];
 
+	const address = node.shippingAddress;
+	const shippingAddress: ShippingAddress | null = address
+		? {
+				first_name: emptyToNull(address.firstName),
+				last_name: emptyToNull(address.lastName),
+				address1: emptyToNull(address.address1),
+				address2: emptyToNull(address.address2),
+				city: emptyToNull(address.city),
+				state: emptyToNull(address.provinceCode),
+				postal_code: emptyToNull(address.zip),
+				country_code: emptyToNull(address.countryCodeV2),
+				phone: emptyToNull(address.phone),
+			}
+		: null;
+
 	const order: Omit<NewOrder, 'store_id'> = {
 		platform_order_id: node.id,
 		order_number: node.name,
@@ -121,6 +153,7 @@ function normalizeOrder(node: ShopifyOrder): NormalizedOrder {
 		tracking_url: tracking?.url ?? null,
 		carrier_name: tracking?.company ?? null,
 		shipping_method: node.shippingLine?.title ?? null,
+		shipping_address: shippingAddress,
 		order_notes: node.note || null,
 	};
 
