@@ -39,14 +39,14 @@ const styles = StyleSheet.create({
 		paddingVertical: 20,
 		paddingHorizontal: 18,
 		fontSize: 9,
-		color: '#1a1a1a',
+		color: '#000000',
 		fontFamily: 'Helvetica',
 	},
 	header: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'flex-start',
-		marginBottom: 10,
+		marginBottom: 14,
 	},
 	brand: {
 		flexShrink: 1,
@@ -57,59 +57,62 @@ const styles = StyleSheet.create({
 		fontFamily: 'Helvetica-Bold',
 	},
 	logo: {
-		height: 32,
+		width: 120,
+		height: 36,
+		objectFit: 'contain',
+		objectPositionX: 0,
 		marginBottom: 4,
 	},
 	tagline: {
 		fontSize: 8,
-		color: '#555555',
+		color: '#000000',
 		marginTop: 2,
 	},
 	brandMeta: {
 		fontSize: 7,
-		color: '#888888',
+		color: '#000000',
 		marginTop: 2,
-	},
-	orderMeta: {
-		textAlign: 'right',
-		color: '#555555',
-		fontSize: 8,
 	},
 	orderNumber: {
 		fontSize: 10,
 		fontFamily: 'Helvetica-Bold',
-		color: '#1a1a1a',
-		marginBottom: 2,
+		color: '#000000',
 	},
-	itemCount: {
-		marginTop: 4,
+	infoRow: {
+		flexDirection: 'row',
+		alignItems: 'flex-start',
+		marginBottom: 14,
 	},
 	shipTo: {
-		marginBottom: 20,
+		width: 150,
+	},
+	orderInfo: {
+		paddingLeft: 12,
 	},
 	shipToLabel: {
 		fontSize: 7,
-		color: '#888888',
+		color: '#000000',
 		textTransform: 'uppercase',
 		letterSpacing: 0.5,
 		marginBottom: 3,
 	},
+	addressLine: {
+		marginBottom: 1,
+	},
 	tableHeader: {
 		flexDirection: 'row',
 		borderBottomWidth: 1,
-		borderBottomColor: '#1a1a1a',
+		borderBottomColor: '#000000',
 		paddingBottom: 4,
 		marginBottom: 2,
 		fontSize: 7,
-		color: '#888888',
+		color: '#000000',
 		textTransform: 'uppercase',
 		letterSpacing: 0.5,
 	},
 	row: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		borderBottomWidth: 1,
-		borderBottomColor: '#eeeeee',
 		paddingVertical: 5,
 	},
 	checkCell: {
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
 		width: 10,
 		height: 10,
 		borderWidth: 1,
-		borderColor: '#999999',
+		borderColor: '#000000',
 		borderRadius: 2,
 	},
 	qtyCell: {
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	variant: {
-		color: '#666666',
+		color: '#000000',
 		fontSize: 8,
 		marginTop: 1,
 	},
@@ -178,10 +181,6 @@ export function PackingSlipDocument({
 	return (
 		<Document>
 			{orders.map((order) => {
-				const itemCount = order.items.reduce(
-					(sum, item) => sum + item.quantity,
-					0,
-				);
 				return (
 					<Page key={order.order_number} size={SLIP_SIZE} style={styles.page}>
 					<View style={styles.header}>
@@ -199,30 +198,32 @@ export function PackingSlipDocument({
 									<Text style={styles.brandMeta}>{contactEmail}</Text>
 								)}
 							</View>
-						<View style={styles.orderMeta}>
-							<Text style={styles.orderNumber}>Order #{order.order_number}</Text>
-							<Text>{formatDate(order.order_date, timeZone)}</Text>
-							<Text style={styles.itemCount}>
-								{itemCount} {itemCount === 1 ? 'item' : 'items'}
-							</Text>
-						</View>
+						<Text style={styles.orderNumber}>Order #{order.order_number}</Text>
 					</View>
 
-					{order.shipping_address ? (
-						<View style={styles.shipTo}>
-							<Text style={styles.shipToLabel}>Ship to</Text>
-							{addressLines(order.shipping_address).map((line, index) => (
-								<Text key={index}>{line}</Text>
-							))}
-						</View>
-					) : (
-						order.customer_name && (
+					<View style={styles.infoRow}>
+						{order.shipping_address ? (
+							<View style={styles.shipTo}>
+								<Text style={styles.shipToLabel}>Ship to</Text>
+								{addressLines(order.shipping_address).map((line, index) => (
+									<Text key={index} style={styles.addressLine}>
+										{line}
+									</Text>
+								))}
+							</View>
+						) : order.customer_name ? (
 							<View style={styles.shipTo}>
 								<Text style={styles.shipToLabel}>Customer</Text>
 								<Text>{order.customer_name}</Text>
 							</View>
-						)
-					)}
+						) : (
+							<View />
+						)}
+						<View style={styles.orderInfo}>
+							<Text style={styles.shipToLabel}>Order</Text>
+							<Text>{formatDate(order.order_date, timeZone)}</Text>
+						</View>
+					</View>
 
 					<View style={styles.tableHeader}>
 						<Text style={styles.checkCell} />
