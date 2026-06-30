@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { ORDER_TYPE_VALUES } from '../../../orders/contract/constants.js';
 
 export const OperationsQuerySchema = z.object({
-	range: z.enum(['30', '90', '365']).default('30'),
+	start: z.iso.date(),
+	end: z.iso.date(),
 });
 
 export const OperationsResponseSchema = z.object({
