@@ -4,6 +4,7 @@
 		"moduleResolution": "NodeNext",
 		"target": "ES2022",
 		"lib": ["ESNext"],
+		"jsx": "react-jsx",
 		"skipLibCheck": true,
 		"outDir": "dist",
 		"esModuleInterop": true,
