@@ -1,12 +1,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { successResponse } from '../../../utils/api-responses.js';
-import { getOperations, type OperationsRange } from './operations-service.js';
+import { getOperations } from './operations-service.js';
 
 export async function handleGetOperations(
-	request: FastifyRequest<{ Querystring: { range: '30' | '90' | '365' } }>,
+	request: FastifyRequest<{ Querystring: { start: string; end: string } }>,
 	reply: FastifyReply,
 ) {
-	const range = Number(request.query.range) as OperationsRange;
-	const data = await getOperations(request.userId, range);
+	const { start, end } = request.query;
+	const data = await getOperations(request.userId, start, end);
 	return successResponse(reply, data);
 }

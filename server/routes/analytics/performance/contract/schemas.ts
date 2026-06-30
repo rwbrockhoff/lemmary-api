@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 export const PerformanceQuerySchema = z.object({
-	range: z.enum(['30', '90', '365']).default('30'),
+	start: z.iso.date(),
+	end: z.iso.date(),
 });
 
 export const StageBottleneckSchema = z.object({

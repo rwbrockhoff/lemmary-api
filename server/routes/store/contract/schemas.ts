@@ -42,4 +42,5 @@ export const StoreResponseSchema = z.object({
 	leadTimeDays: z.number().nullable(),
 	storeUrl: z.string().nullable(),
 	timezone: z.string().nullable(),
+	lastSyncedAt: z.date().nullable(),
 });

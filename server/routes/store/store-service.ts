@@ -37,6 +37,7 @@ type StoreView = {
 	leadTimeDays: number | null;
 	storeUrl: string | null;
 	timezone: string | null;
+	lastSyncedAt: Date | null;
 };
 
 type CreateStoreResult =
@@ -88,6 +89,7 @@ export async function getStore(userId: string): Promise<StoreView> {
 			leadTimeDays: null,
 			storeUrl: null,
 			timezone: null,
+			lastSyncedAt: null,
 		};
 	}
 
@@ -102,6 +104,7 @@ export async function getStore(userId: string): Promise<StoreView> {
 		leadTimeDays: store.lead_time_days,
 		storeUrl: platformConfig.store_url ?? null,
 		timezone: store.timezone,
+		lastSyncedAt: store.last_synced_at,
 	};
 }
 

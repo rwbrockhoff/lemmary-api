@@ -2,27 +2,23 @@ import { sql } from 'kysely';
 import { db } from '../../../db/connection.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { startOfDayUtc } from '../../../utils/timezone.js';
+import {
+	resolveDateRange,
+	type ResolvedRange,
+} from '../../../utils/date-range.js';
 import { netRevenueSum } from '../../../utils/revenue.js';
 import { gateRows } from '../../../utils/report-gates.js';
 import { productionItemFilter } from '../../../utils/production-filter.js';
 import { OPERATIONS_MINIMUMS } from '../thresholds.js';
 import type { OperationsData } from './contract/types.js';
 
-export const VALID_RANGES = [30, 90, 365] as const;
-export type OperationsRange = (typeof VALID_RANGES)[number];
 export type OperationsBucket = 'day' | 'week' | 'month';
 
 const CAPACITY_LOOKBACK_WEEKS = 8;
 
-const bucketForRange = (range: OperationsRange): OperationsBucket => {
-	if (range === 30) return 'day';
-	if (range === 90) return 'week';
-	return 'month';
-};
-
-const emptyDashboard = (range: OperationsRange): OperationsData => ({
-	range,
-	bucket: bucketForRange(range),
+const emptyDashboard = (range: ResolvedRange): OperationsData => ({
+	range: range.days,
+	bucket: range.bucket,
 	revenue: { current: '0', previous: '0', changePercent: 0 },
 	avgOrderValue: { current: '0', previous: '0', changePercent: 0 },
 	ordersInProgress: 0,
@@ -35,11 +31,13 @@ const emptyDashboard = (range: OperationsRange): OperationsData => ({
 
 async function getRevenue(
 	storeId: string,
-	periodStart: Date,
-	previousPeriodStart: Date,
+	start: Date,
+	end: Date,
+	priorStart: Date,
+	priorEnd: Date,
 ) {
-	const currentPeriodFilter = sql`order_date >= ${periodStart}`;
-	const previousPeriodFilter = sql`order_date >= ${previousPeriodStart} and order_date < ${periodStart}`;
+	const currentPeriodFilter = sql`order_date >= ${start} and order_date < ${end}`;
+	const previousPeriodFilter = sql`order_date >= ${priorStart} and order_date < ${priorEnd}`;
 
 	const row = await db
 		.selectFrom('orders')
@@ -54,7 +52,8 @@ async function getRevenue(
 			),
 		])
 		.where('store_id', '=', storeId)
-		.where('order_date', '>=', previousPeriodStart)
+		.where('order_date', '>=', priorStart)
+		.where('order_date', '<', end)
 		.executeTakeFirstOrThrow();
 
 	const currentRevenue = Number(row.current_period);
@@ -105,17 +104,18 @@ async function getInProgress(storeId: string) {
 	return row.count;
 }
 
-async function getCompleted(storeId: string, periodStart: Date) {
+async function getCompleted(storeId: string, start: Date, end: Date) {
 	const row = await db
 		.selectFrom('orders')
 		.select(db.fn.count<number>('id').as('count'))
 		.where('store_id', '=', storeId)
-		.where('fulfilled_at', '>=', periodStart)
+		.where('fulfilled_at', '>=', start)
+		.where('fulfilled_at', '<', end)
 		.executeTakeFirstOrThrow();
 	return row.count;
 }
 
-async function getAvgLeadTime(storeId: string, periodStart: Date) {
+async function getAvgLeadTime(storeId: string, start: Date, end: Date) {
 	const row = await db
 		.selectFrom('orders')
 		.select(
@@ -127,7 +127,8 @@ async function getAvgLeadTime(storeId: string, periodStart: Date) {
 		)
 		.where('store_id', '=', storeId)
 		.where('fulfilled_at', 'is not', null)
-		.where('fulfilled_at', '>=', periodStart)
+		.where('fulfilled_at', '>=', start)
+		.where('fulfilled_at', '<', end)
 		.executeTakeFirstOrThrow();
 
 	return row.avg_days !== null
@@ -213,7 +214,8 @@ async function getDueSoon(storeId: string, todayUtc: number, dayMs: number) {
 
 async function getOrdersTrend(
 	storeId: string,
-	periodStart: Date,
+	start: Date,
+	end: Date,
 	bucket: OperationsBucket,
 	timeZone: string,
 ) {
@@ -231,7 +233,8 @@ async function getOrdersTrend(
 			netRevenueSum().as('revenue'),
 		])
 		.where('store_id', '=', storeId)
-		.where('order_date', '>=', periodStart)
+		.where('order_date', '>=', start)
+		.where('order_date', '<', end)
 		.groupBy(sql`date_trunc(${bucketLit}, order_date AT TIME ZONE ${tzLit})`)
 		.orderBy('date', 'asc')
 		.execute();
@@ -316,16 +319,16 @@ async function getCapacity(
 
 export async function getOperations(
 	userId: string,
-	range: OperationsRange,
+	startDate: string,
+	endDate: string,
 ): Promise<OperationsData> {
 	const store = await getStoreForUser(userId);
+	const range = resolveDateRange(startDate, endDate, store?.timezone ?? 'UTC');
 	if (!store) return emptyDashboard(range);
 
-	const bucket = bucketForRange(range);
+	const { start, end, priorStart, priorEnd, days, bucket } = range;
 	const now = new Date();
 	const dayMs = 24 * 60 * 60 * 1000;
-	const periodStart = new Date(now.getTime() - range * dayMs);
-	const previousPeriodStart = new Date(now.getTime() - 2 * range * dayMs);
 
 	const todayUtc = startOfDayUtc(now, store.timezone).getTime();
 	const weekStart = new Date(todayUtc).toISOString().slice(0, 10);
@@ -340,17 +343,17 @@ export async function getOperations(
 		ordersTrend,
 		capacity,
 	] = await Promise.all([
-		getRevenue(store.id, periodStart, previousPeriodStart),
+		getRevenue(store.id, start, end, priorStart, priorEnd),
 		getInProgress(store.id),
-		getCompleted(store.id, periodStart),
-		getAvgLeadTime(store.id, periodStart),
+		getCompleted(store.id, start, end),
+		getAvgLeadTime(store.id, start, end),
 		getDueSoon(store.id, todayUtc, dayMs),
-		getOrdersTrend(store.id, periodStart, bucket, store.timezone),
+		getOrdersTrend(store.id, start, end, bucket, store.timezone),
 		getCapacity(store.id, store.timezone, weekStart, weekEnd),
 	]);
 
 	return {
-		range,
+		range: days,
 		bucket,
 		revenue: revenue.revenue,
 		avgOrderValue: revenue.avgOrderValue,

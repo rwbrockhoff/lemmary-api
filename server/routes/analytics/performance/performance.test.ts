@@ -5,6 +5,15 @@ import { db } from '../../../db/connection.js';
 import { getPerformance } from './performance-service.js';
 import { REPORTING_USER_ID } from '../../../tests/test-constants.js';
 
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+const daysAgo = (n: number) => {
+	const d = new Date();
+	d.setUTCDate(d.getUTCDate() - n);
+	return isoDate(d);
+};
+const TODAY = isoDate(new Date());
+const WIDE = { start: daysAgo(365), end: TODAY };
+
 describe('GET /analytics/performance', () => {
 	let app: FastifyInstance;
 
@@ -19,7 +28,7 @@ describe('GET /analytics/performance', () => {
 
 	it('returns all dashboard sections', async () => {
 		const response = await app.inject(
-			withAuth('GET', '/analytics/performance', { query: { range: '365' } }),
+			withAuth('GET', '/analytics/performance', { query: WIDE }),
 		);
 
 		expect(response.statusCode).toBe(200);
@@ -34,7 +43,7 @@ describe('GET /analytics/performance', () => {
 
 	it('identifies stitching as the slowest production stage', async () => {
 		const response = await app.inject(
-			withAuth('GET', '/analytics/performance', { query: { range: '365' } }),
+			withAuth('GET', '/analytics/performance', { query: WIDE }),
 		);
 
 		const stages = response.json().data.stageBottleneck.stages;
@@ -49,7 +58,7 @@ describe('GET /analytics/performance', () => {
 
 	it('counts coupon usage from seeded orders', async () => {
 		const response = await app.inject(
-			withAuth('GET', '/analytics/performance', { query: { range: '365' } }),
+			withAuth('GET', '/analytics/performance', { query: WIDE }),
 		);
 
 		const { withPromoCount, totalCount } = response.json().data.couponUsage;
@@ -60,7 +69,7 @@ describe('GET /analytics/performance', () => {
 
 	it('splits customers into new and returning', async () => {
 		const response = await app.inject(
-			withAuth('GET', '/analytics/performance', { query: { range: '365' } }),
+			withAuth('GET', '/analytics/performance', { query: WIDE }),
 		);
 
 		const { newCount, returningCount, totalCount } =
@@ -71,7 +80,9 @@ describe('GET /analytics/performance', () => {
 
 	it('aggregates material consumption across the BOM chain', async () => {
 		const response = await app.inject(
-			withAuth('GET', '/analytics/performance', { query: { range: '30' } }),
+			withAuth('GET', '/analytics/performance', {
+				query: { start: daysAgo(30), end: TODAY },
+			}),
 		);
 
 		const materials = response.json().data.materialConsumption.materials;
@@ -106,7 +117,7 @@ describe('GET /analytics/performance', () => {
 			.executeTakeFirstOrThrow();
 
 		try {
-			const data = await getPerformance(REPORTING_USER_ID, { range: '30' });
+			const data = await getPerformance(REPORTING_USER_ID, daysAgo(30), TODAY);
 
 			// Aggregates drop to null, lists drop to empty
 			expect(data.customerMix).toBeNull();

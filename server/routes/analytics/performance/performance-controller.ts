@@ -3,9 +3,10 @@ import { successResponse } from '../../../utils/api-responses.js';
 import { getPerformance } from './performance-service.js';
 
 export async function handleGetPerformance(
-	request: FastifyRequest<{ Querystring: { range: '30' | '90' | '365' } }>,
+	request: FastifyRequest<{ Querystring: { start: string; end: string } }>,
 	reply: FastifyReply,
 ) {
-	const data = await getPerformance(request.userId, request.query);
+	const { start, end } = request.query;
+	const data = await getPerformance(request.userId, start, end);
 	return successResponse(reply, data);
 }
