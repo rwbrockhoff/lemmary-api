@@ -31,6 +31,18 @@ export type StoreWithAccessToken = StoreSummary & {
 	refresh_token: string | null;
 };
 
+export function buildSquarespaceConfig(storeUrl: string | null) {
+	return {
+		base_url: 'https://api.squarespace.com/1.0',
+		api_version: '1.0',
+		store_url: storeUrl,
+	};
+}
+
+export function buildShopifyConfig(shop: string) {
+	return { store_url: `https://${shop}` };
+}
+
 // Shopify's shop domain (e.g. my-store.myshopify.com)
 // is kept in platform_config.store_url
 export function getShopDomain(store: StoreSummary): string {

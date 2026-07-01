@@ -6,6 +6,8 @@ import {
 	getStoreForUser,
 	getShopDomain,
 	getStoreByShopDomain,
+	buildSquarespaceConfig,
+	buildShopifyConfig,
 } from '../../utils/store.js';
 import { recordAuditEvent } from '../../utils/audit-logger.js';
 import { cancelSubscription } from '../subscription/subscription-service.js';
@@ -144,11 +146,7 @@ export async function createStore(
 	const valid = await testSquarespaceConnection(input.accessToken);
 	if (!valid) return { ok: false, error: 'invalid_token' };
 
-	const platformConfig = {
-		base_url: 'https://api.squarespace.com/1.0',
-		api_version: '1.0',
-		store_url: input.storeUrl ?? null,
-	};
+	const platformConfig = buildSquarespaceConfig(input.storeUrl ?? null);
 
 	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${input.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
 	const contactEmail = await getUserEmail(userId);
@@ -208,7 +206,7 @@ export async function createShopifyStore(
 		return { ok: true, store: await getStore(userId) };
 	}
 
-	const platformConfig = { store_url: `https://${shop}` };
+	const platformConfig = buildShopifyConfig(shop);
 	const shopTimezone = await fetchShopTimezone(shop, tokens.accessToken);
 	const contactEmail = await getUserEmail(userId);
 
