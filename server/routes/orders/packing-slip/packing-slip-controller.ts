@@ -1,0 +1,32 @@
+import type { FastifyRequest, FastifyReply } from 'fastify';
+import { AppError } from '../../../utils/app-error.js';
+import { generatePackingSlips } from './packing-slip-service.js';
+
+function sendPdf(reply: FastifyReply, pdf: Buffer, filename: string) {
+	return reply
+		.header('Content-Type', 'application/pdf')
+		.header('Content-Disposition', `attachment; filename="${filename}"`)
+		.send(pdf);
+}
+
+export async function handleGetPackingSlip(
+	request: FastifyRequest<{ Params: { orderId: string } }>,
+	reply: FastifyReply,
+) {
+	const pdf = await generatePackingSlips(request.userId, [
+		request.params.orderId,
+	]);
+	if (!pdf) throw AppError.notFound('Order not found');
+
+	return sendPdf(reply, pdf, 'packing-slip.pdf');
+}
+
+export async function handleGetPackingSlips(
+	request: FastifyRequest<{ Body: { orderIds: string[] } }>,
+	reply: FastifyReply,
+) {
+	const pdf = await generatePackingSlips(request.userId, request.body.orderIds);
+	if (!pdf) throw AppError.notFound('No orders found');
+
+	return sendPdf(reply, pdf, 'packing-slips.pdf');
+}

@@ -1,5 +1,9 @@
-import type { NewOrder, NewOrderItem } from '../../../db/database-types.js';
-import { applyOrNull } from '../../../utils/nullable.js';
+import type {
+	NewOrder,
+	NewOrderItem,
+	ShippingAddress,
+} from '../../../db/database-types.js';
+import { applyOrNull, emptyToNull } from '../../../utils/nullable.js';
 import type { NormalizedOrder } from './order-types.js';
 
 const BASE_URL = 'https://api.squarespace.com/1.0/commerce/orders';
@@ -12,6 +16,13 @@ type SquarespaceMoneyValue = {
 type SquarespaceAddress = {
 	firstName: string;
 	lastName: string;
+	address1: string | null;
+	address2: string | null;
+	city: string | null;
+	state: string | null;
+	postalCode: string | null;
+	countryCode: string | null;
+	phone: string | null;
 };
 
 type SquarespaceVariantOption = {
@@ -127,6 +138,21 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 	const lastName = raw.shippingAddress?.lastName ?? '';
 	const customerName = [firstName, lastName].filter(Boolean).join(' ');
 
+	const address = raw.shippingAddress;
+	const shippingAddress: ShippingAddress | null = address
+		? {
+				first_name: emptyToNull(address.firstName),
+				last_name: emptyToNull(address.lastName),
+				address1: emptyToNull(address.address1),
+				address2: emptyToNull(address.address2),
+				city: emptyToNull(address.city),
+				state: emptyToNull(address.state),
+				postal_code: emptyToNull(address.postalCode),
+				country_code: emptyToNull(address.countryCode),
+				phone: emptyToNull(address.phone),
+			}
+		: null;
+
 	const order: Omit<NewOrder, 'store_id'> = {
 		platform_order_id: raw.id,
 		order_number: raw.orderNumber,
@@ -146,6 +172,7 @@ function normalizeOrder(raw: SquarespaceOrder): NormalizedOrder {
 		tracking_url: raw.fulfillments?.[0]?.trackingUrl ?? null,
 		carrier_name: raw.fulfillments?.[0]?.carrierName ?? null,
 		shipping_method: raw.shippingLines?.[0]?.method ?? null,
+		shipping_address: shippingAddress,
 		order_notes:
 			raw.internalNotes?.length > 0
 				? raw.internalNotes.map((n) => n.content).join('\n')

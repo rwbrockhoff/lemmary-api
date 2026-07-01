@@ -6,12 +6,15 @@ import {
 	getStoreForUser,
 	getShopDomain,
 	getStoreByShopDomain,
+	buildSquarespaceConfig,
+	buildShopifyConfig,
 } from '../../utils/store.js';
 import { recordAuditEvent } from '../../utils/audit-logger.js';
 import { cancelSubscription } from '../subscription/subscription-service.js';
 import { Sentry } from '../../config/sentry.js';
-import { AuditAction } from '../../db/enums.js';
+import { AuditAction, type ProductionType } from '../../db/enums.js';
 import { isValidTimeZone } from '../../utils/timezone.js';
+import { setColumn } from '../../utils/update.js';
 import { testSquarespaceConnection } from '../orders/platforms/squarespace.js';
 import {
 	fetchShopTimezone,
@@ -36,6 +39,11 @@ type StoreView = {
 	platform: 'squarespace' | 'shopify' | 'etsy' | null;
 	leadTimeDays: number | null;
 	storeUrl: string | null;
+	logoUrl: string | null;
+	tagline: string | null;
+	websiteUrl: string | null;
+	contactEmail: string | null;
+	defaultProductionType: ProductionType | null;
 	timezone: string | null;
 	lastSyncedAt: Date | null;
 };
@@ -79,6 +87,16 @@ export async function createDefaultStages(
 		.execute();
 }
 
+async function getUserEmail(userId: string): Promise<string | null> {
+	const user = await db
+		.selectFrom('users')
+		.select('email')
+		.where('id', '=', userId)
+		.executeTakeFirst();
+
+	return user?.email ?? null;
+}
+
 export async function getStore(userId: string): Promise<StoreView> {
 	const store = await getStoreForUser(userId);
 	if (!store) {
@@ -88,6 +106,11 @@ export async function getStore(userId: string): Promise<StoreView> {
 			platform: null,
 			leadTimeDays: null,
 			storeUrl: null,
+			logoUrl: null,
+			tagline: null,
+			websiteUrl: null,
+			contactEmail: null,
+			defaultProductionType: null,
 			timezone: null,
 			lastSyncedAt: null,
 		};
@@ -103,6 +126,11 @@ export async function getStore(userId: string): Promise<StoreView> {
 		platform: store.platform,
 		leadTimeDays: store.lead_time_days,
 		storeUrl: platformConfig.store_url ?? null,
+		logoUrl: store.logo_url,
+		tagline: store.tagline,
+		websiteUrl: store.website_url,
+		contactEmail: store.contact_email,
+		defaultProductionType: store.default_production_type,
 		timezone: store.timezone,
 		lastSyncedAt: store.last_synced_at,
 	};
@@ -118,13 +146,10 @@ export async function createStore(
 	const valid = await testSquarespaceConnection(input.accessToken);
 	if (!valid) return { ok: false, error: 'invalid_token' };
 
-	const platformConfig = {
-		base_url: 'https://api.squarespace.com/1.0',
-		api_version: '1.0',
-		store_url: input.storeUrl ?? null,
-	};
+	const platformConfig = buildSquarespaceConfig(input.storeUrl ?? null);
 
 	const encryptedToken = sql<Buffer>`pgp_sym_encrypt(${input.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;
+	const contactEmail = await getUserEmail(userId);
 
 	await db.transaction().execute(async (trx) => {
 		const store = await trx
@@ -136,6 +161,7 @@ export async function createStore(
 				store_access_token: encryptedToken,
 				platform_config: platformConfig,
 				lead_time_days: input.leadTimeDays ?? null,
+				contact_email: contactEmail,
 				timezone: input.timezone,
 			})
 			.returning('id')
@@ -180,8 +206,9 @@ export async function createShopifyStore(
 		return { ok: true, store: await getStore(userId) };
 	}
 
-	const platformConfig = { store_url: `https://${shop}` };
+	const platformConfig = buildShopifyConfig(shop);
 	const shopTimezone = await fetchShopTimezone(shop, tokens.accessToken);
+	const contactEmail = await getUserEmail(userId);
 
 	const values: InsertObject<Database, 'stores'> = {
 		user_id: userId,
@@ -192,6 +219,7 @@ export async function createShopifyStore(
 		access_token_expires_at: expiresAt,
 		platform_config: platformConfig,
 		lead_time_days: null,
+		contact_email: contactEmail,
 	};
 	if (shopTimezone && isValidTimeZone(shopTimezone)) {
 		values.timezone = shopTimezone;
@@ -210,6 +238,8 @@ export async function createShopifyStore(
 	return { ok: true, store: await getStore(userId) };
 }
 
+type StoreUpdateSet = UpdateObject<Database, 'stores'>;
+
 export async function updateStore(
 	userId: string,
 	updates: UpdateStoreInput,
@@ -222,19 +252,16 @@ export async function updateStore(
 		if (!valid) return { ok: false, error: 'invalid_token' };
 	}
 
-	const set: UpdateObject<Database, 'stores'> = { updated_at: new Date() };
+	const set: StoreUpdateSet = { updated_at: new Date() };
 
-	if (updates.storeName !== undefined) {
-		set.store_name = updates.storeName;
-	}
-
-	if (updates.leadTimeDays !== undefined) {
-		set.lead_time_days = updates.leadTimeDays;
-	}
-
-	if (updates.timezone !== undefined) {
-		set.timezone = updates.timezone;
-	}
+	setColumn(set, 'store_name', updates.storeName);
+	setColumn(set, 'lead_time_days', updates.leadTimeDays);
+	setColumn(set, 'timezone', updates.timezone);
+	setColumn(set, 'logo_url', updates.logoUrl);
+	setColumn(set, 'tagline', updates.tagline);
+	setColumn(set, 'website_url', updates.websiteUrl);
+	setColumn(set, 'contact_email', updates.contactEmail);
+	setColumn(set, 'default_production_type', updates.defaultProductionType);
 
 	if (updates.accessToken) {
 		set.store_access_token = sql<Buffer>`pgp_sym_encrypt(${updates.accessToken}, ${env.STORE_ENCRYPTION_KEY})`;

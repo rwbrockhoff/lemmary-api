@@ -53,6 +53,11 @@ export interface StoreTable {
 	access_token_expires_at: Date | null;
 	platform_config: Record<string, unknown> | null;
 	lead_time_days: number | null;
+	logo_url: string | null;
+	tagline: string | null;
+	website_url: string | null;
+	contact_email: string | null;
+	default_production_type: Generated<ProductionType>;
 	timezone: Generated<string>;
 	last_synced_at: Date | null;
 	created_at: Generated<Date>;
@@ -106,6 +111,18 @@ export interface OrderStageHistoryTable {
 export type OrderStageHistory = Selectable<OrderStageHistoryTable>;
 export type NewOrderStageHistory = Insertable<OrderStageHistoryTable>;
 
+export type ShippingAddress = {
+	first_name: string | null;
+	last_name: string | null;
+	address1: string | null;
+	address2: string | null;
+	city: string | null;
+	state: string | null;
+	postal_code: string | null;
+	country_code: string | null;
+	phone: string | null;
+};
+
 export interface OrderTable {
 	id: Generated<string>;
 	store_id: string;
@@ -131,6 +148,7 @@ export interface OrderTable {
 	tracking_number: string | null;
 	tracking_url: string | null;
 	carrier_name: string | null;
+	shipping_address: ShippingAddress | null;
 	currency: Generated<string>;
 	created_at: Generated<Date>;
 	updated_at: Generated<Date>;

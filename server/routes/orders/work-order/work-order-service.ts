@@ -3,6 +3,7 @@ import { db } from '../../../db/connection.js';
 import type { OrderUpdate } from '../../../db/database-types.js';
 import { getStoreForUser } from '../../../utils/store.js';
 import { toNoonUtc } from '../../../utils/timezone.js';
+import { setColumn } from '../../../utils/update.js';
 import { getDefaultStageIds } from '../utils/default-stages.js';
 import { generateOrderNumber } from '../utils/order-number.js';
 import { getOrderWithItems } from '../orders-service.js';
@@ -64,14 +65,14 @@ export async function updateWorkOrder(
 	if (!existing || existing.order_type !== 'work') return null;
 
 	const updates: OrderUpdate = {};
-	if (input.order_title !== undefined) updates.order_title = input.order_title;
-	if (input.order_description !== undefined)
-		updates.order_description = input.order_description;
+	setColumn(updates, 'order_title', input.order_title);
+	setColumn(updates, 'order_description', input.order_description);
+	setColumn(updates, 'due_date', input.due_date);
+	setColumn(updates, 'order_notes', input.order_notes);
+
 	if (input.order_date !== undefined) {
 		updates.order_date = toNoonUtc(input.order_date);
 	}
-	if (input.due_date !== undefined) updates.due_date = input.due_date;
-	if (input.order_notes !== undefined) updates.order_notes = input.order_notes;
 
 	const { itemStageId } = input.items
 		? await getDefaultStageIds(store.id)

@@ -10,6 +10,11 @@ const storeSummaryColumns = [
 	'store_name',
 	'platform_config',
 	'lead_time_days',
+	'logo_url',
+	'tagline',
+	'website_url',
+	'contact_email',
+	'default_production_type',
 	'timezone',
 	'access_token_expires_at',
 	'last_synced_at',
@@ -25,6 +30,18 @@ export type StoreWithAccessToken = StoreSummary & {
 	access_token: string;
 	refresh_token: string | null;
 };
+
+export function buildSquarespaceConfig(storeUrl: string | null) {
+	return {
+		base_url: 'https://api.squarespace.com/1.0',
+		api_version: '1.0',
+		store_url: storeUrl,
+	};
+}
+
+export function buildShopifyConfig(shop: string) {
+	return { store_url: `https://${shop}` };
+}
 
 // Shopify's shop domain (e.g. my-store.myshopify.com)
 // is kept in platform_config.store_url
