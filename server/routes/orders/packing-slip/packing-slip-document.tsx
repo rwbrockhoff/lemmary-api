@@ -147,10 +147,10 @@ function formatDate(date: Date, timeZone: string): string {
 	}).format(date);
 }
 
-function formatVariant(variant: SlipItem['variant_label']): string | null {
-	if (!variant?.length) return null;
-	const values = variant.map((option) => option.value).filter(Boolean);
-	return values.length ? values.join(', ') : null;
+// One variant per line so it's easier to read customizations
+function variantValues(variant: SlipItem['variant_label']): string[] {
+	if (!variant?.length) return [];
+	return variant.map((option) => option.value).filter(Boolean);
 }
 
 function stripProtocol(url: string): string {
@@ -232,7 +232,7 @@ export function PackingSlipDocument({
 					</View>
 
 					{order.items.map((item, index) => {
-						const variant = formatVariant(item.variant_label);
+						const variants = variantValues(item.variant_label);
 						return (
 							<View key={index} style={styles.row} wrap={false}>
 								<View style={styles.checkCell}>
@@ -241,7 +241,11 @@ export function PackingSlipDocument({
 								<Text style={styles.qtyCell}>{item.quantity}</Text>
 								<View style={styles.itemCell}>
 									<Text>{item.product_name}</Text>
-									{variant && <Text style={styles.variant}>{variant}</Text>}
+									{variants.map((value, i) => (
+										<Text key={i} style={styles.variant}>
+											{value}
+										</Text>
+									))}
 								</View>
 							</View>
 						);
