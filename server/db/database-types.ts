@@ -1,6 +1,7 @@
 import type { Generated, Insertable, Selectable, Updateable } from 'kysely';
 import type {
 	OrderType,
+	ReworkReason,
 	AuditAction,
 	SubscriptionStatus,
 	ProductionType,
@@ -127,6 +128,8 @@ export interface OrderTable {
 	id: Generated<string>;
 	store_id: string;
 	order_type: Generated<OrderType>;
+	parent_order_id: string | null;
+	rework_reason: ReworkReason | null;
 	platform_order_id: string | null;
 	order_number: string;
 	order_title: string | null;
