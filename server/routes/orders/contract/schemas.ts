@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CUSTOMER_TIERS } from '../../../utils/customer-tier.js';
-import { ORDER_TYPE_VALUES } from './constants.js';
+import { ORDER_TYPE_VALUES, REWORK_REASON_VALUES } from './constants.js';
 
 export const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -11,6 +11,8 @@ const OrderColumnsSchema = z.object({
 	id: z.string(),
 	store_id: z.string(),
 	order_type: z.enum(ORDER_TYPE_VALUES),
+	parent_order_id: z.string().nullable(),
+	rework_reason: z.enum(REWORK_REASON_VALUES).nullable(),
 	platform_order_id: z.string().nullable(),
 	order_number: z.string(),
 	order_title: z.string().nullable(),
@@ -188,6 +190,10 @@ export const CreateCustomOrderSchema = z.object({
 	due_date: z.iso.date().nullable().optional(),
 	order_notes: z.string().nullable().optional(),
 	items: z.array(CreateOrderLineItemSchema).min(1),
+});
+
+export const CreateReworkSchema = z.object({
+	rework_reason: z.enum(REWORK_REASON_VALUES),
 });
 
 export const UpdateCustomOrderSchema = z.object({

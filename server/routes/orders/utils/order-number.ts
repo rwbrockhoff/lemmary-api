@@ -4,6 +4,7 @@ import type { Database } from '../../../db/database-types.js';
 const ORDER_NUMBER_PREFIXES = {
 	custom: 'C',
 	work: 'WO',
+	rework: 'R',
 } as const;
 
 type LocalOrderType = keyof typeof ORDER_NUMBER_PREFIXES;
