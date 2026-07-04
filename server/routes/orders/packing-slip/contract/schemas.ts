@@ -1,5 +1,5 @@
 import { z } from 'zod';
 
-export const PackingSlipsBodySchema = z.object({
-	orderIds: z.array(z.uuid()).min(1),
+export const BatchIdParamSchema = z.object({
+	batchId: z.uuid(),
 });

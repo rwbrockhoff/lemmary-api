@@ -7,6 +7,31 @@ import {
 	type SlipOrder,
 } from './packing-slip-document.js';
 
+export async function generateBatchPackingSlips(
+	userId: string,
+	batchId: string,
+): Promise<Buffer | null> {
+	const store = await getStoreForUser(userId);
+	if (!store) return null;
+
+	const rows = await db
+		.selectFrom('production_batch_orders')
+		.innerJoin(
+			'production_batches',
+			'production_batches.id',
+			'production_batch_orders.batch_id',
+		)
+		.select('production_batch_orders.order_id')
+		.where('production_batch_orders.batch_id', '=', batchId)
+		.where('production_batches.store_id', '=', store.id)
+		.execute();
+
+	const orderIds = rows.map((row) => row.order_id);
+	if (orderIds.length === 0) return null;
+
+	return generatePackingSlips(userId, orderIds);
+}
+
 export async function generatePackingSlips(
 	userId: string,
 	orderIds: string[],

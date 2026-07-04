@@ -1,6 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { AppError } from '../../../utils/app-error.js';
-import { generatePackingSlips } from './packing-slip-service.js';
+import {
+	generatePackingSlips,
+	generateBatchPackingSlips,
+} from './packing-slip-service.js';
 
 function sendPdf(reply: FastifyReply, pdf: Buffer, filename: string) {
 	return reply
@@ -21,12 +24,15 @@ export async function handleGetPackingSlip(
 	return sendPdf(reply, pdf, 'packing-slip.pdf');
 }
 
-export async function handleGetPackingSlips(
-	request: FastifyRequest<{ Body: { orderIds: string[] } }>,
+export async function handleGetBatchPackingSlips(
+	request: FastifyRequest<{ Params: { batchId: string } }>,
 	reply: FastifyReply,
 ) {
-	const pdf = await generatePackingSlips(request.userId, request.body.orderIds);
-	if (!pdf) throw AppError.notFound('No orders found');
+	const pdf = await generateBatchPackingSlips(
+		request.userId,
+		request.params.batchId,
+	);
+	if (!pdf) throw AppError.notFound('No orders found for this batch');
 
 	return sendPdf(reply, pdf, 'packing-slips.pdf');
 }

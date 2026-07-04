@@ -2,10 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { ApiTags } from '../../../openapi/tags.js';
 import { OrderIdParamSchema } from '../contract/schemas.js';
-import { PackingSlipsBodySchema } from './contract/schemas.js';
+import { BatchIdParamSchema } from './contract/schemas.js';
 import {
 	handleGetPackingSlip,
-	handleGetPackingSlips,
+	handleGetBatchPackingSlips,
 } from './packing-slip-controller.js';
 
 export async function packingSlipRoutes(app: FastifyInstance) {
@@ -23,15 +23,15 @@ export async function packingSlipRoutes(app: FastifyInstance) {
 		handleGetPackingSlip,
 	);
 
-	r.post(
-		'/orders/packing-slips',
+	r.get(
+		'/batches/:batchId/packing-slips',
 		{
 			schema: {
-				tags: [ApiTags.ORDERS],
-				summary: 'Download a combined packing slip PDF for multiple orders',
-				body: PackingSlipsBodySchema,
+				tags: [ApiTags.BATCHES],
+				summary: 'Download a combined packing slip PDF for a batch',
+				params: BatchIdParamSchema,
 			},
 		},
-		handleGetPackingSlips,
+		handleGetBatchPackingSlips,
 	);
 }
