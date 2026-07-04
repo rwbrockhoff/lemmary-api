@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CUSTOMER_TIERS } from '../../../utils/customer-tier.js';
-import { ORDER_TYPE_VALUES } from './constants.js';
+import { ORDER_TYPE_VALUES, REWORK_REASON_VALUES } from './constants.js';
 
 export const VariantOptionSchema = z.object({
 	name: z.string(),
@@ -11,6 +11,8 @@ const OrderColumnsSchema = z.object({
 	id: z.string(),
 	store_id: z.string(),
 	order_type: z.enum(ORDER_TYPE_VALUES),
+	parent_order_id: z.string().nullable(),
+	rework_reason: z.enum(REWORK_REASON_VALUES).nullable(),
 	platform_order_id: z.string().nullable(),
 	order_number: z.string(),
 	order_title: z.string().nullable(),
@@ -75,16 +77,25 @@ export const GetOrdersQuerySchema = z.object({
 	includeBatchId: z.uuid().optional(),
 });
 
+export const OrderMetricsSchema = z.object({
+	totalItems: z.number(),
+	revenue: z.number(),
+	dueThisWeek: z.number(),
+});
+
 export const GetOrdersResponseSchema = z.object({
 	orders: z.array(OrderWithItemsSchema),
 	hasMore: z.boolean(),
 	lastSyncedAt: z.date().nullable(),
+	metricSummary: OrderMetricsSchema.nullable(),
 });
 
 export const OrderSchema = OrderColumnsSchema;
 
 export const OrderDetailSchema = OrderColumnsSchema.extend({
 	workflow_stage_name: z.string().nullable(),
+	parent_order_number: z.string().nullable(),
+	reworks: z.array(z.object({ id: z.uuid(), order_number: z.string() })),
 	order_url: z.string().nullable(),
 	customer_tier: z.enum(CUSTOMER_TIERS).nullable(),
 	items: z.array(
@@ -188,6 +199,18 @@ export const CreateCustomOrderSchema = z.object({
 	due_date: z.iso.date().nullable().optional(),
 	order_notes: z.string().nullable().optional(),
 	items: z.array(CreateOrderLineItemSchema).min(1),
+});
+
+export const CreateReworkSchema = z.object({
+	parent_order_id: z.uuid(),
+	rework_reason: z.enum(REWORK_REASON_VALUES),
+});
+
+export const UpdateReworkSchema = z.object({
+	rework_reason: z.enum(REWORK_REASON_VALUES).optional(),
+	due_date: z.iso.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	items: z.array(UpdateOrderLineItemSchema).min(1).optional(),
 });
 
 export const UpdateCustomOrderSchema = z.object({

@@ -7,6 +7,7 @@ import {
 } from '../../../utils/date-range.js';
 import { gateRows, gateSummary } from '../../../utils/report-gates.js';
 import { productionItemFilter } from '../../../utils/production-filter.js';
+import { salesOrderTypesSql } from '../../../utils/order-scope.js';
 import { PERFORMANCE_MINIMUMS } from '../thresholds.js';
 
 type StageBottleneckRow = {
@@ -37,6 +38,7 @@ async function getTopProducts(storeId: string, range: ResolvedRange) {
 		WHERE o.store_id = ${storeId}
 			AND o.order_date >= ${range.start}
 			AND o.order_date < ${range.end}
+			AND o.order_type IN ${salesOrderTypesSql}
 		GROUP BY oi.product_name
 		ORDER BY SUM(oi.quantity * COALESCE(oi.unit_price::numeric, 0)) DESC
 		LIMIT 5
@@ -70,6 +72,7 @@ async function getCustomerMix(storeId: string, range: ResolvedRange) {
 			FROM orders
 			WHERE store_id = ${storeId}
 				AND customer_email IS NOT NULL
+				AND order_type IN ${salesOrderTypesSql}
 			GROUP BY customer_email
 		),
 		current_customers AS (
@@ -79,6 +82,7 @@ async function getCustomerMix(storeId: string, range: ResolvedRange) {
 				AND order_date >= ${range.start}
 				AND order_date < ${range.end}
 				AND customer_email IS NOT NULL
+				AND order_type IN ${salesOrderTypesSql}
 		),
 		current_repeat AS (
 			SELECT DISTINCT o.customer_email
@@ -89,6 +93,7 @@ async function getCustomerMix(storeId: string, range: ResolvedRange) {
 				AND o.order_date < ${range.end}
 				AND o.order_date > cfo.first_order_date
 				AND o.customer_email IS NOT NULL
+				AND o.order_type IN ${salesOrderTypesSql}
 		),
 		prior_customers AS (
 			SELECT DISTINCT customer_email
@@ -97,6 +102,7 @@ async function getCustomerMix(storeId: string, range: ResolvedRange) {
 				AND order_date >= ${range.priorStart}
 				AND order_date < ${range.priorEnd}
 				AND customer_email IS NOT NULL
+				AND order_type IN ${salesOrderTypesSql}
 		),
 		prior_repeat AS (
 			SELECT DISTINCT o.customer_email
@@ -107,6 +113,7 @@ async function getCustomerMix(storeId: string, range: ResolvedRange) {
 				AND o.order_date < ${range.priorEnd}
 				AND o.order_date > cfo.first_order_date
 				AND o.customer_email IS NOT NULL
+				AND o.order_type IN ${salesOrderTypesSql}
 		)
 		SELECT
 			(SELECT COUNT(*) FROM current_repeat) AS current_returning,
@@ -160,6 +167,7 @@ async function getCouponUsage(storeId: string, range: ResolvedRange) {
 			) AS prior_total
 		FROM orders
 		WHERE store_id = ${storeId}
+			AND order_type IN ${salesOrderTypesSql}
 	`.execute(db);
 
 	const row = rows.rows[0];
@@ -348,6 +356,7 @@ async function getOrderCount(storeId: string, range: ResolvedRange) {
 		WHERE store_id = ${storeId}
 			AND order_date >= ${range.start}
 			AND order_date < ${range.end}
+			AND order_type IN ${salesOrderTypesSql}
 	`.execute(db);
 	return rows.rows[0]?.count ?? 0;
 }

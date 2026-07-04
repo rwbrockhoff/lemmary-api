@@ -1,8 +1,25 @@
 // Column domains shared by the db types and the route contracts
 
-export const ORDER_TYPE_VALUES = ['platform', 'custom', 'work'] as const;
+export const ORDER_TYPE_VALUES = [
+	'platform',
+	'custom',
+	'work',
+	'rework',
+] as const;
 
 export type OrderType = (typeof ORDER_TYPE_VALUES)[number];
+
+// Reasons an order was reworked
+export const REWORK_REASON_VALUES = [
+	'missing_item',
+	'wrong_item',
+	'defect',
+	'damaged_in_transit',
+	'customer_change',
+	'other',
+] as const;
+
+export type ReworkReason = (typeof REWORK_REASON_VALUES)[number];
 
 // Whether a variant is built after the order or kept ready-made in stock
 export const PRODUCTION_TYPE_VALUES = [

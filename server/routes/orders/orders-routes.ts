@@ -37,11 +37,13 @@ import {
 } from './orders-controller.js';
 import { customOrderRoutes } from './custom/custom-order-routes.js';
 import { workOrderRoutes } from './work-order/work-order-routes.js';
+import { reworkRoutes } from './rework/rework-routes.js';
 import { packingSlipRoutes } from './packing-slip/packing-slip-routes.js';
 
 export async function ordersRoutes(app: FastifyInstance) {
 	await app.register(customOrderRoutes);
 	await app.register(workOrderRoutes);
+	await app.register(reworkRoutes);
 	await app.register(packingSlipRoutes);
 
 	const r = app.withTypeProvider<ZodTypeProvider>();

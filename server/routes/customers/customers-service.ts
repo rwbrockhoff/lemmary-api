@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
+import { SALES_ORDER_TYPES } from '../../utils/order-scope.js';
 import type { CustomerDetail } from './contract/types.js';
 
 export async function getCustomerByEmail(
@@ -43,7 +44,12 @@ export async function getCustomerByEmail(
 
 	if (orders.length === 0) return null;
 
-	const lifetimeSpend = orders.reduce(
+	// Reworks show in the history but don't count toward tier or spend, they aren't purchases
+	const salesOrders = orders.filter((order) =>
+		SALES_ORDER_TYPES.some((type) => type === order.order_type),
+	);
+
+	const lifetimeSpend = salesOrders.reduce(
 		(sum, order) => sum + Number(order.subtotal ?? 0),
 		0,
 	);
@@ -57,8 +63,8 @@ export async function getCustomerByEmail(
 	return {
 		email,
 		name,
-		tier: computeCustomerTier(orders.length),
-		orderCount: orders.length,
+		tier: computeCustomerTier(salesOrders.length),
+		orderCount: salesOrders.length,
 		lifetimeSpend: lifetimeSpend.toFixed(2),
 		firstOrderDate,
 		orders: orders.map((order) => ({
