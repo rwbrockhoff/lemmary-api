@@ -87,6 +87,8 @@ export const OrderSchema = OrderColumnsSchema;
 
 export const OrderDetailSchema = OrderColumnsSchema.extend({
 	workflow_stage_name: z.string().nullable(),
+	parent_order_number: z.string().nullable(),
+	reworks: z.array(z.object({ id: z.uuid(), order_number: z.string() })),
 	order_url: z.string().nullable(),
 	customer_tier: z.enum(CUSTOMER_TIERS).nullable(),
 	items: z.array(

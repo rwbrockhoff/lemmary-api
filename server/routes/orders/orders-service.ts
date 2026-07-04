@@ -221,8 +221,10 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 			'order_workflow_stages.id',
 			'orders.workflow_stage_id',
 		)
+		.leftJoin('orders as parent', 'parent.id', 'orders.parent_order_id')
 		.select([
 			'order_workflow_stages.name as workflow_stage_name',
+			'parent.order_number as parent_order_number',
 			sql<number | null>`case
 				when orders.customer_email is null then null
 				else (
@@ -253,11 +255,20 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 		.orderBy('order_items.id', 'asc')
 		.execute();
 
+	const reworks = await db
+		.selectFrom('orders')
+		.select(['id', 'order_number'])
+		.where('parent_order_id', '=', order.id)
+		.where('store_id', '=', store.id)
+		.orderBy('order_date', 'asc')
+		.execute();
+
 	const storeUrl = getStoreUrl(store.platform_config);
 
 	return {
 		...order,
 		items,
+		reworks,
 		order_url: buildOrderUrl(storeUrl, order.platform_order_id),
 		customer_tier: applyOrNull(order.customer_order_count, computeCustomerTier),
 	};
