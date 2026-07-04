@@ -9,7 +9,7 @@ export const ORDER_TYPE_VALUES = [
 
 export type OrderType = (typeof ORDER_TYPE_VALUES)[number];
 
-// Why an order was reworked, kept unambiguous so fault derives from the reason alone
+// Reasons an order was reworked
 export const REWORK_REASON_VALUES = [
 	'missing_item',
 	'wrong_item',

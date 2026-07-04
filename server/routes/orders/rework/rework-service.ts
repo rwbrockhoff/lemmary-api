@@ -14,7 +14,7 @@ import type {
 	UpdateOrderLineItem,
 } from '../contract/types.js';
 
-// Reworks copies a completed order (customer + items) into a new no-revenue order
+// Clones a completed order (customer + items) into a new no-revenue rework
 
 export async function createRework(userId: string, input: CreateRework) {
 	const store = await getStoreForUser(userId);

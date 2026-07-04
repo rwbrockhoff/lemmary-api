@@ -1,8 +1,7 @@
 import { Kysely, sql } from 'kysely';
 
-// Adds the rework order type: a redo of a completed order with its own order number,
-// linked back to the original, so rework can flow through production without counting
-// as revenue. rework_reason is app-validated so the reason list can grow without a migration.
+// Adds the rework order type: a redo of a completed order, linked to the original.
+// Reworks move through production but don't count as revenue.
 
 export async function up(db: Kysely<any>): Promise<void> {
 	await db.schema
