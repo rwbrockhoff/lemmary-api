@@ -37,8 +37,14 @@ describe('Customers API', () => {
 		expect(body.data.name).toBe(order.customer_name);
 		expect(body.data.orderCount).toBeGreaterThan(0);
 		expect(Array.isArray(body.data.orders)).toBe(true);
-		expect(body.data.orders.length).toBe(body.data.orderCount);
 		expect(body.data.orders[0]).toHaveProperty('order_type');
+
+		// Reworks show in the history but don't count toward orderCount
+		const salesOrders = body.data.orders.filter(
+			(order: { order_type: string }) =>
+				order.order_type === 'platform' || order.order_type === 'custom',
+		);
+		expect(body.data.orderCount).toBe(salesOrders.length);
 	});
 
 	it('GET /customers/:email computes a valid tier', async () => {
