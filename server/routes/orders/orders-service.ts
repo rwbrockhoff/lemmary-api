@@ -39,21 +39,23 @@ function formatWorkflowOrder<
 	};
 }
 
-function logStageTransition(
+async function logStageTransition(
 	orderId: string,
 	fromStageId: string | null,
 	toStageId: string,
 ) {
-	db.insertInto('order_stage_history')
-		.values({
-			order_id: orderId,
-			from_stage_id: fromStageId,
-			to_stage_id: toStageId,
-		})
-		.execute()
-		.catch((err) => {
-			console.error('Failed to log stage transition', err);
-		});
+	try {
+		await db
+			.insertInto('order_stage_history')
+			.values({
+				order_id: orderId,
+				from_stage_id: fromStageId,
+				to_stage_id: toStageId,
+			})
+			.execute();
+	} catch (err) {
+		console.error('Failed to log stage transition', err);
+	}
 }
 
 export async function getOrders(
@@ -384,7 +386,7 @@ export async function updateOrderStage(
 		.executeTakeFirst();
 
 	if (updated && current && current.workflow_stage_id !== stageId) {
-		logStageTransition(orderId, current.workflow_stage_id, stageId);
+		await logStageTransition(orderId, current.workflow_stage_id, stageId);
 	}
 
 	return updated;
