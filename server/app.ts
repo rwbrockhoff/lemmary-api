@@ -24,6 +24,7 @@ import { productsRoutes } from './routes/products/products-routes.js';
 import { bomRoutes } from './routes/bom/bom-routes.js';
 import { materialsRoutes } from './routes/materials/materials-routes.js';
 import { customersRoutes } from './routes/customers/customers-routes.js';
+import { searchRoutes } from './routes/search/search-routes.js';
 
 type BuildAppOptions = { logger?: boolean };
 
@@ -101,6 +102,7 @@ export const buildApp = ({ logger = true }: BuildAppOptions = {}) => {
 	app.register(bomRoutes);
 	app.register(materialsRoutes);
 	app.register(customersRoutes);
+	app.register(searchRoutes);
 
 	return app;
 };
