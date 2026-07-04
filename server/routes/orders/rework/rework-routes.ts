@@ -6,19 +6,19 @@ import {
 	OrderIdParamSchema,
 	OrderDetailSchema,
 	CreateReworkSchema,
+	UpdateReworkSchema,
 } from '../contract/schemas.js';
-import { handleCreateRework } from './rework-controller.js';
+import { handleCreateRework, handleUpdateRework } from './rework-controller.js';
 
 export async function reworkRoutes(app: FastifyInstance) {
 	const r = app.withTypeProvider<ZodTypeProvider>();
 
 	r.post(
-		'/orders/:orderId/rework',
+		'/orders/rework',
 		{
 			schema: {
 				tags: [ApiTags.ORDERS],
 				summary: 'Create a rework of an order',
-				params: OrderIdParamSchema,
 				body: CreateReworkSchema,
 				response: {
 					201: successSchema(OrderDetailSchema),
@@ -26,5 +26,21 @@ export async function reworkRoutes(app: FastifyInstance) {
 			},
 		},
 		handleCreateRework,
+	);
+
+	r.patch(
+		'/orders/rework/:orderId',
+		{
+			schema: {
+				tags: [ApiTags.ORDERS],
+				summary: 'Update a rework order',
+				params: OrderIdParamSchema,
+				body: UpdateReworkSchema,
+				response: {
+					200: successSchema(OrderDetailSchema),
+				},
+			},
+		},
+		handleUpdateRework,
 	);
 }

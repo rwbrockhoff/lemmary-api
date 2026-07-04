@@ -193,7 +193,15 @@ export const CreateCustomOrderSchema = z.object({
 });
 
 export const CreateReworkSchema = z.object({
+	parent_order_id: z.uuid(),
 	rework_reason: z.enum(REWORK_REASON_VALUES),
+});
+
+export const UpdateReworkSchema = z.object({
+	rework_reason: z.enum(REWORK_REASON_VALUES).optional(),
+	due_date: z.iso.date().nullable().optional(),
+	order_notes: z.string().nullable().optional(),
+	items: z.array(UpdateOrderLineItemSchema).min(1).optional(),
 });
 
 export const UpdateCustomOrderSchema = z.object({
