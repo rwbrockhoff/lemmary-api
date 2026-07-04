@@ -39,13 +39,17 @@ export async function getCustomerByEmail(
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.customer_email', '=', email)
-		.where('orders.order_type', 'in', SALES_ORDER_TYPES)
 		.orderBy('orders.order_date', 'desc')
 		.execute();
 
 	if (orders.length === 0) return null;
 
-	const lifetimeSpend = orders.reduce(
+	// Reworks show in the history but don't count toward tier or spend, they aren't purchases
+	const salesOrders = orders.filter((order) =>
+		SALES_ORDER_TYPES.some((type) => type === order.order_type),
+	);
+
+	const lifetimeSpend = salesOrders.reduce(
 		(sum, order) => sum + Number(order.subtotal ?? 0),
 		0,
 	);
@@ -59,8 +63,8 @@ export async function getCustomerByEmail(
 	return {
 		email,
 		name,
-		tier: computeCustomerTier(orders.length),
-		orderCount: orders.length,
+		tier: computeCustomerTier(salesOrders.length),
+		orderCount: salesOrders.length,
 		lifetimeSpend: lifetimeSpend.toFixed(2),
 		firstOrderDate,
 		orders: orders.map((order) => ({

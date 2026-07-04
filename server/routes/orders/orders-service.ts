@@ -8,6 +8,7 @@ import {
 	SALES_ORDER_TYPES,
 	salesOrderTypesSql,
 } from '../../utils/order-scope.js';
+import { toNoonUtc } from '../../utils/timezone.js';
 import type { GetOrdersQuery } from './contract/types.js';
 
 function getStoreUrl(platformConfig: unknown): string | null {
@@ -379,7 +380,7 @@ export async function updateOrderDates(
 	// order_date comes from the platform on synced orders, so only app-created
 	// (custom/work) orders are allowed to change it
 	if (input.order_date !== undefined && existing.order_type !== 'platform') {
-		updates.order_date = input.order_date;
+		updates.order_date = toNoonUtc(input.order_date);
 	}
 
 	return db
