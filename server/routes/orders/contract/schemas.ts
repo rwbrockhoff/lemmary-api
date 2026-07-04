@@ -77,10 +77,17 @@ export const GetOrdersQuerySchema = z.object({
 	includeBatchId: z.uuid().optional(),
 });
 
+export const OrderMetricsSchema = z.object({
+	totalItems: z.number(),
+	revenue: z.number(),
+	dueThisWeek: z.number(),
+});
+
 export const GetOrdersResponseSchema = z.object({
 	orders: z.array(OrderWithItemsSchema),
 	hasMore: z.boolean(),
 	lastSyncedAt: z.date().nullable(),
+	metricSummary: OrderMetricsSchema.nullable(),
 });
 
 export const OrderSchema = OrderColumnsSchema;

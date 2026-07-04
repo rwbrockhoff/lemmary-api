@@ -29,6 +29,17 @@ describe('Orders API', () => {
 		expect(body.data).toHaveProperty('lastSyncedAt');
 	});
 
+	it('GET /orders includes a metric summary for the pending view', async () => {
+		const response = await app.inject(withAuth('GET', '/orders'));
+
+		expect(response.statusCode).toBe(200);
+		const { metricSummary } = response.json().data;
+		expect(metricSummary).not.toBeNull();
+		expect(typeof metricSummary.totalItems).toBe('number');
+		expect(typeof metricSummary.revenue).toBe('number');
+		expect(typeof metricSummary.dueThisWeek).toBe('number');
+	});
+
 	it('GET /orders counts item quantity, not line item rows, for progress', async () => {
 		const created = await app.inject(
 			withAuth('POST', '/orders/custom', {
@@ -43,9 +54,9 @@ describe('Orders API', () => {
 		const orderId = created.json().data.id;
 
 		const response = await app.inject(withAuth('GET', '/orders'));
-		const order = response.json().data.orders.find(
-			(o: { id: string }) => o.id === orderId,
-		);
+		const order = response
+			.json()
+			.data.orders.find((o: { id: string }) => o.id === orderId);
 
 		expect(order).toBeDefined();
 		expect(order.item_count).toBe(3);

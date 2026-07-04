@@ -171,7 +171,10 @@ export async function getOrders(
 				.limit(limit + 1)
 				.offset(offset);
 
-	const rows = await filteredQuery.execute();
+	const [rows, metricSummary] = await Promise.all([
+		filteredQuery.execute(),
+		isPending ? getOpenOrdersMetrics(store.id) : Promise.resolve(null),
+	]);
 
 	const hasMore = !isPending && rows.length > limit;
 	const visibleRows = hasMore ? rows.slice(0, limit) : rows;
@@ -206,6 +209,40 @@ export async function getOrders(
 		})),
 		hasMore,
 		lastSyncedAt: store.last_synced_at,
+		metricSummary,
+	};
+}
+
+async function getOpenOrdersMetrics(storeId: string) {
+	const row = await db
+		.selectFrom('orders')
+		.leftJoin(
+			'order_workflow_stages',
+			'order_workflow_stages.id',
+			'orders.workflow_stage_id',
+		)
+		.select([
+			sql<string>`coalesce(sum(orders.grand_total), 0)`.as('revenue'),
+			sql<string>`coalesce(sum((
+				select coalesce(sum(oi.quantity), 0)
+				from order_items oi
+				where oi.order_id = orders.id
+			)), 0)`.as('total_items'),
+			sql<string>`count(*) filter (
+				where orders.due_date >= current_date
+				and orders.due_date < current_date + interval '7 days'
+			)`.as('due_this_week'),
+		])
+		.where('orders.store_id', '=', storeId)
+		.where('orders.fulfillment_status', '=', 'pending')
+		.where(sql<SqlBool>`order_workflow_stages.is_complete is not true`)
+		.where('orders.order_type', '!=', 'work')
+		.executeTakeFirst();
+
+	return {
+		totalItems: Number(row?.total_items ?? 0),
+		revenue: Number(row?.revenue ?? 0),
+		dueThisWeek: Number(row?.due_this_week ?? 0),
 	};
 }
 
