@@ -4,6 +4,10 @@ import type { OrderUpdate } from '../../db/database-types.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
 import { applyOrNull } from '../../utils/nullable.js';
+import {
+	SALES_ORDER_TYPES,
+	salesOrderTypesSql,
+} from '../../utils/order-scope.js';
 import type { GetOrdersQuery } from './contract/types.js';
 
 function getStoreUrl(platformConfig: unknown): string | null {
@@ -68,6 +72,7 @@ export async function getOrders(
 				.select(['customer_email', sql<number>`count(*)`.as('total')])
 				.where('store_id', '=', store.id)
 				.where('customer_email', 'is not', null)
+				.where('order_type', 'in', SALES_ORDER_TYPES)
 				.groupBy('customer_email'),
 		)
 		// Per-order item totals and completed-item counts
@@ -223,6 +228,7 @@ export async function getOrderWithItems(userId: string, orderId: string) {
 					select count(*) from orders o2
 					where o2.customer_email = orders.customer_email
 					and o2.store_id = orders.store_id
+					and o2.order_type in ${salesOrderTypesSql}
 				)
 			end`.as('customer_order_count'),
 		])
@@ -393,6 +399,7 @@ function workflowOrdersBase(storeId: string) {
 				.select(['customer_email', sql<number>`count(*)`.as('total')])
 				.where('store_id', '=', storeId)
 				.where('customer_email', 'is not', null)
+				.where('order_type', 'in', SALES_ORDER_TYPES)
 				.groupBy('customer_email'),
 		)
 		.with('item_counts', (qb) =>

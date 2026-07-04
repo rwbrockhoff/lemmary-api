@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 import { db } from '../../db/connection.js';
 import { getStoreForUser } from '../../utils/store.js';
 import { computeCustomerTier } from '../../utils/customer-tier.js';
+import { SALES_ORDER_TYPES } from '../../utils/order-scope.js';
 import type { CustomerDetail } from './contract/types.js';
 
 export async function getCustomerByEmail(
@@ -38,6 +39,7 @@ export async function getCustomerByEmail(
 		])
 		.where('orders.store_id', '=', store.id)
 		.where('orders.customer_email', '=', email)
+		.where('orders.order_type', 'in', SALES_ORDER_TYPES)
 		.orderBy('orders.order_date', 'desc')
 		.execute();
 

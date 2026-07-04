@@ -9,6 +9,7 @@ import {
 import { netRevenueSum } from '../../../utils/revenue.js';
 import { gateRows } from '../../../utils/report-gates.js';
 import { productionItemFilter } from '../../../utils/production-filter.js';
+import { SALES_ORDER_TYPES } from '../../../utils/order-scope.js';
 import { OPERATIONS_MINIMUMS } from '../thresholds.js';
 import type { OperationsData } from './contract/types.js';
 
@@ -54,6 +55,7 @@ async function getRevenue(
 		.where('store_id', '=', storeId)
 		.where('order_date', '>=', priorStart)
 		.where('order_date', '<', end)
+		.where('order_type', 'in', SALES_ORDER_TYPES)
 		.executeTakeFirstOrThrow();
 
 	const currentRevenue = Number(row.current_period);
@@ -235,6 +237,7 @@ async function getOrdersTrend(
 		.where('store_id', '=', storeId)
 		.where('order_date', '>=', start)
 		.where('order_date', '<', end)
+		.where('order_type', 'in', SALES_ORDER_TYPES)
 		.groupBy(sql`date_trunc(${bucketLit}, order_date AT TIME ZONE ${tzLit})`)
 		.orderBy('date', 'asc')
 		.execute();
